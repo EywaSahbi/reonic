@@ -3,13 +3,14 @@ import os
 
 import httpx
 
-ENGINE_URL = os.getenv("ENGINE_URL", "http://localhost:8000")
+ENGINE_URL = os.getenv("ENGINE_URL", "http://127.0.0.1:8000")  # not localhost: Windows tries IPv6 first, ~2 s per miss
+TIMEOUT = httpx.Timeout(10.0, connect=0.3)  # a down engine fails fast, a slow one still gets 10 s
 OFFLINE = "engine-offline"  # params_version of the placeholder design below
 
 
 def _post(path: str, body: dict) -> dict | None:
     try:
-        r = httpx.post(f"{ENGINE_URL}{path}", json=body, timeout=10)
+        r = httpx.post(f"{ENGINE_URL}{path}", json=body, timeout=TIMEOUT)
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError):
@@ -28,7 +29,7 @@ def design(facts: dict, locks: dict | None = None, prices: dict | None = None) -
 
 def prices() -> dict | None:
     try:
-        r = httpx.get(f"{ENGINE_URL}/prices", timeout=5)
+        r = httpx.get(f"{ENGINE_URL}/prices", timeout=TIMEOUT)
         r.raise_for_status()
         return r.json()
     except (httpx.HTTPError, ValueError):
@@ -37,7 +38,7 @@ def prices() -> dict | None:
 
 def healthy() -> bool:
     try:
-        return httpx.get(f"{ENGINE_URL}/health", timeout=2).status_code == 200
+        return httpx.get(f"{ENGINE_URL}/health", timeout=TIMEOUT).status_code == 200
     except httpx.HTTPError:
         return False
 
