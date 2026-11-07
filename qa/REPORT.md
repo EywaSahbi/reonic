@@ -2,6 +2,12 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — tap cards and house illustration (commit adfa400)
+
+- `cd app && npm run build`: passed.
+- Browser check passed: household-size and heating choices render as labelled tap cards; choosing four people updates demand to 4,600 kWh and displays a house illustration with 17 panels, matching `design.components.pv.quantity`. The estimate and plan card update with the same mock design.
+- Runtime service integration remains pending; the displayed results are clearly marked as mock estimates.
+
 ## 2026-11-07 — engine EV distance contract update (commit f38af8a)
 
 - Added smoke requests that submit `ev_km_per_week` and `ev_km_per_day` separately alongside an EV design, validating the returned Design shape. Syntax check passes; runtime acceptance awaits the engine service delivery.
