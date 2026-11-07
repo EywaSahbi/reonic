@@ -87,8 +87,17 @@ def reo_msg(plan: dict, text: str) -> dict:
     return m
 
 
+# Customer-side designs leave out the heat-pump grant: persona.md says reo never names a funding amount or a
+# post-grant price to the customer (app FYI 20:27, until Raneem decides). The planner's view keeps the grant line.
+CUSTOMER_PRICES = {"heatpump_subsidy_share": 0}
+
+
+def customer_prices(st: dict) -> dict:
+    return {**CUSTOMER_PRICES, **(st.get("prices") or {})}
+
+
 def _design(plan: dict, st: dict) -> tuple[dict, bool]:
-    d = engine.design(plan["facts"], st.get("locks"), st.get("prices"))
+    d = engine.design(plan["facts"], st.get("locks"), customer_prices(st))
     return (d, True) if d else (engine.offline_design(), False)
 
 
@@ -175,7 +184,7 @@ def run_skill(db: dict, skill: str, plan: dict, st: dict, trigger: str, inputs: 
 def goal_turn(db: dict, plan: dict, st: dict, new: dict, goal: str) -> dict:
     """Trigger: goal message -> goal_planner. The best variant becomes the plan (customer's choice), two alternatives shown."""
     plan["facts"].update(new)
-    run = run_skill(db, "goal_planner", plan, st, "goal message", {"goal": goal})
+    run = run_skill(db, "goal_planner", plan, {**st, "prices": customer_prices(st)}, "goal message", {"goal": goal})
     res = run["output"] or {}
     rec = res.get("recommendation")
     if not rec:
@@ -249,7 +258,7 @@ def start_session(_: dict | None = None):
     with _lock:
         db = _load()
         pid = uuid.uuid4().hex[:10]
-        design = engine.design({}) or engine.offline_design()  # zero-fact design once the engine allows facts: {}
+        design = engine.design({}, None, CUSTOMER_PRICES) or engine.offline_design()  # zero-fact first design
         plan = {"id": pid, "status": "drafting", "customer": {}, "facts": {}, "design": design, "transcript": [],
                 "flags": [], "similar_projects": [], "installer_edits": [],
                 "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}

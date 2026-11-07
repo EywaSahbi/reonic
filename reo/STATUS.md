@@ -36,5 +36,6 @@
 - goal_planner runs as a fixed, logged search over engine what-ifs + anchors (< 1 s), not an Opus loop: a customer chat turn can't wait 30 s; EV homes keep their wallbox. Customer goal = customer's choice, so the best variant becomes the plan; installer goal questions apply nothing.
 - bill_reader: facts from the bill wait for the customer's 'Yes, that's right' before they enter the plan.
 - Harness: models get `read`/`propose` tools only; `evidence.similar` (individual homes) is NOT a model tool (hard rule 5), the model sees aggregate percentiles only. Grounding guard: every number in output text within persona rounding of a tool-result number of the same run; small counts <= 12 allowed.
+- Customer-side engine calls send prices {heatpump_subsidy_share: 0}: no grant line or post-grant price in the customer chat (persona + app FYI 20:27, until Raneem decides); installer views and the offer pack keep the KfW line. A planner-approved quote shows whatever the planner sent.
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.
