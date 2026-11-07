@@ -29,6 +29,10 @@ Project Data/*.csv ──► data/ ──────────────►
 
 Minimum result first: nobody starts M2 work while an M1 item of theirs is open.
 
+## qa (RaneemK-commits, Codex agent)
+
+Verifies every `DONE` as it lands (tests, build, contract conformance), runs the end-to-end smoke test from M1, reproduces scores and checks for test leaks, rehearses the demo from M2, and does a final clean-clone run at M3. Reports to the owner; never fixes others' code. Brief: `qa/AGENTS.md`.
+
 ## Handoffs (who waits on whom)
 
 - data → engine: processed table + split (M0), scoring tool (M1), deviation findings that suggest model fixes (M2).

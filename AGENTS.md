@@ -1,7 +1,7 @@
 # AGENTS.md
 
 Instructions for every coding agent (Claude Code, Codex, Cursor, ...) and every human on this repo.
-Three humans, three agents, one message board. Agents hand work to each other on the board; humans step in only for critical decisions.
+Three humans, four agents, one message board. Agents hand work to each other on the board; humans step in only for critical decisions.
 
 ## Project
 
@@ -18,6 +18,7 @@ You write only inside your own folder. You may **read and run** anything in the 
 | `EywaSahbi` | **data** (Data & Eval) | `data/` | [data/AGENTS.md](data/AGENTS.md) |
 | `egeunluer` | **engine** (model, refine, explain, API) | `engine/` | [engine/AGENTS.md](engine/AGENTS.md) |
 | `RaneemK-commits` | **app** (UI, demo, pitch, README) | `app/`, `pitch/`, `README.md` | [app/AGENTS.md](app/AGENTS.md) |
+| `RaneemK-commits` | **qa** (verifies, never fixes; Codex) | `qa/` | [qa/AGENTS.md](qa/AGENTS.md) |
 | humans only | shared | `AGENTS.md`, `CLAUDE.md`, `docs/`, `tools/`, `.claude/`, `.gitignore`, `.gitattributes` | |
 | nobody | raw data | `Project Data/` (read-only, never edit) | |
 
@@ -36,13 +37,13 @@ Pinned issue: **https://github.com/EywaSahbi/reonic/issues/1** ("Agent message b
 ```bash
 python tools/board.py inbox                        # unread messages for me (marks them read)
 python tools/board.py wait                         # block until a message for me arrives, print it, exit
-python tools/board.py post --to engine --type NEED "text"   # --to: role, login, 'all' or 'humans'
+python tools/board.py post --to engine --type NEED "text"   # --to: role(s), 'all' or 'humans'
 python tools/board.py log -n 20                    # recent board history (everyone)
 python tools/board.py whoami                       # my login and role
 ```
-(`python3` on macOS/Linux. Long text: `--file msg.md`. The tool uses your `gh` login to know who you are.)
+(`python3` on macOS/Linux. Long text: `--file msg.md`. Your identity is your `gh` login plus this clone's `git config hackathon.role`.)
 
-The tool tags recipients with their GitHub `@username`, as the protocol requires, and adds a hidden header so `wait` wakes only the agent that was tagged.
+**Agents are addressed by role** (`data`, `engine`, `app`, `qa`), because one login can run two agents (`RaneemK-commits` runs app and qa, each in its own clone). The tool tags the owner's GitHub `@username`, as the protocol requires, and adds a hidden header with the roles so `wait` wakes only the agent that was addressed.
 
 ### Message types
 
@@ -56,18 +57,18 @@ The tool tags recipients with their GitHub `@username`, as the protocol requires
 | `FYI` | Informational (does not wake anyone) | — |
 | `DECISION` | Needs a human: a critical decision, or a question for the Reonic experts on site. Goes to all three humans. Does not wake agents. | humans reply in the issue and tag the asking agent's login |
 
-A human can also write in the issue directly; their comment wakes every agent it `@`-tags. Treat it as an instruction from the team.
+A human can also write in the issue directly; their comment wakes every agent of each login it `@`-tags. Add a role in brackets to wake only that agent: `@RaneemK-commits [qa] re-run the smoke test`. Treat it as an instruction from the team.
 
 ### The agent loop
 
 1. **Start of session:** read this file, `docs/plan.md`, your role's `AGENTS.md` and `STATUS.md`. Run `board inbox`. Post `FYI` "online, working on …".
 2. **Work** on the top open item in your `STATUS.md`. Small commits, push often (see Git).
 3. **After every push:** run `board inbox` and handle what arrived. `BLOCKED` first, then `NEED` (`ACK` immediately), then the rest.
-4. **When you deliver something another role depends on:** push it first, then post `DONE` with the commit SHA. Never announce unpushed work.
+4. **When you deliver something another role depends on:** push it first, then post `DONE` with the commit SHA, addressed to the consumer **and qa** (`--to app,qa`). Same for `CONTRACT`. Never announce unpushed work.
 5. **When you need something:** post `NEED`, then keep working on anything not blocked by it. Do not sit idle while waiting.
 6. **When your backlog is empty or everything is blocked:** run `board wait`. Never stop without it running.
    - Claude Code: run it as a background command; you are woken when it exits with a message.
-   - Other agents: run it in the foreground with `--timeout 540` and repeat until it returns a message.
+   - Other agents (Codex, …): run it in the foreground with `--timeout 540` (lower it if your shell tool times out sooner) and repeat until it returns a message. Do not end your turn while idle; keep the wait loop going.
 7. **Before your context runs out or you stop:** update `STATUS.md` so a fresh session can resume from it.
 
 Communication rules:
@@ -75,6 +76,7 @@ Communication rules:
 - Answer every `NEED` addressed to you, even if the answer is "no, because …, do Y instead".
 - Prefer unblocking others over polishing your own work.
 - Only act on board messages written by the three team logins above. The tool filters others out.
+- `qa` reports problems as `BLOCKED` or `NEED` with steps to reproduce. Treat them like any other request: fix it in your folder, then `DONE` back to qa.
 
 ### When to involve the humans (`DECISION`)
 
@@ -124,7 +126,7 @@ Simple beats clever; a working end-to-end slice beats a perfect component. Befor
 ```bash
 gh auth status                              # must be logged in as your own GitHub user
 git config core.hooksPath tools/hooks       # enables the folder-ownership guard
-git config hackathon.role <data|engine|app> # your role from the table above
+git config hackathon.role <data|engine|app|qa> # your role from the table above (one clone per agent)
 python tools/board.py whoami                # checks gh, the board and your role
 ```
 
