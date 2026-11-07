@@ -185,7 +185,11 @@ export function Widget({ onClose }: { onClose: () => void }) {
 }
 
 const CHOICE_LABEL: Record<string, string> = { heatpump: "Heat pump", district: "District heating", semi: "Semi-detached", gable: "Gable roof", flat: "Flat roof", mono: "Mono-pitch", "1": "Just me", "5+": "5 or more" };
-const label = (o: string) => CHOICE_LABEL[o] ?? o.charAt(0).toUpperCase() + o.slice(1);
+const STATES: Record<string, string> = {
+  BW: "Baden-Württemberg", BY: "Bavaria", BE: "Berlin", BB: "Brandenburg", HB: "Bremen", HH: "Hamburg", HE: "Hesse", MV: "Mecklenburg-Vorpommern",
+  NI: "Lower Saxony", NW: "North Rhine-Westphalia", RP: "Rhineland-Palatinate", SL: "Saarland", SN: "Saxony", ST: "Saxony-Anhalt", SH: "Schleswig-Holstein", TH: "Thuringia",
+};
+const label = (o: string) => STATES[o] ?? CHOICE_LABEL[o] ?? o.charAt(0).toUpperCase() + o.slice(1);
 
 // Maps a choice answer to HomeFacts. EV options map to has_ev / ev_planned per experience/flow.md.
 function choiceFacts(ask: Ask, o: string): Partial<HomeFacts> {
@@ -206,6 +210,21 @@ function AskInput({ ask, onFacts, onAddress }: {
 }) {
   const [v, setV] = useState("");
 
+  if (ask.input === "choice" && (ask.options?.length ?? 0) > 8 && !ask.options?.some((o) => iconFor(o))) {
+    // Long lists (e.g. 16 federal states): one picker instead of a wall of cards.
+    return (
+      <form className="ask" onSubmit={(e) => { e.preventDefault(); if (v) onFacts(choiceFacts(ask, v), label(v)); }}>
+        <label className="ask-label" htmlFor="ask-select">{ask.prompt}</label>
+        <div className="ask-field">
+          <select id="ask-select" value={v} onChange={(e) => setV(e.target.value)} autoFocus>
+            <option value="">Choose…</option>
+            {ask.options!.map((o) => <option key={o} value={o}>{label(o)}</option>)}
+          </select>
+          <button type="submit" className="btn-small" disabled={!v}>OK</button>
+        </div>
+      </form>
+    );
+  }
   if (ask.input === "choice" || ask.input === "boolean") {
     const options = ask.input === "boolean" ? ["Yes", "No"] : ask.options ?? [];
     return (

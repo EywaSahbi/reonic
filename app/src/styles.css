@@ -332,3 +332,4 @@ h1, h2, h3 { color: var(--ink); }
 .plan-offline { background: var(--white); border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 16px; }
 .plan-offline strong { display: block; color: var(--ink); margin-bottom: 4px; }
 .plan-offline p { margin: 0; font-size: 13px; color: var(--ink-500); }
+.ask-field select { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 12px; background: var(--white); color: var(--ink); }

@@ -293,13 +293,16 @@ function ComponentEditor({ k, design, disabled, highlight, onLock }: {
   );
 }
 
-const FACT_FIELDS: { key: keyof HomeFacts; label: string; type: "number" | "heating" | "bool" }[] = [
+const REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"];
+
+const FACT_FIELDS: { key: keyof HomeFacts; label: string; type: "number" | "heating" | "bool" | "region" }[] = [
   { key: "total_demand_kwh", label: "Total demand (kWh/yr)", type: "number" },
   { key: "num_inhabitants", label: "People", type: "number" },
   { key: "heating_type", label: "Heating", type: "heating" },
   { key: "ev_planned", label: "EV planned", type: "bool" },
   { key: "has_ev", label: "Has EV", type: "bool" },
   { key: "roof_area_sqm", label: "Roof area (m²)", type: "number" },
+  { key: "region", label: "Federal state", type: "region" },
   { key: "house_size_sqm", label: "Living space (m²)", type: "number" },
   { key: "electricity_price_eur_per_kwh", label: "Tariff (€/kWh)", type: "number" },
 ];
@@ -322,6 +325,12 @@ function FactsEditor({ facts, assumed, disabled, onSave }: { facts: HomeFacts; a
             <select value={(val(key) as string | undefined) ?? ""} disabled={disabled} onChange={(e) => set(key, e.target.value || undefined)}>
               <option value="">unknown</option>
               {["gas", "oil", "heatpump", "electric", "district", "other"].map((h) => <option key={h}>{h}</option>)}
+            </select>
+          )}
+          {type === "region" && (
+            <select value={(val(key) as string | undefined) ?? ""} disabled={disabled} onChange={(e) => set(key, e.target.value || undefined)}>
+              <option value="">unknown</option>
+              {REGIONS.map((r) => <option key={r}>{r}</option>)}
             </select>
           )}
           {type === "bool" && (

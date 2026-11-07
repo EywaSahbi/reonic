@@ -2,6 +2,8 @@ import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types
 import { House } from "./House";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
+// Display rounding only (persona.md): sizes to 1 decimal, payback to whole years.
+const num = (n: number) => String(Math.round(n * 10) / 10);
 const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("en");
 
 // Live plan card: components, sizes, price range that narrows as facts arrive, reasons, assumptions.
@@ -53,7 +55,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
               <div className="comp-row">
                 <span className="comp-name">{NAMES[k]}</span>
                 <span className="comp-size">
-                  {c.recommended && c.size !== null ? `${c.size} ${c.unit}` : "not needed"}
+                  {c.recommended && c.size !== null ? `${num(c.size)} ${c.unit}` : "not needed"}
                   {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
                 </span>
               </div>
@@ -66,7 +68,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
 
       <dl className="econ">
         <div><dt>Savings / yr</dt><dd>{eur(d.economics.annual_savings_eur)}</dd></div>
-        <div><dt>Payback</dt><dd>{d.economics.payback_years !== null ? `~${d.economics.payback_years} yrs` : "none"}</dd></div>
+        <div><dt>Payback</dt><dd>{d.economics.payback_years !== null ? `~${Math.round(d.economics.payback_years)} yrs` : "none"}</dd></div>
         <div><dt>Own power</dt><dd>{d.economics.autarky_pct}%</dd></div>
       </dl>
 

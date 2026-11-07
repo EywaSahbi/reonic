@@ -5,8 +5,8 @@
 - [x] Fill `experience/persona.md` + `experience/flow.md` → `DONE` to reo, qa (M0, unblocks reo)
 - [ ] Review `reo/CONTRACT.md` with reo; send a `NEED` for anything the UI needs (M0)
 - [x] Vite + React + TS skeleton; typed client + mock for `reo/CONTRACT.md`; customer widget on the mock installer site (M0)
-- [~] Customer flow live against reo: chat, tap cards, handoff, installer view, summary verified with reo v1 (2d6428f) in engine-offline mode; re-check with numbers once engine serves :8000 (M1)
-- [x] Installer view: inbox, plan detail, edits, finalise; customer sees final quote (M1, on mock)
+- [x] Customer flow + installer view live against reo v1 + engine stub (M1): kWh line -> design, Gas, EV -> handoff offer, region picker, handoff, installer edit, finalise -> customer quote
+- [x] Installer view: inbox, plan detail, edits, finalise; customer sees final quote (M1, live)
 - [ ] `pitch/demo-script.md` first draft (M1)
 - [ ] Flags, similar projects, "ask reo why", reality-check panel (M2)
 - [ ] Address input for the mocked lookup (M2)
@@ -28,4 +28,5 @@
 - Installer summary is templated in the UI until reo adds `Plan.summary` (NEED). Price-list editing waits for a reo `GET /prices` passthrough (NEED).
 - Visual theme = `experience/brand.md` (Reonic: zinc paper/ink, Geist, black pills, sunset only on hero word + hero card + precision bar, emerald/amber pills). Tokens live in `app/src/styles.css` :root.
 - Engine-offline (`params_version: "engine-offline"`): plan card shows "Calculation paused", installer shows a warning, no €0 anywhere, edits + finalise disabled.
+- Long choice lists (>8 options, no icons, e.g. 16 federal states) render as one picker, not cards. Customer plan card rounds sizes to 1 decimal and payback to whole years (display only).
 - Mock persists plans in localStorage so the installer view (next) sees handoffs from the customer tab without reo.

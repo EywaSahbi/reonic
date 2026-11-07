@@ -16,6 +16,7 @@ export type HomeFacts = {
   roof_area_sqm?: number;
   roof_orientation_deg?: number;
   roof_tilt_deg?: number;
+  region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH"; // federal state; sets PV yield
   electricity_price_eur_per_kwh?: number;
   has_existing_pv?: boolean;
   existing_pv_kwp?: number;
