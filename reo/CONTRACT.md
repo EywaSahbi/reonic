@@ -1,4 +1,4 @@
-# reo/ contract (v0 draft — owner `EywaSahbi` agrees v1 with app at M0)
+# reo/ contract (v1 — owner `EywaSahbi`)
 
 HTTP JSON API on `http://localhost:8001`, CORS open to `http://localhost:5173`. The only API app talks to.
 Types `HomeFacts`, `Design`, `ComponentKey`, `PriceList` are from [engine/CONTRACT.md](../engine/CONTRACT.md).
@@ -21,6 +21,7 @@ type Plan = {
   installer_edits: { at: string; change: string; before: unknown; after: unknown }[];
   history: { at: string; trigger: string; total_eur: number }[];   // how the design evolved
   updated_at: string;
+  summary?: string;                      // installer paragraph (flow.md 'Plan summary'), set once handed over
 };
 
 type Turn = {
@@ -31,26 +32,34 @@ type Turn = {
 };
 ```
 
+Behaviour notes (v1):
+- `design.params_version === "engine-offline"` means the engine was unreachable: the design carries no numbers (sizes `null`, totals `0`) and reo says so. Never shown as a real design.
+- Chip taps sent as `/messages` text (exact chip/option texts) and `/facts` answer instantly without the LLM.
+- Locks from `/plans/{id}/edit` persist across later edits (merged per component); prices likewise.
+- A yearly kWh figure from the customer goes to `total_demand_kwh` (engine contract 336060e); the kWh ask uses that field.
+
 ## Customer side
 
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
-| POST | `/sessions` | `{}` → `Turn` (greeting) | M0 stub |
-| POST | `/sessions/{id}/messages` | `{text}` → `Turn` | M0 stub, M1 real |
-| POST | `/sessions/{id}/facts` | `{facts: Partial<HomeFacts>}` → `Turn` (no LLM needed) | M1 |
-| POST | `/sessions/{id}/address` | `{address}` → `Turn` (mocked roof lookup) | M2 |
-| POST | `/sessions/{id}/handoff` | `{name, email?}` → `Plan` (status `handed_over`) | M1 |
-| GET | `/sessions/{id}` | → `Plan` (customer sees the final quote once `quoted`) | M1 |
+| GET | `/health` | → `{ok, llm: boolean, voice: boolean, engine: boolean}` | done |
+| POST | `/sessions` | `{}` → `Turn` (greeting; zero-fact design once engine allows `facts: {}`) | done |
+| POST | `/sessions/{id}/messages` | `{text}` → `Turn` | done |
+| POST | `/sessions/{id}/facts` | `{facts: Partial<HomeFacts>}` → `Turn` (no LLM) | done |
+| POST | `/sessions/{id}/address` | `{address}` → `Turn` (mocked roof lookup; until M2: asks for roof m²) | M2 |
+| POST | `/sessions/{id}/handoff` | `{name, email?}` → `Plan` (status `handed_over`) | done |
+| GET | `/sessions/{id}` | → `Plan` (customer sees the final quote once `quoted`) | done |
 
 ## Installer side
 
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
-| GET | `/plans?status=handed_over` | → `{id, customer, total_eur, status, updated_at}[]` | M1 |
-| GET | `/plans/{id}` | → `Plan` | M1 |
-| POST | `/plans/{id}/edit` | `{locks?, facts?, prices?}` → `Plan` (engine re-run, edit recorded) | M1 |
-| POST | `/plans/{id}/ask` | `{text}` → `{answer: string}` ("why a 10 kWh battery?") | M2 |
-| POST | `/plans/{id}/finalize` | `{note?}` → `Plan` (status `quoted`) | M1 |
+| GET | `/plans?status=handed_over` | → `{id, customer, total_eur, status, updated_at}[]` | done |
+| GET | `/plans/{id}` | → `Plan` | done |
+| POST | `/plans/{id}/edit` | `{locks?, facts?, prices?}` → `Plan` (engine re-run, edit recorded; 503 if engine down) | done |
+| POST | `/plans/{id}/ask` | `{text}` → `{answer: string}` ("why a 10 kWh battery?") | done (benchmarks M2) |
+| POST | `/plans/{id}/finalize` | `{note?}` → `Plan` (status `quoted`) | done |
+| GET | `/prices` | → engine `PriceList` passthrough (503 if engine down) | done |
 | GET | `/validation` | → data's latest score JSON (for the reality-check panel) | M2 |
 
 ## Voice (planned, additive, waiting for a human `DECISION`; details in [VOICE.md](VOICE.md))

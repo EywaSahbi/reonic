@@ -29,7 +29,7 @@ log = logging.getLogger("reo.llm")
 # compiles fast, while one optional property per field is rejected by the API as too complex.
 HEATING = ["gas", "oil", "heatpump", "electric", "district", "other"]
 FACT_TYPES = {
-    "annual_demand_kwh": float, "num_inhabitants": int, "house_size_sqm": float, "house_built_year": int,
+    "total_demand_kwh": float, "annual_demand_kwh": float, "num_inhabitants": int, "house_size_sqm": float, "house_built_year": int,
     "heating_type": str, "heating_demand_kwh": float, "has_ev": bool, "ev_planned": bool,
     "ev_km_per_year": float, "ev_km_per_week": float, "ev_km_per_day": float,
     "roof_area_sqm": float, "roof_orientation_deg": float, "roof_tilt_deg": float,
@@ -52,6 +52,8 @@ EXTRACT_SCHEMA = {
 EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar installer's assistant and return JSON.
 - facts: one {{field, value}} per fact this message states or clearly corrects; nothing else. Never guess or fill defaults.
   value is text: a plain number ("4500", "0.35"), "true"/"false", or for heating_type one of {", ".join(HEATING)}.
+  Yearly electricity use as the customer states it (e.g. from the bill) -> total_demand_kwh; annual_demand_kwh only if
+  they say it excludes the car and heating.
   Units: kWh per year, m², euros, EUR per kWh (35 ct -> 0.35), degrees with 180 = south.
   "we're buying an electric car" -> ev_planned true; "we have an EV" -> has_ev true; "no car" -> has_ev false and ev_planned false.
   Kilometres: put them in the field matching what was said (per year, per week or per day), no conversion.

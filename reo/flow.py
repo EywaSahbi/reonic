@@ -20,6 +20,31 @@ QUESTIONS = [
 ]
 
 
+# Chips shown with each ask (flow.md Stage 3 table).
+CHIPS = {
+    "building_type": [],
+    "heating_type": ["Gas", "Oil", "Heat pump already", "Other"],
+    "has_ev": ["Yes, already", "Planned", "No"],
+    "roof_area_sqm": ["About 40 m²", "About 60 m²", "Not sure"],
+    "house_size_sqm": ["About 120 m²", "About 160 m²"],
+    "electricity_price_eur_per_kwh": ["About 35 ct", "About 40 ct", "Not sure"],
+    "budget_eur": ["Under €15,000", "€15,000–25,000", "No fixed budget"],
+}
+STANDING_CHIPS = ["Why this size?", "What does it cost?", "Send to installer"]
+OPENING_ASK = {"field": "num_inhabitants", "prompt": "People in your home", "input": "choice", "options": ["1", "2", "3", "4", "5+"]}
+KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, from your bill)", "input": "number"}
+
+
+def ui_ask(ask: dict) -> dict:
+    """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
+    label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
+             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "house_size_sqm": "Living space (m²)",
+             "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
+    out = {k: v for k, v in ask.items() if k != "prompt"}
+    out["prompt"] = label.get(ask["field"], ask["prompt"])
+    return out
+
+
 def _missing(design: dict | None, impact: str) -> set[str]:
     return {m["field"] for m in (design or {}).get("missing_inputs", []) if m.get("impact") == impact}
 
