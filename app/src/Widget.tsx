@@ -190,7 +190,8 @@ function choiceFacts(ask: Ask, o: string): Partial<HomeFacts> {
     if (o === "Planned") return { ev_planned: true };
     return { has_ev: false, ev_planned: false };
   }
-  return { [ask.field]: o } as Partial<HomeFacts>;
+  const n = parseInt(o, 10); // numeric choices like "4" or "5+" (experience/flow.md Stage 1)
+  return { [ask.field]: Number.isFinite(n) && /^\d/.test(o) ? n : o } as Partial<HomeFacts>;
 }
 
 // Inline input for Turn.ask.

@@ -235,9 +235,9 @@ export const mockApi: Api = {
       installer_edits: [], history: [], updated_at: now(),
     };
     skippedBySession[id] = new Set();
-    const messages = [msg("Hi, I'm reo, the energy advisor at SolarHaus Müller. Tell me a little about your home and I'll sketch a solar system with a price estimate right away. To start: roughly how much electricity do you use per year?")];
+    const messages = [msg("Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
     plan.transcript.push(...messages);
-    return delay({ messages, plan: save(plan), suggestions: ["About 3,000 kWh", "About 4,500 kWh", "I don't know"], ask: { field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh)", input: "number" } });
+    return delay({ messages, plan: save(plan), suggestions: ["I know my yearly kWh"], ask: { field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"] } });
   },
 
   async sendMessage(id, text) {
@@ -251,10 +251,10 @@ export const mockApi: Api = {
       plan.transcript.push(...messages);
       return delay({ messages, plan: save(plan), suggestions: [] });
     }
-    if (t === "i don't know" && plan.facts.annual_demand_kwh === undefined) {
-      const messages = [msg("No problem. How many people live in your home?")];
+    if (t === "i know my yearly kwh") {
+      const messages = [msg("Great, that's the most precise. What does your bill say per year?")];
       plan.transcript.push(...messages);
-      return delay({ messages, plan: save(plan), suggestions: ["2 people", "4 people", "5 people"], ask: { field: "num_inhabitants", prompt: "People in the home", input: "number" } });
+      return delay({ messages, plan: save(plan), suggestions: ["About 3,000 kWh", "About 4,500 kWh"], ask: { field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number" } });
     }
     const why = answerWhy(plan, text);
     if (why) {
@@ -358,7 +358,7 @@ function respondToFacts(plan: Plan, facts: Partial<HomeFacts>, trigger: string, 
   const changes = applyFacts(plan, facts, trigger);
   const d = plan.design;
   if (first) {
-    return nextTurn(plan, skipped, [`For about ${d.economics.total_demand_kwh.toLocaleString("en")} kWh a year, ${headline(d).charAt(0).toLowerCase() + headline(d).slice(1)}`, d.components.battery.recommended ? "The battery lets you use your own solar power in the evening." : "", "To firm this up:"].filter(Boolean));
+    return nextTurn(plan, skipped, [`For about ${d.economics.total_demand_kwh.toLocaleString("en")} kWh a year, ${headline(d)}`, d.components.battery.recommended ? "The battery lets you use your own solar power in the evening." : "", "To firm this up:"].filter(Boolean));
   }
   const lead = changes.length ? `Got it, so I've ${changes.join(" and ")}. The new estimate is roughly ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}.` : `Thanks, noted. The estimate is now roughly ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}.`;
   return nextTurn(plan, skipped, [lead]);

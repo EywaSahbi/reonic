@@ -13,19 +13,22 @@
 
 ## Customer side
 
-### Stage 1: Hello
+### Stage 1: Hello (tap-first, no kWh needed)
 
-Opening message (`POST /sessions`), no engine call needed:
+Most people don't know their kWh. reo opens with something everyone can answer with one tap; kWh stays the precise option for people who have their bill at hand.
 
-> Hi, I'm reo, the energy advisor at SolarHaus Müller. Tell me a little about your home and I'll sketch a solar system with a price estimate right away. To start: roughly how much electricity do you use per year?
+Opening message (`POST /sessions`). If the engine accepts `facts: {}`, include the typical-home design in this turn so the plan card already shows a wide range; otherwise the first design comes after the first tap.
 
-- `ask`: `{field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh)", input: "number"}`
-- `suggestions`: `["About 3,000 kWh", "About 4,500 kWh", "I don't know"]`
-- "I don't know" → ask `num_inhabitants` instead: "No problem. How many people live in your home?" (`input: "number"`, chips `["1–2", "3–4", "5+"]`). The engine estimates demand from it.
+> Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
+
+- `ask`: `{field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"]}` (the app renders `choice` asks as big tap cards; `5+` → `num_inhabitants: 5`)
+- `suggestions`: `["I know my yearly kWh"]`
+- `I know my yearly kWh` → `ask` `{field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number"}`, chips `["About 3,000 kWh", "About 4,500 kWh"]`.
+- Free text works at any point: "we use about 4,500 kWh a year" → `annual_demand_kwh: 4500` (the demo opens this way).
 
 ### Stage 2: First design, immediately
 
-As soon as there is `annual_demand_kwh` or `num_inhabitants`, call the engine and reply in this shape (2–4 sentences):
+As soon as there is `annual_demand_kwh` or `num_inhabitants` (or at once, if the engine designs from zero facts), call the engine and reply in this shape (2–4 sentences):
 
 1. The headline: what reo recommends and the price range, as an estimate.
 2. One reason, from the engine.
@@ -39,12 +42,15 @@ Ask for the open fields in this order. If the engine's `missing_inputs` ranks a 
 
 | # | Field | Prompt (say why) | `ask` | Chips |
 |---|---|---|---|---|
+| 0 | `building_type` *(once engine ships it)* | "What kind of house is it? That tells me roughly how much roof and heating you have." | `choice`, options `detached, semi, terraced` | none (cards) |
 | 1 | `heating_type` | "How do you heat today? That decides whether a heat pump makes sense." | `choice`, options `gas, oil, heatpump, electric, district, other` | `Gas`, `Oil`, `Heat pump already`, `Other` |
 | 2 | `has_ev` / `ev_planned` | "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." | `choice`, field `has_ev`, options `Yes, already`, `Planned`, `No` | same as options |
 | 3 | `roof_area_sqm` | "How big is the roof area that faces the sun? Or give me your address and I'll look it up." | `address` (falls back to `number` if lookup fails) | `Use my address`, `About 40 m²`, `Not sure` |
 | 4 | `house_size_sqm` (+ `house_built_year`) | only if a heat pump is in play: "How big is the living space, and roughly when was the house built? That sizes the heat pump." | `number` | `About 120 m²`, `About 160 m²` |
 | 5 | `electricity_price_eur_per_kwh` | "What do you pay per kWh? I've assumed a typical rate so far." | `number` | `About 35 ct`, `About 40 ct`, `Not sure` |
 | 6 | `budget_eur` | "Do you have a budget in mind? Then I can show what fits." | `number` | `Under €15,000`, `€15,000–25,000`, `No fixed budget` |
+
+Prefer `choice` asks wherever the answer has a few options: the app shows them as picture cards and every tap updates the plan live. `roof_type` (`gable, flat, mono, other`) can join row 3 once the engine ships it. Stop asking once the engine has no `high`-impact `missing_inputs` left, and offer the handoff (Stage 5).
 
 Mapping notes for reo:
 - EV chip `Yes, already` → `has_ev: true`; `Planned` → `ev_planned: true`; `No` → both `false`. Free text like "we're buying an electric car next year" → `ev_planned: true`.
