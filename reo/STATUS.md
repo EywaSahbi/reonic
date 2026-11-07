@@ -21,6 +21,9 @@ Not covered: engine downtime only with the fake engine (did not stop Ege's engin
 
 ## Backlog (top = next)
 
+- [x] Deployment guard: planner Bearer token (`REO_INSTALLER_TOKEN`) on installer routes + `REO_ALLOWED_ORIGINS` CORS (`test_auth.py`)
+- [ ] Roof lookup: OSM building relations (multipolygon), app NEED 23:4x (Platz der Republik 1 Berlin, Schellingstraße 3 München)
+
 - [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
 - [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [x] installer_qa on the harness (Sonnet 5.5 / scripted)

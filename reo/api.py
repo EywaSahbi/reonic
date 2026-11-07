@@ -7,6 +7,7 @@ every turn, so every number shown is from this turn (hard rule 2).
 Run:  uv run uvicorn api:app --reload --port 8001
 """
 import base64
+import hmac
 import json
 import os
 import threading
@@ -41,8 +42,26 @@ HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner 
 OFFLINE_TEXT = "My calculator isn't reachable right now, so I can't give you numbers yet."
 
 app = FastAPI(title="reo")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
-                   allow_methods=["*"], allow_headers=["*"])
+INSTALLER_ROUTES = ("/plans", "/runs", "/calendar", "/prices")  # planner-only: plans, offer packs, runs, approvals
+
+
+@app.middleware("http")
+async def installer_auth(request, call_next):
+    """Deployment guard: with REO_INSTALLER_TOKEN set (reo/.env on the laptop), installer routes need
+    `Authorization: Bearer <token>`; customer routes stay open (the session id is the customer's key).
+    Unset (local dev, tests): no check. Registered before CORS, so CORS wraps it and 401s carry CORS headers."""
+    token = os.getenv("REO_INSTALLER_TOKEN", "")
+    path = request.url.path
+    if token and request.method != "OPTIONS" and any(path == r or path.startswith(r + "/") for r in INSTALLER_ROUTES):
+        sent = request.headers.get("authorization", "")
+        if not hmac.compare_digest(sent.encode(), f"Bearer {token}".encode()):
+            return JSONResponse({"error": "planner token required"}, status_code=401)
+    return await call_next(request)
+
+
+ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] + \
+          [o.strip().rstrip("/") for o in os.getenv("REO_ALLOWED_ORIGINS", "").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["*"], allow_headers=["*"])
 _lock = threading.Lock()
 
 

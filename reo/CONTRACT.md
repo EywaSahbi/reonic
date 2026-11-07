@@ -42,6 +42,12 @@ Behaviour notes (v1):
 - Heating advice: when `heating_type` is gas / oil / district / other, the reply adds the engine's `heating_comparison` (energy factor, yearly cost now vs heat pump on grid power, CO₂ only when the engine gives a positive reduction); cost is called cheaper only if `heatpump_cheaper`. Scripted text: `scripted.heating_advice`; with a key the model follows `prompt.md` rule 9.
 - A yearly kWh figure from the customer goes to `total_demand_kwh` (engine contract 336060e); the kWh ask uses that field.
 
+## Access (deployment, v1.4)
+
+- `REO_INSTALLER_TOKEN` (env / `reo/.env`, never committed or bundled): when set, installer routes `/plans*`, `/runs*` (incl. SSE `/runs/{id}/events`), `/calendar/slots`, `/prices` need `Authorization: Bearer <token>`, else `401 {"error": "planner token required"}`. Unset (local dev): no check. No `?token=` query (the app streams SSE with fetch + Bearer).
+- Customer routes (`/health`, `/sessions*`, `/tts`) stay open; the session id is the customer's key and never returns the offer pack.
+- CORS: localhost:5173 plus `REO_ALLOWED_ORIGINS` (comma-separated, e.g. `https://sonnfeld-reo.vercel.app`); 401s carry CORS headers; preflights need no token.
+
 ## Customer side
 
 | Method | Path | Body → Response | Milestone |
