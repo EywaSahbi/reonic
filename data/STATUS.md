@@ -6,14 +6,15 @@
 - [x] `build.py` → `processed/projects.parquet` (HomeFacts column names) + `processed/split.csv`; `CONTRACT.md` v1 → `DONE` to engine, reo, qa (M0)
 - [x] `score.py` + naive baseline on `val` → `DONE` to engine, qa (M1). Engine `all` on val: bundle 0.56 vs baseline 0.55
 - [ ] Engine params must come from `train` only, or test numbers are in-sample (NEED to engine)
-- [ ] `benchmarks.json` from `train` → `DONE` to reo, qa (M1)
+- [x] `benchmarks.json` from `train` → `DONE` to reo, qa (M1)
 - [ ] Test-set report, deviation analysis, charts → `DONE` to reo, app (M2)
 
 ## Published
 
 - `docs/dataset_explanation.md` (commits 60f5b08, b81a28c)
 - `processed/projects.parquet` (1,571 rows) + `processed/split.csv` (1,098 / 238 / 235), `CONTRACT.md` v1, `NOTES.md` (1e37ff2)
-- `score.py`, `reports/score_all_val.json` (engine v0-handset+line on val)
+- `score.py`, `reports/score_all_val.json` (engine v0-handset+line on val) (10e725a)
+- `benchmarks.py` → `processed/benchmarks.json` (46 segments, 21 with n >= 15)
 
 ## Decisions
 
@@ -23,3 +24,4 @@
 - Keep large commercial-size projects; metrics use medians so they do not dominate.
 - Size tolerance ±20 % relative (wallbox ±5 %), same as engine's own predict.py, so numbers are comparable.
 - Baseline built from `train` medians only, so it never sees val/test.
+- Benchmarks: 1,000-kWh demand bands with fallback levels and min_n 15, because EV and heating segments are tiny; full sorted size lists so reo can state exact percentiles.

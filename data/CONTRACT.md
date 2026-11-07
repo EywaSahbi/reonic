@@ -45,13 +45,26 @@ Sizes are null when the component is absent.
 
 ## `data/processed/benchmarks.json`
 
+Built by `uv run python benchmarks.py` from `train` only.
+
 ```json
-{"built_from": "train", "segments": [
-  {"key": {"demand_band": "4000-6000", "has_ev": true, "heating_type": "gas"}, "n": 87,
-   "pv_kwp": {"p10": 6.3, "p50": 9.5, "p90": 12.6}, "battery_kwh": {"p10": 5, "p50": 9, "p90": 12},
-   "attach_rate": {"battery": 0.71, "heatpump": 0.08, "wallbox": 0.62}}
-]}
+{"built_from": "train", "n_train": 1098, "min_n": 15,
+ "demand_bands": ["0-3000", "3000-4000", "4000-5000", "5000-6000", "6000+"],
+ "segments": [
+  {"level": 2, "key": {"demand_band": "4000-5000", "has_ev": false}, "n": 403,
+   "pv_kwp": {"p10": 4.8, "p50": 9.5, "p90": 13.5, "values": [0.47, 1.35, "... sorted"]},
+   "battery_kwh": {"p10": 5.0, "p50": 7.0, "p90": 14.0, "values": [3.5, 4.6, "..."]},
+   "battery_kwh_per_kwp": {"p10": 0.6, "p50": 0.9, "p90": 1.7, "values": ["..."]},
+   "attach_rate": {"pv": 0.59, "battery": 0.86, "heatpump": 0.01, "wallbox": 0.26},
+   "typical_sizes": {"battery_kwh": [{"size": 5.0, "share": 0.35}, {"size": 10.0, "share": 0.26}, {"size": 7.0, "share": 0.13}],
+                     "pv_kwp": [{"size": 10.0, "share": 0.17}, {"size": 11.0, "share": 0.15}, {"size": 9.0, "share": 0.1}]}}
+ ]}
 ```
+
+- **Levels:** 3 = `demand_band` × `has_ev` × `heating_type`, 2 = band × EV, 1 = band, 0 = all homes. `heating_type` null → `"unknown"`, demand null → `"unknown"`.
+- **Lookup:** take the segment with the highest level whose key matches the home and `n >= min_n`. Level 0 always exists. EV homes are rare (~4 %), so their level-2/3 segments are mostly below `min_n` and fall back to level 1.
+- `values`: every expert size in the segment, sorted, so "larger than X % of similar homes" = share of `values` below the size. Sizes only over homes that have the component; `attach_rate` is the share of all homes in the segment.
+- The example is the real level-2 segment at the time of writing; read the file for current values.
 
 ## Predictions CSV (input to `score.py`)
 
