@@ -2,6 +2,13 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — app + reo offline integration (`28527ca`, `9b01a6c`)
+
+- `cd app && npm run build`: passed.
+- `cd reo && uv run pytest`: passed, 4 tests. The scripted fallback case ran with `ANTHROPIC_API_KEY` unset; engine-down handling also passed.
+- Live customer flow against reo with the design engine offline: opening the widget and choosing household size and gas heating kept the plan in “Calculation paused”; the UI stated there were no sizes or prices, preserved entered inputs, and offered no handoff. No fabricated price or €0 estimate appeared.
+- This verifies the offline integration state only. Engine-backed design, the engine `val` metric, validation data, and the full handoff-to-quote journey through live services remain pending.
+
 ## 2026-11-07 — reo API v1 (commit 2d6428f)
 
 - `cd reo && uv sync && uv run pytest`: passed, 4 tests, including scripted fallback with `ANTHROPIC_API_KEY` unset and engine-down behavior.
