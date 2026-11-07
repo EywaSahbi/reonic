@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { OfferPackPanel, RunTimeline } from "./OfferPack";
-import { RealityCheck } from "./RealityCheck";
 import { SonnfeldMark } from "./Logo";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
@@ -37,7 +36,6 @@ export function Installer() {
         <span className="inst-tag">reo · powered by Reonic</span>
         <a className="inst-link" href="#/">Customer site →</a>
       </header>
-      <div className="inst-reality"><RealityCheck /></div>
       <div className="inst-body">
         <aside className="inbox" aria-label="Handed-over plans">
           <h2>Inbox</h2>
@@ -203,21 +201,6 @@ function PlanDetail({ id }: { id: string }) {
           </table>
         </section>
 
-        <section className="card">
-          <h3>Similar real projects</h3>
-          {plan.similar_projects.length === 0 ? <p className="muted">None attached.</p> : (
-            <table className="price-table">
-              <thead><tr><th>Project</th><th className="num">Demand</th>{COMPONENT_KEYS.map((k) => <th key={k} className="num">{NAMES[k]}</th>)}</tr></thead>
-              <tbody>
-                <tr className="this-plan"><td>This plan</td><td className="num">{plan.facts.total_demand_kwh ?? plan.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{d.components[k].recommended ? d.components[k].size : "–"}</td>)}</tr>
-                {plan.similar_projects.map((s) => (
-                  <tr key={s.project_id}><td>{s.project_id}</td><td className="num">{s.facts.total_demand_kwh ?? s.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{s.expert[k] ?? "–"}</td>)}</tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </section>
-
         <AskReo id={plan.id} />
 
         <section className="card">
@@ -237,19 +220,17 @@ function PlanDetail({ id }: { id: string }) {
         </section>
       )}
 
-      <section className="card finalize">
+      {(quoted || plan.offer_pack?.status !== "ready") && <section className="card finalize">
         {quoted ? (
           <p><strong>Quote sent.</strong> The customer now sees the confirmed plan and price on the website.</p>
         ) : (
-          plan.offer_pack?.status === "ready" ? (
-            <p className="muted">Send the quote from the offer pack above ("Send the quote to the customer" → Approve).</p>
-          ) : <>
+          <>
             <label htmlFor="note">Note to the customer <span className="muted">(optional, sent as written)</span></label>
             <textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. We checked your roof photos; 12 kWh fits your evening usage better." />
             <button className="btn-primary" onClick={finalize} disabled={busy || isOffline(d)}>Finalise and send quote · {eur(d.price.total_eur)}</button>
           </>
         )}
-      </section>
+      </section>}
     </div>
   );
 }

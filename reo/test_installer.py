@@ -23,7 +23,7 @@ def _wait(c, pid):
 def test_customer_never_sees_offer_pack_or_planner_working_copy(tmp_path, monkeypatch):
     c, pid, p = setup(tmp_path, monkeypatch)
     handed = c.get(f"/sessions/{pid}").json()
-    assert "offer_pack" not in handed and handed["similar_projects"] == []
+    assert "offer_pack" not in handed
     c.post(f"/plans/{pid}/edit", json={"locks": {"battery": {"recommended": True, "size": 12}}})
     s = c.get(f"/sessions/{pid}").json()  # planner still working: customer keeps the design they handed over
     assert s["design"]["components"]["battery"]["size"] == handed["design"]["components"]["battery"]["size"]

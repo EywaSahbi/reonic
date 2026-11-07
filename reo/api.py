@@ -34,7 +34,6 @@ from harness.skills import SKILLS
 
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
-REPORTS = HERE.parent / "data" / "reports"  # data/CONTRACT.md: score_<name>_<split>.json
 GREETING = ("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
             "with a price estimate. To start: how many people live in your home?")
 HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit "
@@ -93,12 +92,11 @@ def _get(db: dict, pid: str) -> tuple[dict, dict]:
 
 
 def out(plan: dict, installer: bool = False) -> dict:
-    """Plan as the app sees it. Customer responses never carry other homes (similar_projects) or the installer's
-    offer pack, and until the quote is confirmed they show the design the customer handed over, not the planner's
+    """Plan as the app sees it. Customer responses never carry the installer's offer pack, and until the quote is confirmed they show the design the customer handed over, not the planner's
     working copy (which may carry installer prices such as the grant line)."""
-    shown = {k: v for k, v in plan.items() if k not in ("customer_design", "offer_pack")}
+    shown = {k: v for k, v in plan.items() if k not in ("customer_design", "offer_pack", "similar_projects")}
     if not installer:
-        shown.update(similar_projects=[], design=customer_design(plan))
+        shown["design"] = customer_design(plan)
     elif "offer_pack" in plan:
         shown["offer_pack"] = plan["offer_pack"]
     if plan["status"] != "drafting":
@@ -115,8 +113,6 @@ def customer_design(plan: dict) -> dict:
 
 def attach_evidence(plan: dict) -> None:
     plan["flags"] = evidence.flags(plan["facts"], plan["design"])
-    if plan["status"] != "drafting":
-        plan["similar_projects"] = evidence.similar_projects(plan["facts"])
 
 
 def reo_msg(plan: dict, text: str) -> dict:
@@ -353,7 +349,7 @@ def start_session(_: dict | None = None):
         pid = uuid.uuid4().hex[:10]
         design = engine.design({}, None, CUSTOMER_PRICES) or engine.offline_design()  # zero-fact first design
         plan = {"id": pid, "status": "drafting", "customer": {}, "facts": {}, "design": design, "transcript": [],
-                "flags": [], "similar_projects": [], "installer_edits": [],
+                "flags": [], "installer_edits": [],
                 "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}
         db["plans"][pid] = plan
         db["state"][pid] = {"skipped": [], "offered": False, "last_ask": "num_inhabitants", "locks": {}, "prices": {}}
@@ -645,19 +641,6 @@ def prices():
     if p is None:
         return JSONResponse({"error": "engine not reachable"}, status_code=503)
     return p
-
-
-@app.get("/validation")
-def validation(split: str = "test", view: str | None = None):
-    """data's score JSON by its fixed name (data NEED 20:19): test (default), val, or the installer-profile view.
-    Served as published; reo never edits the numbers."""
-    names = {"test": "score_test_test.json", "val": "score_val_val.json", "profiles": "score_val_profiles_val.json"}
-    order = [view] if view else list(dict.fromkeys([split, "test", "val"]))
-    for key in order:
-        f = REPORTS / names.get(key, "")
-        if key in names and f.exists():
-            return {"available": True, "file": f.name, **json.loads(f.read_text(encoding="utf-8"))}
-    return {"available": False, "note": "validation numbers arrive from data/score.py"}
 
 
 # ---------- agent harness: offer pack, runs, approvals ----------

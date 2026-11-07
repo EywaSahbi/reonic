@@ -71,7 +71,6 @@ export type Plan = {
   design: Design;
   transcript: Message[];
   flags: { component: ComponentKey; text: string; severity: "info" | "warn" }[];
-  similar_projects: { project_id: string; facts: HomeFacts; expert: Record<ComponentKey, number | null> }[];
   installer_edits: { at: string; change: string; before: unknown; after: unknown }[];
   history: { at: string; trigger: string; total_eur: number }[];
   updated_at: string;

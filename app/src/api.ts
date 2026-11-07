@@ -30,7 +30,6 @@ export type Api = {
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
   askPlan(id: string, text: string): Promise<{ answer: string; run_id?: string }>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
-  validation(split?: "test" | "val", view?: "profiles"): Promise<unknown>;
   preparePlan(id: string): Promise<Plan>;
   chooseVariant(id: string, name: VariantName): Promise<Plan>;
   approveAction(id: string, actionId: string, payload?: Record<string, unknown>): Promise<Plan>;
@@ -68,7 +67,6 @@ const httpApi: Api = {
   editPlan: (id, edit) => call("POST", `/plans/${id}/edit`, edit),
   askPlan: (id, text) => call("POST", `/plans/${id}/ask`, { text }),
   finalizePlan: (id, note) => call("POST", `/plans/${id}/finalize`, { note }),
-  validation: (split = "test", view) => call("GET", `/validation?${view ? `view=${view}` : `split=${split}`}`),
   preparePlan: (id) => call("POST", `/plans/${id}/prepare`, {}),
   chooseVariant: (id, name) => call("POST", `/plans/${id}/variant`, { name }),
   approveAction: (id, actionId, payload) => call("POST", `/plans/${id}/actions/${actionId}/approve`, payload ? { payload } : {}),

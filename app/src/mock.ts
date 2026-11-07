@@ -232,7 +232,7 @@ export const mockApi: Api = {
   async startSession() {
     const id = "mock-" + Math.random().toString(36).slice(2, 8);
     const plan: Plan = {
-      id, status: "drafting", customer: {}, facts: {}, design: design({}), transcript: [], flags: [], similar_projects: [],
+      id, status: "drafting", customer: {}, facts: {}, design: design({}), transcript: [], flags: [],
       installer_edits: [], history: [], updated_at: now(),
     };
     skippedBySession[id] = new Set();
@@ -315,11 +315,6 @@ export const mockApi: Api = {
       ? [{ component: "battery", text: "Battery larger than 85% of similar homes (mock)", severity: "warn" }]
       : [];
     const d = plan.facts.total_demand_kwh ?? 4500;
-    plan.similar_projects = [
-      { project_id: "mock-p-1021", facts: { total_demand_kwh: d - 300, heating_type: plan.facts.heating_type }, expert: { pv: 9.5, battery: 8, heatpump: plan.facts.heating_type === "gas" ? 9 : null, wallbox: 11 } },
-      { project_id: "mock-p-0877", facts: { total_demand_kwh: d + 400, heating_type: plan.facts.heating_type }, expert: { pv: 11, battery: 10, heatpump: null, wallbox: 11 } },
-      { project_id: "mock-p-1302", facts: { total_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
-    ];
     plan.transcript.push(msg(`Done. Your plan is with Sonnfeld, ${name}. You'll see the final quote here once your planner has confirmed it.`));
     startPrep(plan);
     return delay(save(plan));
@@ -416,7 +411,6 @@ export const mockApi: Api = {
   async getRun(runId) { throw new Error(`mock: no run ${runId}`); },
   watchRun() { return () => {}; },
 
-  async validation() { return delay({ available: true, split: "test", n: 235, bundle_match: 0.523, components: { pv: { presence_acc: 0.783, size_mae: 3.22, within_tol: 0.492 }, battery: { presence_acc: 0.919, size_mae: 3.58, within_tol: 0.386 } }, note: "Local preview only; live values come from reo /validation." }); },
 
   // Mock voice: no speech-to-text in the browser, so "heard" is the next demo line the plan still needs.
   // shortcut: fake transcript + no audio; the real path is reo -> ElevenLabs (reo/VOICE.md).

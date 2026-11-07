@@ -1,7 +1,7 @@
-"""Evidence from real expert designs (data/): flags vs similar homes, and similar real projects.
+"""Evidence from real expert designs (data/benchmarks.json): aggregate flags vs similar homes.
 
 Flags are aggregate ("larger than 85% of similar homes") and may appear in the customer chat and in LLM context.
-Similar projects are individual homes: installer view only, never sent to the customer or to the LLM (hard rule 5).
+Individual homes are never served (hard rule 5).
 """
 import bisect
 import json
@@ -17,16 +17,6 @@ SIZE_KEY = {"pv": "pv_kwp", "battery": "battery_kwh"}
 def _benchmarks() -> dict | None:
     f = DATA / "benchmarks.json"
     return json.loads(f.read_text(encoding="utf-8")) if f.exists() else None
-
-
-@cache
-def _projects():
-    import pandas as pd  # loaded on first use only
-    f = DATA / "projects.parquet"
-    if not f.exists():
-        return None
-    p = pd.read_parquet(f).merge(pd.read_csv(DATA / "split.csv"), on="project_id")
-    return p[p["split"] == "train"]  # never show val/test homes
 
 
 def _band(kwh: float | None, bands: list[str]) -> str:
@@ -87,38 +77,6 @@ def flags(facts: dict, design: dict) -> list[dict]:
             out.append({"component": key, "severity": "info", "text": f"Only {rate:.0%} of similar homes got a {NAMES[key].lower()} (n={n})"})
         elif not comp["recommended"] and rate > 0.6:
             out.append({"component": key, "severity": "info", "text": f"{rate:.0%} of similar homes got a {NAMES[key].lower()}; this design has none (n={n})"})
-    return out
-
-
-def similar_projects(facts: dict, k: int = 3) -> list[dict]:
-    """data/CONTRACT.md lookup: train homes, filters kept only if >= k remain (EV group, existing PV, heating),
-    then nearest household demand, ties by installer and project_id. Installer view only."""
-    p = _projects()
-    if p is None:
-        return []
-    pool = p
-    for col, want in [("has_ev", bool(facts.get("has_ev") or facts.get("ev_planned"))),
-                      ("has_existing_pv", facts.get("has_existing_pv")), ("heating_type", facts.get("heating_type"))]:
-        if want is None:
-            continue
-        col_vals = pool[col].fillna(False) if col != "heating_type" else pool[col]
-        if (col_vals == want).sum() >= k:
-            pool = pool[col_vals == want]
-    kwh = _household_kwh(facts)
-    pool = pool.assign(_d=(pool["annual_demand_kwh"] - kwh).abs() if kwh is not None else 0)
-    pool = pool.sort_values(["_d", "installer", "project_id"], na_position="last")
-    out = []
-    for _, r in pool.head(k).iterrows():
-        val = lambda c: None if r[c] != r[c] else r[c]  # NaN -> None
-        out.append({
-            "project_id": r["project_id"],
-            "facts": {f: (bool(val(f)) if f in ("has_ev", "has_existing_pv") else val(f)) for f in
-                      ("annual_demand_kwh", "num_inhabitants", "heating_type", "has_ev", "has_existing_pv", "house_size_sqm")
-                      if val(f) is not None},
-            "expert": {"pv": val("pv_kwp") if r["has_pv"] else None, "battery": val("battery_kwh") if r["has_battery"] else None,
-                       "heatpump": val("heatpump_kw") if r["has_heatpump"] else None,
-                       "wallbox": val("wallbox_kw") if r["has_wallbox"] else None},
-        })
     return out
 
 
