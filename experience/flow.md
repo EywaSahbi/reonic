@@ -19,7 +19,7 @@ Most people don't know their kWh. reo opens with something everyone can answer w
 
 Opening message (`POST /sessions`). If the engine accepts `facts: {}`, include the typical-home design in this turn so the plan card already shows a wide range; otherwise the first design comes after the first tap.
 
-> Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
+> Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
 
 - `ask`: `{field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"]}` (the app renders `choice` asks as big tap cards; `5+` → `num_inhabitants: 5`)
 - `suggestions`: `["I know my yearly kWh"]`

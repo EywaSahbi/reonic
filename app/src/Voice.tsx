@@ -70,7 +70,7 @@ export function MicButton({ disabled, onRecorded, onError, onStart }: {
       className={`mic ${recording ? "is-recording" : ""}`}
       disabled={disabled && !recording}
       onClick={() => (recording ? stopAll() : start())}
-      aria-label={recording ? "Stop and send voice message" : "Talk to reo"}
+      aria-label={recording ? "Stop and send voice message" : "Talk to the energy advisor"}
       aria-pressed={recording}
       title={recording ? "Tap to send" : "Tap to talk"}
     >

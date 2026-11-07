@@ -235,7 +235,7 @@ export const mockApi: Api = {
       installer_edits: [], history: [], updated_at: now(),
     };
     skippedBySession[id] = new Set();
-    const messages = [msg("Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
+    const messages = [msg("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
     plan.transcript.push(...messages);
     return delay({ messages, plan: save(plan), suggestions: ["I know my yearly kWh"], ask: { field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"] } });
   },

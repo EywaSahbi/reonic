@@ -25,6 +25,7 @@ Done in phase 1: persona + flow (incl. tap-first opening, region, existing solar
 ## Decisions
 
 (one line each: what, why)
+- White-label on the customer site (Raneem): no 'reo', 'Reonic' or 'powered by' anywhere a customer sees it; the advisor is "Sonnfeld's energy advisor". Centre CTA = big character (ReoAvatar 132 px) under a "Plan my home" pill. Planner view may say reo.
 - Hero photo `app/src/assets/house-hero.jpg`: usage cleared by Raneem (2026-11-07).
 - Installer brand in demo is "Sonnfeld" (was SolarHaus Müller, renamed by Raneem 2026-11-07); persona and flow use it verbatim. Site copy in English.
 - Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).

@@ -67,7 +67,6 @@ export function App() {
 
       <footer className="home-foot" id="about">
         <span>Sonnfeld GmbH · Munich · demo site</span>
-        <span>reo · powered by Reonic</span>
         <a href="#/installer">Planner login</a>
         {USING_MOCK && <span className="mock-badge">mock API</span>}
       </footer>
@@ -82,15 +81,15 @@ export function App() {
   );
 }
 
-// Centre-stage entry to reo, where a site would put its main call to action.
-// reo's animated avatar (ReoAvatar, owned by the avatar work): follows the cursor, waves on hover, winks on click.
+// Centre-stage entry, where a site would put its main call to action: the advisor character, big, with
+// "Plan my home" above him. White-label: no product name on the installer's site (the installer licenses the software).
+// The character (ReoAvatar) follows the cursor, waves on hover, winks on click.
 function ReoEntry({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="reo-entry">
-      <button className="reo-entry-btn" onClick={onOpen} aria-label="Plan your home with reo">
-        <span className="reo-entry-face" aria-hidden><ReoAvatar size={44} /></span>
-        <span className="reo-entry-text">Plan my home with reo</span>
-        <span className="reo-entry-arrow" aria-hidden>→</span>
+      <button className="reo-entry-btn" onClick={onOpen} aria-label="Plan my home with our energy advisor">
+        <span className="reo-entry-label">Plan my home <span className="reo-entry-arrow" aria-hidden>→</span></span>
+        <span className="reo-entry-face" aria-hidden><ReoAvatar size={132} /></span>
       </button>
       <span className="reo-entry-note">Free · no sign-up · about 2 minutes</span>
     </div>

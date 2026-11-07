@@ -158,13 +158,13 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const hasDesign = !!plan && (plan.history.length > 0 || Object.keys(plan.facts).length > 0);
 
   return (
-    <div className={`widget ${hasDesign ? "widget-wide" : ""} ${variant === "stage" ? "widget-stage" : ""}`} role="dialog" aria-label="reo energy advisor">
+    <div className={`widget ${hasDesign ? "widget-wide" : ""} ${variant === "stage" ? "widget-stage" : ""}`} role="dialog" aria-label="Sonnfeld energy advisor">
       <div className="widget-head">
         <div className="reo-id">
           <span className="reo-avatar-slot" aria-hidden><ReoAvatar size={36} greet={false} winkKey={messages.length} /></span>
           <div>
             <strong>Energy advisor</strong>
-            <span>reo · powered by Reonic</span>
+            <span>Sonnfeld</span>
           </div>
         </div>
         <div className="widget-actions">
@@ -203,11 +203,11 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               )}
               {notice && <div className="voice-hint">{notice}</div>}
               {reoAudio.speaking && (
-                <div className="speaking"><span className="mic-dot" /> reo is speaking <button type="button" onClick={reoAudio.stop}>Stop</button></div>
+                <div className="speaking"><span className="mic-dot" /> Speaking <button type="button" onClick={reoAudio.stop}>Stop</button></div>
               )}
               <form className="composer" onSubmit={(e) => { e.preventDefault(); say(text); }}>
                 {voiceOn && <MicButton disabled={busy || !id} onRecorded={sendVoice} onStart={() => { reoAudio.stop(); setNotice(null); }} onError={setNotice} />}
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message reo" />
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message the energy advisor" />
                 <button type="submit" disabled={busy || !text.trim()}>Send</button>
               </form>
             </div>

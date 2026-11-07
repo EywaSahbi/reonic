@@ -15,7 +15,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
       <aside className="plan" aria-label="Your plan">
         <div className="plan-offline">
           <strong>Calculation paused</strong>
-          <p>reo can't reach its design engine right now, so there are no sizes or prices yet. Everything you've told reo is saved; the plan appears as soon as the engine is back.</p>
+          <p>We can't calculate your plan right now, so there are no sizes or prices yet. Everything you've told us is saved; the plan appears as soon as the calculation is back.</p>
         </div>
       </aside>
     );
@@ -41,7 +41,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
           </div>
         )}
         {!quoted && (
-          <div className="precision" title="The bar fills as reo learns more about your home">
+          <div className="precision" title="The bar fills as we learn more about your home">
             <span style={{ transform: `scaleX(${Math.min(100, Math.max(10, 100 - spreadPct * 2)) / 100})` }} />
           </div>
         )}
