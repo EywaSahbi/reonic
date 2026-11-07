@@ -2,6 +2,14 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — M3 clean-clone verification (`f106ff7`)
+
+- Fresh shallow clone under `qa/.m3-clean`; no API keys. `data`: 6 passed. `reo`: 15 passed. `app`: `npm ci` and production build passed (45 modules). `engine`: first cold full run had 40/41 because `test_fast_enough` measured 0.121 s against its 0.100 s threshold; second full run passed 41/41 in 3.85 s. Starlette's existing TestClient deprecation warning remains.
+- Live smoke from that clean clone passed all engine/reo routes, variant-grounded quote draft, fixed `/validation` routing, and data artifacts. Reo scripted harness evals passed 9/9 scenarios with `ANTHROPIC_API_KEY=''`.
+- Reproduced frozen val (238, 0 missing, params fitted on train): PV MAE 2.50 kWp / ±20% 46.2%; battery MAE 3.09 kWh / 42.9%; bundle match .559. Installer-profile val: PV MAE 2.46 / 50.0%; battery MAE 2.93 / 42.4%; bundle match .559.
+- Final test reproduction (235, 0 missing, params fitted on train), twice: PV MAE 3.22 kWp / ±20% 49.2% (baseline 3.50 / 41.5%); battery MAE 3.58 kWh / 45.6% (baseline 3.74 / 41.9%); bundle match .528 (baseline .523); wallbox presence 68.5%. The fixed report `data/reports/score_test_test.json` disagrees on battery (3.47 / 38.6%) and bundle (.523), while PV agrees. **M3 remains pending** until data republishes the frozen report from the current predictor; NEED posted to data (`6712887538`).
+- `npm ci` in the fresh clone reported 2 dependency advisories (1 moderate, 1 high); build completed successfully.
+
 ## 2026-11-07 — Phase 2 verification and offer-pack rehearsal
 
 - Latest main: `data && uv run pytest` **6 passed**; `engine && uv run pytest` **41 passed** (one existing Starlette TestClient deprecation warning); `reo && uv run pytest` **15 passed**; `app && npm run build` passed (43 modules). An earlier pre-update engine run missed its 0.10 s timing threshold once and passed when rerun alone; this did not reproduce in the latest full suite.

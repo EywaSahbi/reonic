@@ -8,7 +8,7 @@
 - [x] M1: engine-backed full flow, no-key fallback, hard-rule-2 customer estimate check, and `val` score reproduced; earlier response/card mismatch was fixed by reo. Variant selection stale-draft issue fixed in `35f5a3d`/`057048c`; live smoke and browser now verify refreshed draft numbers and planner edit preservation.
 - [x] Test-leak check on `engine/`: fitted params declare `split: train`; reproduced val/test prediction runs use the fixed held-out splits
 - [x] M2: offer-pack demo rehearsed without API keys; `/validation` serves fixed test, val, and installer-profile report files. Held-out test-set reproduction remains for M3 per data's instruction to rescore test once at final validation.
-- [ ] M3: final full run on a clean clone before submission
+- [ ] M3: clean-clone run from `f106ff7` passed suites, live smoke, evals and build. Current test score reproduction disagrees with published `score_test_test.json`; NEED posted to data (board comment `6712887538`); rerun score and `/validation` check after data republishes.
 
 ## Published
 
