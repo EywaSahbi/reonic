@@ -30,8 +30,8 @@ export function Installer() {
   return (
     <div className="inst">
       <header className="inst-nav">
-        <div className="brand"><span className="brand-mark" aria-hidden>☀</span> SolarHaus Müller</div>
-        <span className="inst-tag">reo · planner workspace</span>
+        <div className="brand"><span className="brand-mark" aria-hidden /> SolarHaus Müller</div>
+        <span className="inst-tag">reo · powered by Reonic</span>
         <a className="inst-link" href="#/">Customer site →</a>
       </header>
       <div className="inst-body">

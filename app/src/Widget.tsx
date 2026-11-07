@@ -128,8 +128,8 @@ export function Widget({ onClose }: { onClose: () => void }) {
         <div className="reo-id">
           <span className="reo-avatar">reo</span>
           <div>
-            <strong>reo</strong>
-            <span>Energy advisor · SolarHaus Müller</span>
+            <strong>Energy advisor</strong>
+            <span>reo · powered by Reonic</span>
           </div>
         </div>
         <div className="widget-actions">

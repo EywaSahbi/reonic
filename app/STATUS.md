@@ -25,4 +25,5 @@
 - Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).
 - Persona: reo may mention heat pump funding in general (never amounts), and aggregate "similar homes" comparisons from attached benchmarks in the customer chat; individual projects stay installer-only. Raneem's call.
 - Installer summary is templated in the UI until reo adds `Plan.summary` (NEED). Price-list editing waits for a reo `GET /prices` passthrough (NEED).
+- Visual theme = `experience/brand.md` (Reonic: zinc paper/ink, Geist, black pills, sunset only on hero word + hero card + precision bar, emerald/amber pills). Tokens live in `app/src/styles.css` :root.
 - Mock persists plans in localStorage so the installer view (next) sees handoffs from the customer tab without reo.

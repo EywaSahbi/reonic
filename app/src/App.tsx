@@ -9,7 +9,7 @@ export function App() {
     <div className="site">
       <header className="site-nav">
         <div className="brand">
-          <span className="brand-mark" aria-hidden>☀</span> SolarHaus Müller
+          <span className="brand-mark" aria-hidden /> SolarHaus Müller
         </div>
         <nav>
           <a href="#solar">Solar</a>
@@ -24,7 +24,7 @@ export function App() {
         <section className="hero">
           <div className="hero-copy">
             <p className="eyebrow">Your installer in Munich since 1998</p>
-            <h1>Your own power, planned in minutes.</h1>
+            <h1>Your own <span className="sunset-word">power</span>, planned in minutes.</h1>
             <p className="lede">
               Tell reo, our energy advisor, a little about your home. You get a first solar, battery and heat pump design
               with a price estimate straight away. Our planners then check it and send you a binding quote.
@@ -35,6 +35,7 @@ export function App() {
             </div>
           </div>
           <div className="hero-art" aria-hidden>
+            <div className="hero-art-label">Solar, battery, heat pump<small>Planned by reo, checked by our team</small></div>
             <div className="sun" />
             <div className="roof">
               {Array.from({ length: 12 }).map((_, i) => <span key={i} />)}
@@ -56,7 +57,7 @@ export function App() {
       </main>
 
       <footer className="site-foot">
-        SolarHaus Müller GmbH · demo site for the reo hackathon project
+        SolarHaus Müller GmbH · reo · powered by Reonic · demo site
         <a className="foot-link" href="#/installer">Planner login</a>
         {USING_MOCK && <span className="mock-badge">mock API</span>}
       </footer>
