@@ -28,7 +28,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
         )}
         {!quoted && (
           <div className="precision" title="The bar fills as reo learns more about your home">
-            <span style={{ width: `${Math.min(100, Math.max(10, 100 - spreadPct * 2))}%` }} />
+            <span style={{ transform: `scaleX(${Math.min(100, Math.max(10, 100 - spreadPct * 2)) / 100})` }} />
           </div>
         )}
       </div>
