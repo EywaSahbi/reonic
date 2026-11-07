@@ -58,6 +58,7 @@ type Design = {
     energy_factor: number;                                                        // COP ÷ old efficiency: heat per kWh of electricity vs per kWh of fuel (gas 3.7)
     cost_now_eur_per_year: number; cost_heatpump_eur_per_year: number;            // heat pump on grid power, at the home's tariff
     cost_factor: number | null;                                                   // now ÷ heat pump (>1 = heat pump cheaper)
+    heatpump_cheaper: boolean;                                                    // heat pump runs cheaper than today's heating on grid power: only then claim a cost benefit
     co2_now_kg_per_year: number | null; co2_heatpump_kg_per_year: number | null; co2_reduction_pct: number | null;   // null for district / other: no official factor
     note: string | null } | null;                                                 // how the heat demand was estimated, if not given
   assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];     // defaults the engine used

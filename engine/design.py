@@ -396,6 +396,7 @@ def heating_comparison(base: dict, overrides: dict):
            "energy_factor": round(p["cop"] / eff, 1),
            "cost_now_eur_per_year": round(cost_now), "cost_heatpump_eur_per_year": round(cost_hp),
            "cost_factor": round(cost_now / cost_hp, 2) if cost_hp else None,
+           "heatpump_cheaper": cost_hp < cost_now,
            "co2_now_kg_per_year": None, "co2_heatpump_kg_per_year": None, "co2_reduction_pct": None,
            "note": note["note"] if note else None}
     ef = p["co2_kg_per_kwh"]

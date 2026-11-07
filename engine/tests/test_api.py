@@ -215,3 +215,10 @@ def test_heating_comparison_gas_and_electric():
 def test_heating_comparison_without_official_co2_factor():
     hc = post({"total_demand_kwh": 4500, "heating_type": "district", "heating_demand_kwh": 18000})["heating_comparison"]
     assert hc["cost_factor"] > 1 and hc["co2_reduction_pct"] is None
+
+
+def test_heatpump_cheaper_flag_follows_prices():
+    f = {"total_demand_kwh": 4500, "heating_type": "gas", "heating_demand_kwh": 18000}
+    assert post(f)["heating_comparison"]["heatpump_cheaper"] is True
+    hc = post({**f, "electricity_price_eur_per_kwh": 0.60})["heating_comparison"]
+    assert hc["heatpump_cheaper"] is False and hc["cost_factor"] < 1
