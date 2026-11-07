@@ -47,6 +47,8 @@ const ICONS: Record<string, ReactNode> = {
   detached: S(house(22, 5)),
   semi: S(<>{house(13, 3)}{house(13, 16)}</>),
   terraced: S(<>{house(9, 2)}{house(9, 11.5)}{house(9, 21)}</>),
+  "Yes, I have solar": S(<><path d="M4 22 9 10h18l-4 12z" /><path d="M7 16h18M14 10l-2 12M20 10l-2 12" /></>),
+  "No solar yet": S(<><path d="M4 26V15l12-9 12 9v11z" /><circle cx="16" cy="18" r="3" /><path d="M16 12v1.5M16 22.5V24M10 18h1.5M20.5 18H22" /></>),
   gable: S(<path d="M3 24 16 9l13 15M7 24v4h18v-4" />),
   flat: S(<path d="M4 12h24v14H4zM4 16h24" />),
   mono: S(<path d="M4 18 28 9v17H4z" />),

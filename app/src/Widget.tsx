@@ -233,6 +233,7 @@ function choiceFacts(ask: Ask, o: string): Partial<HomeFacts> {
     if (o === "Planned") return { ev_planned: true };
     return { has_ev: false, ev_planned: false };
   }
+  if (ask.field === "has_existing_pv") return { has_existing_pv: /^yes/i.test(o) };
   const n = parseInt(o, 10); // numeric choices like "4" or "5+" (experience/flow.md Stage 1)
   return { [ask.field]: Number.isFinite(n) && /^\d/.test(o) ? n : o } as Partial<HomeFacts>;
 }
