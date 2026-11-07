@@ -387,3 +387,11 @@ h1, h2, h3 { color: var(--ink); }
 
 .dimensions .ask-field label { flex: 1; min-width: 0; font-size: 12px; color: var(--ink-500); }
 .dimensions .ask-field input { width: 100%; min-width: 0; box-sizing: border-box; }
+
+.heating-comparison { margin: 16px 0; padding: 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper-warm); }
+.heating-comparison h4 { margin: 0 0 10px; font-size: 16px; }
+.heating-comparison p { font-size: 13px; line-height: 1.5; margin: 8px 0; }
+.heating-comparison dl { display: grid; gap: 12px; margin: 14px 0; }
+.heating-comparison dt, .heating-comparison small { font-size: 11px; color: var(--ink-500); }
+.heating-comparison dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; }
+.heating-comparison small { display: block; line-height: 1.5; }

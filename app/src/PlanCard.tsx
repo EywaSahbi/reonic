@@ -1,5 +1,6 @@
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
 import { House } from "./House";
+import { HeatingComparison } from "./HeatingComparison";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
 // Display rounding only (persona.md): sizes to 1 decimal, payback to whole years.
@@ -74,6 +75,8 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
         <div><dt>Payback</dt><dd>{d.economics.payback_years !== null ? `~${Math.round(d.economics.payback_years)} yrs` : "none"}</dd></div>
         <div><dt>Own power</dt><dd>{d.economics.autarky_pct}%</dd></div>
       </dl>
+
+      {d.heating_comparison && <HeatingComparison comparison={d.heating_comparison} />}
 
       {d.assumptions.length > 0 && !quoted && (
         <div className="assumptions">

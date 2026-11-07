@@ -44,7 +44,15 @@ export type PriceList = Record<string, number>;
 
 export type PriceItem = { label: string; qty: number; unit: string; unit_price_eur: number; total_eur: number };
 
+export type HeatingComparison = {
+  fuel: string; heat_kwh: number; efficiency_now: number; cop: number; energy_factor: number;
+  cost_now_eur_per_year: number; cost_heatpump_eur_per_year: number; cost_factor: number | null;
+  heatpump_cheaper: boolean; co2_now_kg_per_year: number | null; co2_heatpump_kg_per_year: number | null;
+  co2_reduction_pct: number | null; note: string | null;
+};
+
 export type Design = {
+  heating_comparison?: HeatingComparison | null;
   components: Record<ComponentKey, Component>;
   price: { items: PriceItem[]; total_eur: number; range_eur: [number, number] };
   economics: {

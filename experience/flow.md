@@ -13,18 +13,13 @@
 
 ## Customer side
 
-### Stage 1: Hello (tap-first, no kWh needed)
+### Stage 1: Yearly electricity use, household fallback
 
-Most people don't know their kWh. reo opens with something everyone can answer with one tap; kWh stays the precise option for people who have their bill at hand.
+Open with: "Hi, I'm Sonnfeld's energy advisor. What is your yearly electricity use in kWh? You can find it on your bill, or skip and tell me how many people live at home."
 
-Opening message (`POST /sessions`). If the engine accepts `facts: {}`, include the typical-home design in this turn so the plan card already shows a wide range; otherwise the first design comes after the first tap.
-
-> Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
-
-- `ask`: `{field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"]}` (the app renders `choice` asks as big tap cards; `5+` → `num_inhabitants: 5`)
-- `suggestions`: `["I know my yearly kWh"]`
-- `I know my yearly kWh` → `ask` `{field: "total_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number"}`, chips `["About 3,000 kWh", "About 4,500 kWh"]`.
-- Free text works at any point: "we use about 4,500 kWh a year" → `total_demand_kwh: 4500` (the demo opens this way). A yearly figure the customer states is the total incl. EV and electric heating (engine contract 336060e); `annual_demand_kwh` (household only) is not asked.
+- Ask total_demand_kwh, input number, with a Skip chip.
+- If skipped, ask num_inhabitants, input choice, options 1, 2, 3, 4, 5+ (5+ maps to 5). The engine estimates demand and names that assumption.
+- Bill-confirmed use and volunteered facts satisfy the corresponding question. Existing EV use is normally in the stated total; a planned EV adds future charging in the engine.
 
 ### Stage 2: First design, immediately
 
@@ -34,39 +29,26 @@ As soon as there is `total_demand_kwh` or `num_inhabitants` (or at once, if the 
 2. One reason, from the engine.
 3. What would make it more precise, and the question for it (Stage 3).
 
-> For about 4,500 kWh a year I'd suggest roughly 8 kWp of solar (around 20 panels) with a 10 kWh battery. That would cost roughly €17,000–21,000 (estimate). The battery lets you use your own solar power in the evening. To firm this up: how do you heat your home today?
+> For about 4,500 kWh a year I'd suggest roughly 8 kWp of solar (around 20 panels) with a 10 kWh battery. That would cost roughly €17,000–21,000 (estimate). The battery lets you use your own solar power in the evening. To firm this up: what is your address, so I can estimate your roof area?
 
-### Stage 3: Refine, highest impact first
+### Stage 3: Location, EV, heating
 
-Ask for the open fields in this order. If the engine's `missing_inputs` ranks a field as `high` that is further down, ask it first.
+Follow the approved order, without re-asking known or skipped facts:
 
-| # | Field | Prompt (say why) | `ask` | Chips |
-|---|---|---|---|---|
-| 0 | `building_type` *(once engine ships it)* | "What kind of house is it? That tells me roughly how much roof and heating you have." | `choice`, options `detached, semi, terraced` | none (cards) |
-| 1 | `heating_type` | "How do you heat today? That decides whether a heat pump makes sense." | `choice`, options `gas, oil, heatpump, electric, district, other` | `Gas`, `Oil`, `Heat pump already`, `Other` |
-| 2 | `has_ev` / `ev_planned` | "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." | `choice`, field `has_ev`, options `Yes, already`, `Planned`, `No` | same as options |
-| 2b | `has_existing_pv` | "Is there solar on the roof already? Then I'd plan around it." | `choice`, options `Yes, I have solar`, `No solar yet` (→ `true` / `false`) | none (cards) |
-| 2c | `existing_pv_kwp` | only after "Yes, I have solar": "How big is it, roughly? Then I only add what's missing." | `number` | `About 5 kWp`, `About 10 kWp`, `Not sure` |
-| 3 | `roof_area_sqm` | "What's your address? I'll measure your roof from the map. You can also enter the roof's width and length, or skip." | `address` | `Enter width × length`, `Skip` |
-| 3b | `region` | "Which federal state do you live in? That sets how much sun your panels get." | `choice`, options the 16 codes `BW, BY, BE, BB, HB, HH, HE, MV, NI, NW, RP, SL, SN, ST, SH, TH` (app shows state names, sends the code) | none (cards) |
-| 4 | `house_size_sqm` (+ `house_built_year`) | only if a heat pump is in play: "How big is the living space, and roughly when was the house built? That sizes the heat pump." | `number` | `About 120 m²`, `About 160 m²` |
-| 5 | `electricity_price_eur_per_kwh` | "What do you pay per kWh? I've assumed a typical rate so far." | `number` | `About 35 ct`, `About 40 ct`, `Not sure` |
-| 6 | `budget_eur` | "Do you have a budget in mind? Then I can show what fits." | `number` | `Under €15,000`, `€15,000–25,000`, `No fixed budget` |
+| Step | Field | Ask / fallback |
+|---|---|---|
+| Location | address via roof_area_sqm ask | address input; estimate sunny roof area; Enter width × length / Skip |
+| Address skipped | region | choice of 16 federal-state codes, displayed as names; Skip allowed |
+| State also skipped or lookup failed | roof_width_m, roof_length_m | dimensions input in metres; Skip keeps the roof assumed |
+| EV | has_ev / ev_planned | Yes, already -> has_ev true; Planned -> ev_planned true; No -> both false |
+| Existing solar guard | has_existing_pv, optional existing_pv_kwp | Preserve retrofit check before handoff; a known existing_pv_kwp already implies existing solar |
+| Heating | heating_type | gas, oil, heatpump, electric, district, other; then comparison if available and handoff |
 
-**Heating (row 1), EV (row 2) and existing solar (row 2b) are always asked while unknown**, even though the engine does not list them in `missing_inputs` (it only assumes them). After those, follow the engine's `high` / `medium` inputs (roof, region, …).
+Successful address lookup proceeds to EV, without asking state/dimensions already derived. Manual dimensions can bypass lookup. Never invent skipped facts.
 
-Prefer `choice` asks wherever the answer has a few options: the app shows them as picture cards and every tap updates the plan live. `roof_type` (`gable, flat, mono, other`) can join row 3 once the engine ships it. Stop asking once the engine has no `high`-impact `missing_inputs` left, and offer the handoff (Stage 5).
+For gas/oil/district/other use Design.heating_comparison only when present. Compare a heat pump, not generic electric heating. Show annual cost estimates; claim a cost benefit only with heatpump_cheaper true. energy_factor is efficiency, not a cost factor. Null CO2 is unavailable, not zero. Electric/heatpump needs no conversion claim. Optional living-space, tariff and budget refinements must not block the main handoff flow.
 
-If address lookup does not find a roof, reo asks for `dimensions`; the app renders width and length fields and sends `{roof_width_m, roof_length_m}` to `/sessions/{id}/facts`. `Enter width × length` requests that input directly. `Skip` leaves the roof assumed and moves on.
-
-Mapping notes for reo:
-- EV chip `Yes, already` → `has_ev: true`; `Planned` → `ev_planned: true`; `No` → both `false`. Free text like "we're buying an electric car next year" → `ev_planned: true`.
-- `Not sure` / `I don't know` / skip → leave the field empty, move to the next question, mention the assumption once: "I'll assume a typical roof for now."
-- `has_existing_pv` is **always asked while unknown** (row 2b): data's reality check (7fd5ecb) showed 49 of 52 PV yes/no misses were homes that already had solar and nobody asked. `has_existing_battery`: don't ask; pick it up if mentioned.
-
-**When the design changes**, start the reply with what changed and why, before the next question:
-
-> Since you're getting an electric car, I've raised the solar to about 10.5 kWp and added an 11 kW wallbox. The new estimate is roughly €22,000–25,500. Next: how big is your roof, or shall I look up your address?
+When a design changes, explain the change from current engine reasons before the next question. Estimates remain estimates; the planner checks suitability.
 
 ### Stage 4: Questions welcome, at any point
 
@@ -87,7 +69,7 @@ Standing chips after every design turn (when nothing more specific fits): `Why t
 ### Stage 5: Handoff
 
 reo **offers** the handoff (once, then leaves the `Send to installer` chip) when any of these is true:
-- heating type, EV and existing solar are known (or skipped) **and** the price range is narrow (high ≤ 1.7 × low; market price spread alone is ~1.6×, engine 7aecd88), or
+- the main location, EV, existing-solar and heating questions are answered or skipped, or
 - the engine has no `high`-impact `missing_inputs` left, or
 - the customer asks ("send it", "I want an offer", "can someone call me").
 
