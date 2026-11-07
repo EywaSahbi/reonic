@@ -2,13 +2,14 @@
 
 ## Backlog (top = next)
 
-- [ ] Send engine a `NEED`: the inputs the form collects and the refine actions the UI offers (feeds their `CONTRACT.md` v1)
-- [ ] Vite + React + TS skeleton; typed client + mock for `engine/CONTRACT.md`; input form + design card (M0)
-- [ ] Refine flow live against the engine: change one input / lock a component → updated design, diff highlighted (M1)
+- [ ] Fill `experience/persona.md` + `experience/flow.md` → `DONE` to reo, qa (M0, unblocks reo)
+- [ ] Review `reo/CONTRACT.md` with reo; send a `NEED` for anything the UI needs (M0)
+- [ ] Vite + React + TS skeleton; typed client + mock for `reo/CONTRACT.md`; customer widget on the mock installer site (M0)
+- [ ] Customer flow live against reo: chat, chips, inputs, plan card, handoff (M1)
+- [ ] Installer view: inbox, plan detail, edits, finalise; customer sees final quote (M1)
 - [ ] `pitch/demo-script.md` first draft (M1)
-- [ ] Ask data which metrics / charts the deck will get
-- [ ] Reality-check view: proposed vs expert + metrics across projects (M2)
-- [ ] Stretch: homeowner view; validation flags
+- [ ] Flags, similar projects, "ask reo why", reality-check panel (M2)
+- [ ] Address input for the mocked lookup (M2)
 - [ ] `README.md`, deck, fallback recording (M3)
 
 ## Published

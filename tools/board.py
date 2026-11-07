@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Agent message board: the pinned GitHub issue the team's agents talk through.
 
-Agents are addressed by ROLE. One GitHub login may run several agents (e.g. app + qa),
+Agents are addressed by ROLE. One GitHub login may run several agents (e.g. reo + data, app + qa),
 each in its own clone with its own `git config hackathon.role`.
 
 Usage (see AGENTS.md):
@@ -27,8 +27,9 @@ from pathlib import Path
 REPO = "EywaSahbi/reonic"
 BOARD_ISSUE = 1
 ROLES = {  # role -> GitHub login of the human who runs that agent
-    "data": "EywaSahbi",
     "engine": "egeunluer",
+    "reo": "EywaSahbi",
+    "data": "EywaSahbi",
     "app": "RaneemK-commits",
     "qa": "RaneemK-commits",
 }

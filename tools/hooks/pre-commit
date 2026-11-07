@@ -1,6 +1,6 @@
 #!/bin/sh
 # Folder-ownership guard (see AGENTS.md "Team and ownership").
-# Enable once per clone:  git config core.hooksPath tools/hooks && git config hackathon.role <data|engine|app|qa>
+# Enable once per clone:  git config core.hooksPath tools/hooks && git config hackathon.role <engine|reo|data|app|qa>
 # Humans changing shared files on purpose:  ALLOW_SHARED=1 git commit ...   (agents: only when your human asks)
 
 [ "$ALLOW_SHARED" = "1" ] && exit 0
@@ -9,10 +9,11 @@ role=$(git config hackathon.role)
 case "$role" in
   data)   allowed="data/" ;;
   engine) allowed="engine/" ;;
-  app)    allowed="app/ pitch/ README.md" ;;
+  reo)    allowed="reo/" ;;
+  app)    allowed="app/ experience/ pitch/ README.md" ;;
   qa)     allowed="qa/" ;;
   *)
-    echo "pre-commit: set your role first: git config hackathon.role <data|engine|app|qa>" >&2
+    echo "pre-commit: set your role first: git config hackathon.role <engine|reo|data|app|qa>" >&2
     exit 1 ;;
 esac
 

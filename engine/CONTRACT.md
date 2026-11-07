@@ -1,21 +1,23 @@
-# engine/ contract (v0 draft — owner `egeunluer` agrees v1 with app at M0)
+# engine/ contract (v0 draft — owner `egeunluer` agrees v1 with reo at M0)
 
-HTTP JSON API on `http://localhost:8000`, CORS open to `http://localhost:5173`.
-Changes: additive → `CONTRACT` message to app; breaking → app must `ACK` (after M1: `DECISION`).
+HTTP JSON API on `http://localhost:8000`. Consumers: reo (all endpoints), data (via `predict.py` output).
+Changes: additive → `CONTRACT` message to reo and qa; breaking → reo must `ACK` (after M1: `DECISION`).
 
 ## Types
 
 ```ts
-// All fields optional except energy_demand_kwh; the engine fills gaps and says so in `assumptions`.
-type HomeInput = {
-  energy_demand_kwh: number;            // annual household electricity, without heat pump / EV
-  energy_price_eur_per_kwh?: number;
-  num_inhabitants?: number;
+// Every field optional. Field names are shared with data/processed/projects.parquet.
+type HomeFacts = {
+  annual_demand_kwh?: number;           // household electricity, WITHOUT EV and heat pump
+  num_inhabitants?: number;             // used to estimate demand if annual_demand_kwh is missing
   house_size_sqm?: number;
-  has_ev?: boolean; ev_annual_km?: number;
-  heating_existing_type?: "Gas" | "Oil" | "Heatpump" | "Electric" | "Other" | null;
+  house_built_year?: number;
+  heating_type?: "gas" | "oil" | "heatpump" | "electric" | "district" | "other";
   heating_demand_kwh?: number;
-  has_existing_pv?: boolean; has_existing_storage?: boolean;
+  has_ev?: boolean; ev_planned?: boolean; ev_km_per_year?: number;
+  roof_area_sqm?: number; roof_orientation_deg?: number; roof_tilt_deg?: number;   // 180 = south
+  electricity_price_eur_per_kwh?: number;
+  has_existing_pv?: boolean; existing_pv_kwp?: number; has_existing_battery?: boolean;
   budget_eur?: number;
 };
 
@@ -25,19 +27,24 @@ type Component = {
   recommended: boolean;
   size: number | null;                  // kWp (pv), kWh (battery), kW (heatpump, wallbox)
   unit: "kWp" | "kWh" | "kW";
-  confidence: number;                   // 0..1
-  alternatives: number[];               // other sensible sizes
-  locked: boolean;                      // true when the planner fixed it
-  reasons: string[];                    // short, planner-grade
+  range: [number, number] | null;       // plausible sizes given what is still unknown
+  quantity?: number;                    // e.g. number of PV modules
+  confidence: "low" | "medium" | "high";
+  locked: boolean;
+  reasons: string[];                    // 1–3, name the input that drove the decision
 };
+
+type PriceList = Record<string, number>;   // keys as returned by GET /prices
 
 type Design = {
   components: Record<ComponentKey, Component>;
-  summary: string;                      // 1–3 sentences explaining the design as a whole
-  kpis?: { self_consumption_pct?: number; autarky_pct?: number; annual_savings_eur?: number; payback_years?: number };
-  assumptions: string[];                // inputs the engine filled in
-  similar_projects?: { project_id: string; similarity: number; design: Record<ComponentKey, number | null> }[];
-  model_version: string;
+  price: { items: { label: string; qty: number; unit: string; unit_price_eur: number; total_eur: number }[];
+           total_eur: number; range_eur: [number, number] };
+  economics: { total_demand_kwh: number; self_consumption_pct: number; autarky_pct: number;
+               annual_savings_eur: number; payback_years: number | null };
+  assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];     // defaults the engine used
+  missing_inputs: { field: keyof HomeFacts; why: string; impact: "high" | "medium" | "low" }[];  // ranked
+  params_version: string;
 };
 ```
 
@@ -45,10 +52,7 @@ type Design = {
 
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
-| GET | `/health` | → `{ok: true, model_version}` | M0 |
-| POST | `/design` | `HomeInput` → `Design` | M0 stub, M1 real |
-| POST | `/refine` | `{home: HomeInput, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>}` → `Design` (locked parts kept, the rest re-derived) | M1 |
-| GET | `/projects?split=test&limit=50` | → `{project_id, home: HomeInput}[]` for the demo picker | M2 |
-| GET | `/compare/{project_id}` | → `{home, proposed: Design, expert: Record<ComponentKey, {recommended, size}>}` | M2 |
-| GET | `/metrics?split=test` | → data's score JSON for the current model | M2 |
-| POST | `/parse` (stretch) | `{home, text}` → `{home: HomeInput, changes: string[]}` natural-language refine | M2 |
+| GET | `/health` | → `{ok: true, params_version}` | M0 |
+| GET | `/prices` | → `PriceList` (defaults with labels) | M0 |
+| POST | `/design` | `{facts: HomeFacts, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>, prices?: PriceList}` → `Design` | M0 stub, M1 real |
+| POST | `/explain` | `{facts, locks?, prices?, component: ComponentKey}` → `{reasons: string[], what_if: {change: string, effect: string}[]}` | M2 |

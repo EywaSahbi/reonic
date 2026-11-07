@@ -1,27 +1,23 @@
-# app/ — UI, demo, pitch, README (owner: `RaneemK-commits`)
+# app/ — frontend, reo's creative direction, pitch (owner: `RaneemK-commits`)
 
-You own what the judges see: the planner UI, the five-minute demo story, the pitch deck and the README.
-You write only in `app/`, `pitch/` and `README.md`. You talk to the engine over HTTP only and never edit `engine/` or `data/`.
+You own everything the judges see and hear: the two reo views, reo's voice, the five-minute demo, the deck and the README.
+You write only in `app/`, `experience/`, `pitch/` and `README.md`. You talk to **reo's API only** ([reo/CONTRACT.md](../reo/CONTRACT.md)); never call the engine directly, never edit `reo/`, `engine/` or `data/`.
 
 ## Deliverables
 
-1. **Planner UI** (React + Vite + TypeScript, `:5173`), built against [engine/CONTRACT.md](../engine/CONTRACT.md):
-   - Input form with the few facts a planner knows; sensible defaults.
-   - Design card per component: on/off, size, confidence, alternatives, reasons; the overall summary.
-   - Refine: change an input or lock / resize a component → updated design, with what changed highlighted.
-   - "Checked against reality": proposed vs expert for a real test project, plus metrics across many projects.
-   - Until the engine is live, use a local mock that matches the contract exactly, behind one switch (`VITE_API_URL`).
-2. Stretch: homeowner view on the same engine (plain language, only the variants the installer allows, home data fixed); planner validation flags ("battery unusually large for a home like this").
-3. **`pitch/demo-script.md`**: the five-minute story (home described → design appears → refined, e.g. EV next year → checked against reality), with the exact inputs to type.
-4. **`pitch/`**: deck outline and content (problem, solution, evaluation, value for installers and homeowners); fallback recording plan.
-5. **`README.md`** (submission): setup, approach, evaluation results, known limitations.
+1. **`experience/persona.md` and `experience/flow.md` first** (reo's backend loads them; they unblock reo). Persona: who reo is, tone, what reo may and may not say or promise. Flow: conversation stages, which facts to ask for in which order, when reo offers the handoff, what the installer sees.
+2. **Customer view** (React + Vite + TypeScript, `:5173`): a mock installer website ("SolarHaus Müller" or similar) with the reo chat widget. Messages, quick-reply chips, inline inputs for `ask`, and a live plan card (components, sizes, price range that narrows as facts arrive, reasons). Handoff button. After the installer finalises: the final quote.
+3. **Installer view**: inbox of handed-over plans → plan detail: design with reasons and confidence, flags ("battery larger than 85% of similar homes"), similar real projects, conversation summary, edit controls (lock / resize / toggle components, change facts, edit prices) with what changed highlighted, "ask reo why", finalise and send.
+4. **Reality-check panel** (demo step 4): how the engine compares with expert designs across held-out projects (from `/validation`).
+5. Until reo is live, use a local mock that matches `reo/CONTRACT.md` exactly, behind one switch (`VITE_API_URL`).
+6. **`pitch/demo-script.md`**: the five-minute story with exact inputs (minimal facts → first design and price → more facts incl. "EV next year" → handoff → installer edit → final quote → reality check). **`pitch/`** deck content; fallback recording plan. **`README.md`** for the submission.
 
-UX principles: the planner stays in control (every value overridable, reasons visible); no black box; fast. Plain language in the homeowner view.
+UX principles: the customer always sees a useful answer immediately and knows what would make it better; the installer stays in control and can justify every number; prices are clearly estimates until the installer confirms.
 
 ## Commands
 
 ```bash
 cd app && npm install
-npm run dev          # http://localhost:5173, expects the engine on :8000 (or the mock)
+npm run dev          # http://localhost:5173, expects reo on :8001 (or the mock)
 npm run build        # must pass before you push
 ```
