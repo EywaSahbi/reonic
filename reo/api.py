@@ -27,7 +27,7 @@ import voice
 
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
-VALIDATION = HERE.parent / "data" / "processed" / "validation.json"
+REPORTS = HERE.parent / "data" / "reports"  # data/CONTRACT.md: score_<name>_<split>.json
 GREETING = ("Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system "
             "with a price estimate. To start: how many people live in your home?")
 HANDOFF_OFFER = ("This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it, usually visit "
@@ -376,7 +376,10 @@ def prices():
 
 
 @app.get("/validation")
-def validation():
-    if VALIDATION.exists():
-        return json.loads(VALIDATION.read_text(encoding="utf-8"))
+def validation(split: str = "test"):
+    """data's latest score JSON for the split (test, else val), as published; reo never edits the numbers."""
+    for sp in dict.fromkeys([split, "test", "val"]):
+        files = sorted(REPORTS.glob(f"score_*_{sp}.json"), key=lambda f: f.stat().st_mtime)
+        if files:
+            return {"available": True, "file": files[-1].name, **json.loads(files[-1].read_text(encoding="utf-8"))}
     return {"available": False, "note": "validation numbers arrive from data/score.py"}
