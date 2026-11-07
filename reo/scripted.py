@@ -27,6 +27,7 @@ CHIP_FACTS = {
     "under €15,000": {"budget_eur": 15000}, "€15,000–25,000": {"budget_eur": 25000},
     **{c.lower(): {"region": c} for c in ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]},
     "yes, i have solar": {"has_existing_pv": True}, "no solar yet": {"has_existing_pv": False},
+    "about 5 kwp": {"existing_pv_kwp": 5}, "about 10 kwp": {"existing_pv_kwp": 10},
     "gable": {"roof_type": "gable"}, "flat": {"roof_type": "flat"}, "mono": {"roof_type": "mono"},
     "detached": {"building_type": "detached"}, "semi": {"building_type": "semi"}, "terraced": {"building_type": "terraced"},
 }

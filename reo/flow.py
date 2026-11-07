@@ -14,6 +14,8 @@ QUESTIONS = [
                                 "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
     (("has_existing_pv",), {"field": "has_existing_pv", "input": "choice", "options": ["Yes, I have solar", "No solar yet"],
                             "prompt": "Do you already have solar panels on the roof? Then I'll plan around them."}),
+    (("existing_pv_kwp",), {"field": "existing_pv_kwp", "input": "number",
+                            "prompt": "Roughly how big is your existing solar system, in kWp? It's on your old offer or the inverter."}),
     (("roof_area_sqm",), {"field": "roof_area_sqm", "input": "address",
                           "prompt": "How big is the roof area that faces the sun? Or give me your address and I'll look it up."}),
     (("roof_type",), {"field": "roof_type", "input": "choice", "options": ["gable", "flat", "mono", "other"],
@@ -37,6 +39,7 @@ CHIPS = {
     "roof_area_sqm": ["About 40 m²", "About 60 m²", "Not sure"],
     "region": [],
     "has_existing_pv": ["Yes, I have solar", "No solar yet"],
+    "existing_pv_kwp": ["About 5 kWp", "About 10 kWp", "Not sure"],
     "roof_type": [],
     "house_size_sqm": ["About 120 m²", "About 160 m²"],
     "electricity_price_eur_per_kwh": ["About 35 ct", "About 40 ct", "Not sure"],
@@ -50,7 +53,7 @@ KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, 
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
     label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
-             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
+             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
     out["prompt"] = label.get(ask["field"], ask["prompt"])
@@ -75,6 +78,10 @@ def next_question(facts: dict, design: dict | None, skipped: set[str] = frozense
     for known, ask in QUESTIONS:
         if any(facts.get(f) is not None for f in known) or ask["field"] in skipped:
             continue
+        if ask["field"] == "existing_pv_kwp":
+            if facts.get("has_existing_pv"):
+                open_qs.append(ask)  # asked right after "yes, I have solar": it drives the price range
+            continue
         if ask["field"] not in _askable(design):
             continue
         if ask["field"] == "house_size_sqm" and not (design or {}).get("components", {}).get("heatpump", {}).get("recommended"):
@@ -82,12 +89,23 @@ def next_question(facts: dict, design: dict | None, skipped: set[str] = frozense
         open_qs.append(ask)
     if not open_qs:
         return None  # nothing worth asking left (flow.md stop rule)
+    # flow.md order: heating, EV and existing solar first, in that order; then the engine's high-impact inputs
+    first = [q for q in open_qs if q["field"] in ALWAYS_ASK | {"existing_pv_kwp"}]
+    if first:
+        return first[0]
     high = _missing(design, "high")
     return next((q for q in open_qs if q["field"] in high), open_qs[0])
 
 
 def offer_handoff(facts: dict, design: dict | None, skipped: set[str] = frozenset()) -> bool:
-    """flow.md Stage 5: heating, EV and existing solar known, or nothing worth asking is left."""
+    """flow.md Stage 5: heating, EV and existing solar known and the price range narrow, or nothing worth asking is left."""
     ev_known = facts.get("has_ev") is not None or facts.get("ev_planned") is not None
     pv_known = facts.get("has_existing_pv") is not None or "has_existing_pv" in skipped
-    return (facts.get("heating_type") is not None and ev_known and pv_known) or next_question(facts, design, skipped) is None
+    basics = facts.get("heating_type") is not None and ev_known and pv_known
+    return (basics and narrow(design)) or next_question(facts, design, skipped) is None
+
+
+def narrow(design: dict | None) -> bool:
+    """Price range tight enough to call the plan solid (high end at most 1.5x the low end)."""
+    lo, hi = (design or {}).get("price", {}).get("range_eur", [0, 0])
+    return lo > 0 and hi <= 1.5 * lo

@@ -4,9 +4,10 @@ import llm
 
 def test_question_order_and_stop():
     design = {"missing_inputs": [{"field": "heating_type", "impact": "high"}, {"field": "roof_area_sqm", "impact": "high"}],
-              "components": {"heatpump": {"recommended": False}}}
+              "components": {"heatpump": {"recommended": False}}, "price": {"range_eur": [17000, 21000]}}
     assert flow.next_question({"annual_demand_kwh": 4500}, design)["field"] == "heating_type"
-    assert flow.next_question({"heating_type": "gas"}, design)["field"] == "roof_area_sqm"  # high impact jumps the EV question
+    assert flow.next_question({"heating_type": "gas"}, design)["field"] == "has_ev"  # basics first, then engine high-impact
+    assert flow.next_question({"heating_type": "gas", "has_ev": False, "has_existing_pv": False}, design)["field"] == "roof_area_sqm"
     assert flow.next_question({"heating_type": "gas", "ev_planned": True}, {"missing_inputs": [], "components": {}})["field"] == "has_existing_pv"
     assert flow.next_question({"heating_type": "gas", "ev_planned": True, "has_existing_pv": False}, {"missing_inputs": [], "components": {}}) is None
     assert flow.offer_handoff({"heating_type": "gas", "has_ev": False, "has_existing_pv": False}, design)
@@ -23,3 +24,14 @@ def test_scripted_states_and_house():
     got = scripted.extract("Wir wohnen in einem Reihenhaus mit Flachdach in Hamburg")["facts"]
     assert got == {"building_type": "terraced", "roof_type": "flat", "region": "HH"}
     assert scripted.extract("wir wohnen in Niedersachsen")["facts"] == {"region": "NI"}
+
+
+def test_basics_come_first_and_existing_pv_size():
+    design = {"missing_inputs": [{"field": "electricity_price_eur_per_kwh", "impact": "high"},
+                                 {"field": "has_ev", "impact": "high"}], "components": {},
+              "price": {"range_eur": [9200, 58600]}}
+    assert flow.next_question({"num_inhabitants": 4}, design)["field"] == "heating_type"  # not EV, not price
+    assert flow.next_question({"heating_type": "gas", "ev_planned": True}, design)["field"] == "has_existing_pv"
+    f = {"heating_type": "gas", "ev_planned": True, "has_existing_pv": True}
+    assert flow.next_question(f, design)["field"] == "existing_pv_kwp"
+    assert not flow.offer_handoff(f, design)  # range far too wide to call it solid
