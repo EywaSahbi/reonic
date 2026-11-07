@@ -123,6 +123,7 @@ export type OfferPack = {
   model: string; // "claude-opus-5-5" | "scripted"
   prepared_at: string;
   chosen?: VariantName;
+  draft_for?: VariantName; // which variant customer_message_draft describes (requested from reo; optional)
   run_id?: string; // harness v1.2: live trace via GET /runs/{id}/events
 };
 

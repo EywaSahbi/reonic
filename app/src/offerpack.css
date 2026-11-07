@@ -66,3 +66,6 @@
   .op-variants, .op-grid { grid-template-columns: 1fr; }
   .op-action { grid-template-columns: 1fr; }
 }
+.op-draft-warn { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin: 0 0 8px; padding: 9px 12px; border-radius: var(--radius-sm); background: var(--warning-soft); color: var(--warning-ink); font-size: 13px; }
+.op-draft-warn strong { font-weight: 600; }
+.op-draft-warn .btn-ghost.small { padding: 4px 10px; color: var(--ink); text-decoration: underline; }

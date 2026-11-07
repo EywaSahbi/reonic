@@ -144,10 +144,22 @@ function Actions({ plan, busy, error, quoted, act }: {
   act: (key: string, f: () => Promise<Plan>, changesDesign?: boolean) => void;
 }) {
   const pack = plan.offer_pack!;
+  const current: VariantName = pack.chosen ?? pack.recommended;
   const [draft, setDraft] = useState(pack.customer_message_draft);
+  // Which variant the text in the box describes: reo's draft_for if it sends it, else the variant in use when the draft arrived.
+  const [draftFor, setDraftFor] = useState<VariantName>(pack.draft_for ?? current);
+  const [edited, setEdited] = useState(false); // planner typed in the box: never overwrite silently
+  const [incoming, setIncoming] = useState<string | null>(null); // a newer reo draft held back because of planner edits
   const [slots, setSlots] = useState<string[]>([]);
   const [slot, setSlot] = useState<string>("");
-  useEffect(() => setDraft(pack.customer_message_draft), [pack.customer_message_draft]);
+  useEffect(() => {
+    const fresh = pack.customer_message_draft;
+    if (fresh === draft) return;
+    if (edited) { setIncoming(fresh); return; }
+    setDraft(fresh);
+    setDraftFor(pack.draft_for ?? current);
+  }, [pack.customer_message_draft]);
+  const stale = draftFor !== current;
   const visit = pack.actions.find((a) => a.kind === "book_visit");
   useEffect(() => {
     if (!visit || visit.status !== "proposed") return;
@@ -163,7 +175,14 @@ function Actions({ plan, busy, error, quoted, act }: {
     <>
       <div className="op-draft">
         <label htmlFor="op-draft"><h4>Message to the customer</h4><span className="muted small">sent with the quote, as you leave it here</span></label>
-        <textarea id="op-draft" rows={4} value={draft} onChange={(e) => setDraft(e.target.value)} disabled={quoted || sendQuote?.status !== "proposed"} />
+        {stale && sendQuote?.status === "proposed" && (
+          <div className="op-draft-warn" role="status">
+            This message was written for the <strong>{draftFor}</strong> offer, but you chose <strong>{current}</strong>. Check the sizes and price before sending.
+            {incoming && <button type="button" className="btn-ghost small" onClick={() => { setDraft(incoming); setDraftFor(pack.draft_for ?? current); setIncoming(null); setEdited(false); }}>Use reo's updated message</button>}
+          </div>
+        )}
+        <textarea id="op-draft" rows={4} value={draft} disabled={quoted || sendQuote?.status !== "proposed"}
+          onChange={(e) => { setDraft(e.target.value); setEdited(true); setDraftFor(current); }} />
       </div>
 
       <div>
