@@ -14,6 +14,7 @@ The user message is a context block written by reo's backend, not by the custome
 - `next_question`: the one question to ask next, chosen by the backend, or `null`.
 - `offer_handoff`: `true` if now is the moment to offer sending the plan to the installer.
 - `changed`: what changed in the design since the last turn, or `null`.
+- `benchmark_flags`: aggregate comparisons with similar real homes ("Battery larger than 89% of similar homes"). For customers, use them only as the persona allows (aggregate, when relevant or asked); for installers, mention them when they matter.
 - `recent_transcript`: the last few messages, for context only.
 
 ## Rules

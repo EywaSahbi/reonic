@@ -6,7 +6,7 @@
 - [x] Verified live against engine stub 3c0b18b: full demo (kWh, Gas, EV, why battery, Bavaria, handoff, installer edit + ask, finalise) works
 - [ ] LLM turns take ~6 s (Opus 5.5, effort low); consider a faster model if the demo feels slow (human call)
 - [ ] Offline/scripted replies in German when the customer writes German (now English only)
-- [ ] Flags + similar projects from data's benchmarks; `/plans/{id}/ask`; `/validation` (M2)
+- [x] Flags + similar projects from data's benchmarks (`evidence.py`); `/plans/{id}/ask`; `/validation` (M2)
 - [x] Voice via ElevenLabs (`voice.py`, `/sessions/{id}/voice`, `/tts`, `/health.voice`)
 - [ ] Mocked address lookup for the demo addresses (M2)
 
@@ -26,4 +26,5 @@
 - `region` (engine 718cd3f) asked after roof as a choice of state codes; extracted from state or city names.
 - Customer-stated yearly kWh -> `total_demand_kwh` (engine 336060e), not `annual_demand_kwh`.
 - Engine down -> contract-shaped design with no numbers (`params_version: engine-offline`), reo says it can't calculate; installer edits return 503.
+- Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.

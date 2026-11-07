@@ -35,6 +35,7 @@ type Turn = {
 Behaviour notes (v1):
 - `design.params_version === "engine-offline"` means the engine was unreachable: the design carries no numbers (sizes `null`, totals `0`) and reo says so. Never shown as a real design.
 - Chip taps sent as `/messages` text (exact chip/option texts) and `/facts` answer instantly without the LLM.
+- `flags` (aggregate, from data's `benchmarks.json`) are set every turn. `similar_projects` (individual train homes) are filled once handed over and returned **only by installer endpoints** (`/plans/...`); customer responses always carry `[]`.
 - Locks from `/plans/{id}/edit` persist across later edits (merged per component); prices likewise.
 - A yearly kWh figure from the customer goes to `total_demand_kwh` (engine contract 336060e); the kWh ask uses that field.
 

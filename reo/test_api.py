@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 import api
 import engine
+import evidence
 
 
 def fake_design(facts, locks=None, prices=None):
@@ -61,6 +62,9 @@ def test_demo_flow(tmp_path, monkeypatch):
     p = c.post(f"/sessions/{pid}/handoff", json={"name": "Anna"}).json()
     assert p["status"] == "handed_over" and "summary" in p
     assert [x["id"] for x in c.get("/plans?status=handed_over").json()] == [pid]
+    if evidence.DATA.joinpath("benchmarks.json").exists():  # data published: evidence for the installer only
+        assert len(c.get(f"/plans/{pid}").json()["similar_projects"]) == 3
+        assert c.get(f"/sessions/{pid}").json()["similar_projects"] == []
 
     p = c.post(f"/plans/{pid}/edit", json={"locks": {"battery": {"recommended": True, "size": 12}}}).json()
     assert p["design"]["components"]["battery"]["size"] == 12

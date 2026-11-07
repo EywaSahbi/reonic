@@ -143,7 +143,7 @@ def extract(text: str, facts: dict, last_question: str | None = None) -> dict | 
 
 def reply(*, audience: str, latest_message: str, facts: dict, engine_result: dict | None,
           next_question: dict | None = None, offer_handoff: bool = False, changed: str | None = None,
-          transcript: list[dict] | None = None) -> str | None:
+          transcript: list[dict] | None = None, flags: list[dict] | None = None) -> str | None:
     """reo's words for this turn, phrased from the engine result only, or None."""
     system = PERSONA_FILE.read_text(encoding="utf-8") + "\n\n" + RULES_FILE.read_text(encoding="utf-8")
     context = {
@@ -154,6 +154,7 @@ def reply(*, audience: str, latest_message: str, facts: dict, engine_result: dic
         "next_question": next_question and next_question["prompt"],
         "offer_handoff": offer_handoff,
         "changed": changed,
+        "benchmark_flags": [f["text"] for f in flags or []],
         "recent_transcript": (transcript or [])[-8:],
     }
     return _call(system, json.dumps(context, ensure_ascii=False), max_tokens=8000)

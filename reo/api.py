@@ -20,6 +20,7 @@ from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import engine
+import evidence
 import flow
 import llm
 import scripted
@@ -62,11 +63,17 @@ def _get(db: dict, pid: str) -> tuple[dict, dict]:
     return db["plans"][pid], db["state"][pid]
 
 
-def out(plan: dict) -> dict:
-    """Plan as the app sees it; the installer summary is derived on the way out."""
+def out(plan: dict, installer: bool = False) -> dict:
+    """Plan as the app sees it. Customer responses never carry other homes (similar_projects)."""
     if plan["status"] != "drafting":
         plan = {**plan, "summary": scripted.summary(plan)}
-    return plan
+    return plan if installer else {**plan, "similar_projects": []}
+
+
+def attach_evidence(plan: dict) -> None:
+    plan["flags"] = evidence.flags(plan["facts"], plan["design"])
+    if plan["status"] != "drafting":
+        plan["similar_projects"] = evidence.similar_projects(plan["facts"])
 
 
 def reo_msg(plan: dict, text: str) -> dict:
@@ -101,6 +108,7 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     plan["facts"].update(new)
     d, ok = _design(plan, st)
     plan["design"] = d
+    attach_evidence(plan)
     if new:
         plan["history"].append({"at": now(), "trigger": text, "total_eur": d["price"]["total_eur"]})
     changed = scripted.changes(before, d) if new and had_numbers else None
@@ -116,7 +124,8 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
         reply = OFFLINE_TEXT + (" " + ask["prompt"] if ask else "")
     elif free_text:
         reply = llm.reply(audience="customer", latest_message=text, facts=plan["facts"], engine_result=d,
-                          next_question=ask, offer_handoff=offer, changed=changed, transcript=plan["transcript"])
+                          next_question=ask, offer_handoff=offer, changed=changed, transcript=plan["transcript"],
+                          flags=plan["flags"])
     if reply is None:
         reply = template(d, intent, topic, new, changed, had_numbers, ask, offer)
     m = reo_msg(plan, reply)
@@ -275,6 +284,7 @@ def handoff(pid: str, body: Handoff):
         plan, _ = _get(db, pid)
         plan["status"] = "handed_over"
         plan["customer"] = {"name": body.name, **({"email": body.email} if body.email else {})}
+        attach_evidence(plan)
         reo_msg(plan, f"Done. Your plan is with SolarHaus Müller, {body.name}. "
                       "You'll see the final quote here once your planner has confirmed it.")
         plan["updated_at"] = now()
@@ -305,7 +315,7 @@ class Finalize(BaseModel):
 
 @app.get("/plans")
 def list_plans(status: str | None = None):
-    plans = [p for p in _load()["plans"].values() if not status or p["status"] == status]
+    plans = [p for p in _load()["plans"].values() if not status or p["status"] == status]  # installer inbox
     plans.sort(key=lambda p: p["updated_at"], reverse=True)
     return [{"id": p["id"], "customer": p["customer"], "total_eur": p["design"]["price"]["total_eur"],
              "status": p["status"], "updated_at": p["updated_at"]} for p in plans]
@@ -313,7 +323,7 @@ def list_plans(status: str | None = None):
 
 @app.get("/plans/{pid}")
 def get_plan(pid: str):
-    return out(_get(_load(), pid)[0])
+    return out(_get(_load(), pid)[0], installer=True)
 
 
 @app.post("/plans/{pid}/edit")
@@ -336,9 +346,10 @@ def edit_plan(pid: str, body: Edit):
         plan["installer_edits"].append({"at": now(), "change": ", ".join(what) or "no change",
                                         "before": before, "after": d["price"]["total_eur"]})
         plan["history"].append({"at": now(), "trigger": "installer edit", "total_eur": d["price"]["total_eur"]})
+        attach_evidence(plan)
         plan["updated_at"] = now()
         _save(db)
-        return out(plan)
+        return out(plan, installer=True)
 
 
 @app.post("/plans/{pid}/ask")
@@ -348,7 +359,7 @@ def ask_plan(pid: str, body: Ask):
     if d is None:
         return {"answer": "The calculation isn't reachable right now, so I can't explain the numbers yet."}
     answer = llm.reply(audience="installer", latest_message=body.text, facts=plan["facts"], engine_result=d,
-                       transcript=plan["transcript"])
+                       transcript=plan["transcript"], flags=evidence.flags(plan["facts"], d))  # aggregate only, no other homes
     return {"answer": answer or scripted.answer(d, scripted.extract(body.text)["topic"])}
 
 
@@ -364,7 +375,7 @@ def finalize(pid: str, body: Finalize):
                       + (f" {body.note}" if body.note else ""))
         plan["updated_at"] = now()
         _save(db)
-        return out(plan)
+        return out(plan, installer=True)
 
 
 @app.get("/prices")
