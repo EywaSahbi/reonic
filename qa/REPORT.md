@@ -2,6 +2,15 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — full M1 live flow, data, and score reproduction
+
+- `cd data && uv run pytest`: passed, 3 tests; `cd engine && uv run pytest`: passed, 34 tests; `cd reo && uv run pytest`: passed, 7 tests; `cd app && npm run build`: passed.
+- `cd data && uv run python ../qa/smoke.py --skip-engine --skip-reo`: passed data contract checks for 1,571 rows, unique project IDs, exact fixed 1,098/238/235 split coverage, no customer across splits, and `benchmarks.json` built from train. Full smoke against current engine `:8004` and reo `:8005` passed all live routes, including `/explain`, `/validation`, handoff/edit/finalize, plus data checks.
+- Started current engine + reo + app on QA-local ports with Anthropic and ElevenLabs keys blank; `/health` reported `llm=false`, `voice=false`, `engine=true`. Browser walk passed 4,500 kWh → 35 ct tariff → gas → 60 m² roof → Bavaria → planned EV → handoff as QA Test → installer battery 9→10 kWh → re-derived total/payback → “Why this battery size?” → finalize → customer sees confirmed quote.
+- **BLOCKED to reo:** after selecting Gas, reo said `€13,200–63,600`; the same-turn plan card showed `€13,200–63,700` while the raw engine range was `[13190, 63650]`. This same-turn price mismatch violates the number-source check; board report posted with reproduction details.
+- `cd engine && uv run python ../qa/reproduce_score.py --split both`: passed with 0 missing predictions and params fitted on `train`. Current `val` (238): PV MAE 2.49 kWp / within ±20% 45.9%; battery MAE 2.79 kWh / 38.2%; bundle match 55.9%. Current `test` (235): PV MAE 3.22 kWp / within ±20% 49.2% vs baseline 41.5%; battery MAE 3.47 kWh / 38.6% vs baseline 41.9%; wallbox presence 68.5%; bundle match 52.3%. Outputs were kept in a temporary folder under `qa/` and removed after each run.
+- `/validation` is available but still returns `data/reports/score_all_val.json` (`model: all`, commit `10e725a`), predating the current fitted design. NEED posted to data to publish the current val report. `pitch/demo-script.md` is not present; NEED posted to app for the draft before rehearsal.
+
 ## 2026-11-07 — engine M0 stub (`3c0b18b`, contract addition `718cd3f`)
 
 - `cd engine && uv run pytest`: initially passed 25 tests; after the reasons/assumptions fix (`1031712`), passed 26 tests, including `test_reasons_match_facts`. One upstream Starlette `TestClient` deprecation warning was reported.

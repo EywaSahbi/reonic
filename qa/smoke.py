@@ -94,7 +94,10 @@ def check_design(value: object, label: str) -> None:
     assert isinstance(economics, dict), f"{label}.economics must be object"
     for key in ("total_demand_kwh", "self_consumption_pct", "autarky_pct", "annual_savings_eur"):
         assert isinstance(economics.get(key), (int, float)), f"{label}.economics.{key} must be numeric"
+    for key in ("bill_today_eur_per_month", "bill_after_eur_per_month"):
+        assert isinstance(economics.get(key), (int, float)), f"{label}.economics.{key} must be numeric"
     assert economics.get("payback_years") is None or isinstance(economics.get("payback_years"), (int, float)), f"{label}.economics.payback_years must be numeric/null"
+    assert value.get("bundle") in (None, "S", "M", "L", "XL"), f"{label}.bundle invalid"
     assert isinstance(value["assumptions"], list), f"{label}.assumptions must be array"
     assert isinstance(value["missing_inputs"], list), f"{label}.missing_inputs must be array"
     assert isinstance(value["params_version"], str), f"{label}.params_version must be string"
@@ -135,6 +138,12 @@ def engine_checks(results: list[str]) -> None:
     results.append("PASS engine GET /health")
     prices = call(ENGINE, "/prices")
     assert isinstance(prices, dict), "GET /prices must return a price-list object"
+    assert prices and all(isinstance(v, (int, float)) for v in prices.values()), "GET /prices values must be numeric"
+    for key in prices:
+        if key.endswith("_low"):
+            assert key.removesuffix("_low") + "_high" in prices, f"GET /prices missing high bound for {key}"
+        if key.endswith("_high"):
+            assert key.removesuffix("_high") + "_low" in prices, f"GET /prices missing low bound for {key}"
     results.append("PASS engine GET /prices")
     for design_facts in DEMAND_FACTS:
         design = call(ENGINE, "/design", {"facts": design_facts})
@@ -168,13 +177,9 @@ def engine_checks(results: list[str]) -> None:
     assert ev_notes == ["no EV today, one is planned"], \
         "planned EV assumption must not claim there is no planned EV"
     results.append("PASS engine explanations and assumptions match gas heating and planned EV facts")
-    try:
-        explanation = call(ENGINE, "/explain", {"facts": FACTS, "component": "pv"})
-    except NotPublished:
-        results.append("SKIP engine POST /explain: later milestone")
-    else:
-        assert isinstance(explanation, dict) and isinstance(explanation.get("reasons"), list) and isinstance(explanation.get("what_if"), list), "POST /explain response shape invalid"
-        results.append("PASS engine POST /explain")
+    explanation = call(ENGINE, "/explain", {"facts": FACTS, "component": "pv"})
+    assert isinstance(explanation, dict) and isinstance(explanation.get("reasons"), list) and isinstance(explanation.get("what_if"), list), "POST /explain response shape invalid"
+    results.append("PASS engine POST /explain")
 
 
 def reo_checks(results: list[str]) -> None:
@@ -261,29 +266,36 @@ def reo_checks(results: list[str]) -> None:
         results.append("PASS reo finalize")
     except NotPublished:
         results.append("SKIP finalize: M1 endpoint")
-    try:
-        validation = call(REO, "/validation")
-        assert isinstance(validation, dict), "GET /validation must return JSON object"
-        if validation.get("available") is False:
-            results.append("SKIP reo GET /validation: data report not published")
-        else:
-            assert "split" in validation and "components" in validation, "GET /validation score shape invalid"
-            results.append("PASS reo GET /validation")
-    except NotPublished:
-        results.append("SKIP validation: M2 endpoint")
+    validation = call(REO, "/validation")
+    assert isinstance(validation, dict), "GET /validation must return JSON object"
+    if validation.get("available") is False:
+        results.append("SKIP reo GET /validation: no score report available")
+    else:
+        assert "split" in validation and "components" in validation, "GET /validation score shape invalid"
+        results.append("PASS reo GET /validation")
 
 
 def data_check() -> str:
     table = ROOT / "data" / "processed" / "projects.parquet"
     splits = ROOT / "data" / "processed" / "split.csv"
-    if not table.exists() or not splits.exists():
-        return "SKIP data artifacts: projects.parquet or split.csv not published"
+    benchmarks = ROOT / "data" / "processed" / "benchmarks.json"
+    if not table.exists() or not splits.exists() or not benchmarks.exists():
+        return "SKIP data artifacts: projects.parquet, split.csv, or benchmarks.json not published"
     try:
         import pandas as pd
     except ImportError:
         return "SKIP data artifacts: pandas unavailable"
     frame = pd.read_parquet(table)
-    required = {"project_id", "annual_demand_kwh", "has_pv", "pv_kwp", "has_battery", "battery_kwh", "has_heatpump", "heatpump_kw", "has_wallbox", "wallbox_kw"}
+    required = {
+        "project_id", "installer", "option_id", "target_source",
+        "annual_demand_kwh", "num_inhabitants", "house_size_sqm", "house_built_year",
+        "heating_type", "heating_demand_kwh", "has_ev", "ev_km_per_year",
+        "electricity_price_eur_per_kwh", "has_existing_pv", "existing_pv_kwp",
+        "has_existing_battery", "existing_battery_kwh", "has_existing_wallbox",
+        "existing_heating_electricity_kwh", "has_pv", "pv_kwp", "pv_modules",
+        "has_battery", "battery_kwh", "has_heatpump", "heatpump_kw", "has_wallbox", "wallbox_kw",
+        "customer_contact_id",
+    }
     missing = required - set(frame.columns)
     assert not missing, f"projects.parquet missing columns: {sorted(missing)}"
     assert frame.project_id.notna().all() and frame.project_id.is_unique, "project_id must be non-null and unique"
@@ -292,7 +304,19 @@ def data_check() -> str:
     assert split_frame.project_id.notna().all() and split_frame.project_id.is_unique, "split project_id must be non-null and unique"
     assert set(split_frame.split) <= {"train", "val", "test"}, "split has unknown labels"
     assert set(frame.project_id) == set(split_frame.project_id), "split must cover exactly the processed projects"
-    return f"PASS data artifacts: {len(frame)} unique projects; split covers all projects"
+    counts = split_frame.split.value_counts().to_dict()
+    assert counts == {"train": 1098, "val": 238, "test": 235}, f"unexpected fixed split counts: {counts}"
+    by_customer = frame[["project_id", "customer_contact_id"]].merge(split_frame, on="project_id")
+    assert by_customer.customer_contact_id.notna().all(), "customer_contact_id must be populated for leak check"
+    assert by_customer.groupby("customer_contact_id").split.nunique().max() == 1, \
+        "a customer appears in more than one split"
+    with benchmarks.open(encoding="utf-8") as f:
+        benchmark_data = json.load(f)
+    assert benchmark_data.get("built_from") == "train", "benchmarks must be built from train only"
+    assert benchmark_data.get("n_train") == counts["train"], "benchmark n_train differs from fixed train split"
+    assert isinstance(benchmark_data.get("segments"), list) and benchmark_data["segments"], \
+        "benchmarks must include segments"
+    return f"PASS data artifacts: {len(frame)} projects; fixed split is leak-free; benchmarks built from train"
 
 
 def main() -> int:
