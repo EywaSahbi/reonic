@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
+import { OfferPackPanel } from "./OfferPack";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -149,6 +150,8 @@ function PlanDetail({ id }: { id: string }) {
 
       {isOffline(d) && <div className="flag flag-warn">⚠ Design engine unreachable: no sizes or prices in this plan yet. Edits and finalise need the engine.</div>}
 
+      <OfferPackPanel plan={plan} onPlan={setPlan} onDesignChange={(next) => { setChange(diff(plan.design, next.design)); setPlan(next); }} />
+
       {change && (
         <div className="change-banner" role="status">
           <strong>Re-derived:</strong> {change.text}
@@ -235,7 +238,9 @@ function PlanDetail({ id }: { id: string }) {
         {quoted ? (
           <p><strong>Quote sent.</strong> The customer now sees the confirmed plan and price on the website.</p>
         ) : (
-          <>
+          plan.offer_pack?.status === "ready" ? (
+            <p className="muted">Send the quote from the offer pack above ("Send the quote to the customer" → Approve).</p>
+          ) : <>
             <label htmlFor="note">Note to the customer <span className="muted">(optional, sent as written)</span></label>
             <textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. We checked your roof photos; 12 kWh fits your evening usage better." />
             <button className="btn-primary" onClick={finalize} disabled={busy || isOffline(d)}>Finalise and send quote · {eur(d.price.total_eur)}</button>

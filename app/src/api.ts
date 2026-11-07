@@ -1,5 +1,5 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
-import type { Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
+import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
 import { mockApi } from "./mock";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "";
@@ -30,6 +30,14 @@ export type Api = {
   askPlan(id: string, text: string): Promise<{ answer: string }>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
   validation(): Promise<unknown>;
+  preparePlan(id: string): Promise<Plan>;
+  chooseVariant(id: string, name: VariantName): Promise<Plan>;
+  approveAction(id: string, actionId: string, payload?: Record<string, unknown>): Promise<Plan>;
+  rejectAction(id: string, actionId: string, reason?: string): Promise<Plan>;
+  getRun(runId: string): Promise<Run>;
+  /** Live steps of a run (SSE, replays past steps first). Returns a close function. */
+  watchRun(runId: string, onStep: (s: RunStep) => void, onDone: (d: { status: Run["status"]; duration_s: number | null }) => void): () => void;
+  calendarSlots(): Promise<{ slots: string[] }>;
 };
 
 const httpApi: Api = {
@@ -53,6 +61,19 @@ const httpApi: Api = {
   askPlan: (id, text) => call("POST", `/plans/${id}/ask`, { text }),
   finalizePlan: (id, note) => call("POST", `/plans/${id}/finalize`, { note }),
   validation: () => call("GET", "/validation"),
+  preparePlan: (id) => call("POST", `/plans/${id}/prepare`, {}),
+  chooseVariant: (id, name) => call("POST", `/plans/${id}/variant`, { name }),
+  approveAction: (id, actionId, payload) => call("POST", `/plans/${id}/actions/${actionId}/approve`, payload ? { payload } : {}),
+  rejectAction: (id, actionId, reason) => call("POST", `/plans/${id}/actions/${actionId}/reject`, reason ? { reason } : {}),
+  getRun: (runId) => call("GET", `/runs/${runId}`),
+  watchRun(runId, onStep, onDone) {
+    const es = new EventSource(BASE.replace(/\/$/, "") + `/runs/${runId}/events`);
+    es.addEventListener("step", (e) => onStep(JSON.parse((e as MessageEvent).data)));
+    es.addEventListener("done", (e) => { onDone(JSON.parse((e as MessageEvent).data)); es.close(); });
+    es.onerror = () => es.close(); // the timeline keeps what it has; the pack itself still polls
+    return () => es.close();
+  },
+  calendarSlots: () => call("GET", "/calendar/slots"),
 };
 
 export const api: Api = USING_MOCK ? mockApi : httpApi;

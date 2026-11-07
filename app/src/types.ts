@@ -72,6 +72,7 @@ export type Plan = {
   history: { at: string; trigger: string; total_eur: number }[];
   updated_at: string;
   summary?: string; // reo's installer paragraph, set once handed over
+  offer_pack?: OfferPack; // installer endpoints only (reo v1.1)
 };
 
 export type Ask = {
@@ -94,3 +95,57 @@ export type Health = { ok: boolean; llm: boolean; voice: boolean; engine: boolea
 export const isOffline = (d: Design) => d.params_version === "engine-offline";
 
 export type Locks = Partial<Record<ComponentKey, { recommended: boolean; size?: number }>>;
+
+// ---- reo phase 2 (reo/CONTRACT.md v1.1, f1d56f1) ----
+export type VariantName = "Basic" | "Recommended" | "Independence";
+export type Variant = { name: VariantName; locks: Locks; design: Design; why: string; stale?: boolean }; // stale: after installer edits (v1.2)
+export type Action = {
+  id: string;
+  kind: "book_visit" | "send_quote" | "create_crm_task" | "request_document";
+  label: string;
+  payload: Record<string, unknown>;
+  status: "proposed" | "approved" | "done" | "rejected";
+  result?: string;
+  at?: string;
+};
+export type TraceStep = { step: number; tool: string; summary: string };
+export type OfferPack = {
+  status: "preparing" | "ready" | "failed";
+  variants: Variant[];
+  recommended: VariantName;
+  flags: Plan["flags"];
+  site_visit_checklist: string[];
+  open_questions: string[];
+  customer_message_draft: string;
+  actions: Action[];
+  trace: TraceStep[];
+  duration_s: number;
+  model: string; // "claude-opus-5-5" | "scripted"
+  prepared_at: string;
+  chosen?: VariantName;
+  run_id?: string; // harness v1.2: live trace via GET /runs/{id}/events
+};
+
+// ---- reo agent harness (reo/CONTRACT.md v1.2, cfb01fd) ----
+export type RunStep = {
+  n: number;
+  kind: "think" | "tool" | "guard";
+  tool?: string;
+  effect?: "read" | "propose" | "execute";
+  args_summary: string;
+  result_summary: string;
+  ms: number;
+  ok?: boolean; // guards: false = violation
+};
+export type Run = {
+  id: string;
+  skill: "chat_turn" | "offer_prep" | "goal_planner" | "bill_reader" | "installer_qa" | "follow_up";
+  plan_id: string;
+  trigger: string;
+  status: "running" | "done" | "failed" | "needs_approval";
+  steps: RunStep[];
+  output: unknown | null;
+  model: string;
+  started_at: string;
+  duration_s: number | null;
+};

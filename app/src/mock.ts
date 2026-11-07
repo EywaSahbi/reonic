@@ -2,7 +2,7 @@
 // shortcut: fake sizing + prices (numbers are placeholders, NOT engine output); delete once reo serves M1.
 // Plans persist in localStorage so the installer view (another tab) sees handed-over plans.
 import type { Api } from "./api";
-import type { Ask, Component, Design, HomeFacts, Locks, Message, Plan, PriceList, Turn } from "./types";
+import type { Ask, Component, Design, HomeFacts, Locks, Message, Plan, PriceList, Turn, Variant, VariantName } from "./types";
 
 const KEY = "reo-mock-plans";
 const now = () => new Date().toISOString();
@@ -306,6 +306,7 @@ export const mockApi: Api = {
       { project_id: "mock-p-1302", facts: { total_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
     ];
     plan.transcript.push(msg(`Done. Your plan is with SolarHaus Müller, ${name}. You'll see the final quote here once your planner has confirmed it.`));
+    startPrep(plan);
     return delay(save(plan));
   },
 
@@ -318,7 +319,7 @@ export const mockApi: Api = {
       .map((p) => ({ id: p.id, customer: p.customer, status: p.status, updated_at: p.updated_at, total_eur: p.design.price.total_eur })));
   },
 
-  async getPlan(id) { return delay(get(id)); },
+  async getPlan(id) { return delay(advancePrep(get(id))); },
 
   async editPlan(id, edit) {
     const plan = get(id);
@@ -350,6 +351,56 @@ export const mockApi: Api = {
     return delay(save(plan));
   },
 
+  async preparePlan(id) { const plan = get(id); startPrep(plan); return delay(save(plan)); },
+
+  async chooseVariant(id, name) {
+    const plan = advancePrep(get(id));
+    const v = plan.offer_pack?.variants.find((x) => x.name === name);
+    if (!plan.offer_pack || !v) throw new Error(`mock: no variant ${name}`);
+    const before = plan.design.price.total_eur;
+    plan.design = design(plan.facts, v.locks);
+    plan.offer_pack.chosen = name;
+    plan.installer_edits.push({ at: now(), change: `variant ${name}`, before, after: plan.design.price.total_eur });
+    plan.history.push({ at: now(), trigger: `variant ${name}`, total_eur: plan.design.price.total_eur });
+    return delay(save(plan));
+  },
+
+  async approveAction(id, actionId, payload) {
+    const plan = advancePrep(get(id));
+    const pack = plan.offer_pack;
+    const a = pack?.actions.find((x) => x.id === actionId);
+    if (!pack || !a || a.status !== "proposed") throw new Error(`mock: action ${actionId} not proposed`);
+    a.payload = { ...a.payload, ...payload };
+    a.status = "done";
+    a.at = now();
+    if (a.kind === "book_visit") a.result = `Site visit booked for ${a.payload.slot} (mock calendar)`;
+    if (a.kind === "create_crm_task") a.result = "Task created in CRM (mock log)";
+    if (a.kind === "request_document") a.result = "Request sent to the customer (mock)";
+    if (a.kind === "send_quote") {
+      plan.status = "quoted";
+      const note = typeof a.payload.message === "string" ? a.payload.message : "";
+      plan.transcript.push(msg(`Your planner has confirmed your plan, total ${eur(plan.design.price.total_eur)} (confirmed by SolarHaus Müller).${note ? " " + note : ""}`));
+      a.result = "Quote sent to the customer";
+    }
+    pack.trace.push({ step: pack.trace.length + 1, tool: a.kind === "book_visit" ? "calendar" : a.kind === "send_quote" ? "quote" : "crm", summary: `approved by planner: ${a.result}` });
+    return delay(save(plan));
+  },
+
+  async rejectAction(id, actionId) {
+    const plan = advancePrep(get(id));
+    const a = plan.offer_pack?.actions.find((x) => x.id === actionId);
+    if (!a || a.status !== "proposed") throw new Error(`mock: action ${actionId} not proposed`);
+    a.status = "rejected";
+    a.at = now();
+    return delay(save(plan));
+  },
+
+  async calendarSlots() { return delay({ slots: nextSlots() }); },
+
+  // The mock has no harness runs; the timeline falls back to offer_pack.trace.
+  async getRun(runId) { throw new Error(`mock: no run ${runId}`); },
+  watchRun() { return () => {}; },
+
   async validation() { return delay({ note: "mock: reality-check numbers arrive from data/score.py via reo" }); },
 
   // Mock voice: no speech-to-text in the browser, so "heard" is the next demo line the plan still needs.
@@ -375,4 +426,81 @@ function respondToFacts(plan: Plan, facts: Partial<HomeFacts>, trigger: string, 
   }
   const lead = changes.length ? `Got it, so I've ${changes.join(" and ")}. The new estimate is roughly ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}.` : `Thanks, noted. The estimate is now roughly ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}.`;
   return nextTurn(plan, skipped, [lead]);
+}
+
+// ---- mock offer agent (reo/CONTRACT.md v1.1): scripted pack, ready ~4 s after handoff ----
+// shortcut: fixed lock sets like reo's scripted mode; numbers come from the mock design(), not from reo.
+function nextSlots(): string[] {
+  const out: string[] = [];
+  const d = new Date();
+  for (let i = 1; out.length < 4; i++) {
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
+    if (x.getDay() === 0 || x.getDay() === 6) continue;
+    const day = x.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+    out.push(`${day}, ${out.length % 2 ? "14:00" : "09:00"}`);
+  }
+  return out;
+}
+
+function startPrep(plan: Plan) {
+  plan.offer_pack = {
+    status: "preparing", variants: [], recommended: "Recommended", flags: plan.flags, site_visit_checklist: [], open_questions: [],
+    customer_message_draft: "", actions: [], trace: [{ step: 1, tool: "plan.read", summary: "read the handed-over plan" }],
+    duration_s: 0, model: "scripted", prepared_at: now(),
+  };
+}
+
+const PREP_STEPS: [string, string][] = [
+  ["plan.read", "read the handed-over plan"],
+  ["evidence.similar", "checked 12 similar homes (mock)"],
+  ["engine.design", "Basic: smaller battery"],
+  ["engine.design", "Recommended: reo's design"],
+  ["engine.design", "Independence: bigger PV + battery"],
+  ["guard", "numbers verified against engine results"],
+];
+
+function advancePrep(plan: Plan): Plan {
+  const pack = plan.offer_pack;
+  if (!pack || pack.status !== "preparing") return plan;
+  const elapsed = (Date.now() - Date.parse(pack.prepared_at)) / 1000;
+  pack.trace = PREP_STEPS.slice(0, Math.min(PREP_STEPS.length, 1 + Math.floor(elapsed / 0.7))).map(([tool, summary], i) => ({ step: i + 1, tool, summary }));
+  if (elapsed < 4.2) return save(plan);
+
+  const c = plan.design.components;
+  const pv = c.pv.size ?? 6;
+  const bat = c.battery.recommended ? c.battery.size ?? 8 : 0;
+  const variant = (name: VariantName, locks: Locks, why: (d: Design) => string): Variant => {
+    const d = design(plan.facts, locks);
+    return { name, locks, design: d, why: why(d) };
+  };
+  const slots = nextSlots();
+  Object.assign(pack, {
+    status: "ready",
+    variants: [
+      variant("Basic", { battery: bat > 5 ? { recommended: true, size: 5 } : { recommended: false } },
+        (d) => `Lowest price: ${eur(d.price.total_eur)}, ${d.components.battery.recommended ? `${d.components.battery.size} kWh battery` : "no battery"}, payback ~${d.economics.payback_years ?? "-"} yrs.`),
+      variant("Recommended", {}, (d) => `reo's design: ${d.components.pv.size} kWp + ${d.components.battery.size ?? 0} kWh, ${d.economics.autarky_pct}% own power, ${eur(d.price.total_eur)}.`),
+      variant("Independence", { pv: { recommended: true, size: Math.round(pv * 1.3 * 2) / 2 }, battery: { recommended: true, size: Math.max(10, bat + 3) } },
+        (d) => `Most own power: ${d.economics.autarky_pct}% with ${d.components.pv.size} kWp + ${d.components.battery.size} kWh, ${eur(d.price.total_eur)}.`),
+    ],
+    recommended: "Recommended",
+    flags: plan.flags,
+    site_visit_checklist: [
+      "Check roof condition and usable area",
+      "Photo of the meter cabinet",
+      "Space for battery and inverter",
+      ...(c.wallbox.recommended ? ["Cable route to the wallbox"] : []),
+      ...(plan.facts.has_existing_pv ? ["Existing PV: inverter model and age"] : []),
+    ],
+    open_questions: plan.design.missing_inputs.slice(0, 3).map((m) => `${String(m.field)}: ${m.why}`),
+    customer_message_draft: `Hello ${plan.customer.name ?? ""}, thank you for your request. Based on your details we recommend ${pv} kWp of solar${bat ? ` with a ${bat} kWh battery` : ""} for about ${eur(plan.design.price.total_eur)}. We would like to visit to check the roof before confirming the final price.`,
+    actions: [
+      { id: "a1", kind: "book_visit", label: "Book the site visit", payload: { slot: slots[0] }, status: "proposed" },
+      { id: "a2", kind: "request_document", label: "Ask for a photo of the electricity bill", payload: {}, status: "proposed" },
+      { id: "a3", kind: "create_crm_task", label: "Create CRM task: follow up in 3 days", payload: {}, status: "proposed" },
+      { id: "a4", kind: "send_quote", label: "Send the quote to the customer", payload: {}, status: "proposed" },
+    ],
+    duration_s: 4.2,
+  });
+  return save(plan);
 }
