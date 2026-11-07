@@ -3,7 +3,7 @@
 ## Backlog (top = next)
 
 - [x] `smoke.py` v0 from the first `engine/CONTRACT.md` and `data/CONTRACT.md`
-- [ ] Rewrite `smoke.py` for the restructured `engine/CONTRACT.md` and the new `reo/CONTRACT.md` (v0 targets the retired engine contract)
+- [x] Rewrite `smoke.py` for the restructured `engine/CONTRACT.md` and the new `reo/CONTRACT.md` (v0 targets the retired engine contract)
 - [ ] Verify each M0 `DONE` (engine stub, reo stub, data table + split, app skeleton) as it lands
 - [ ] M1: end-to-end demo walk; fallback without API key; hard-rule-2 number check; reproduce engine's `val` score
 - [ ] Test-leak check on `engine/`
@@ -12,7 +12,7 @@
 
 ## Published
 
-- `qa/smoke.py` v0: health/design/refine shape checks and optional processed-data/split integrity checks (old engine contract; to be rewritten).
+- `qa/smoke.py` v1: current engine + reo contract checks and optional processed-data/split integrity checks; later milestone endpoints skip on 404/405.
 
 ## Decisions
 
