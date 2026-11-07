@@ -114,3 +114,26 @@ def test_address_lookup(tmp_path, monkeypatch):
     assert t["messages"][0]["text"].startswith("I looked up your address")
     t = c.post(f"/sessions/{pid}/address", json={"address": "Irgendwo 1"}).json()
     assert t["ask"]["field"] == "roof_area_sqm"
+
+
+def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
+    import roof
+    c = client(tmp_path, monkeypatch)
+    monkeypatch.setattr(roof, "lookup", lambda a: None)  # building not on the map
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Unbekannt 1"}).json()
+    assert t["ask"]["input"] == "dimensions" and t["suggestions"] == ["Skip"]
+    t = c.post(f"/sessions/{pid}/facts", json={"facts": {"roof_width_m": 8, "roof_length_m": 6}}).json()
+    assert t["plan"]["facts"]["roof_area_sqm"] == 48  # width x length, the engine fits modules from the sides
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "the roof is 10 x 5.5 m"}).json()
+    assert t["plan"]["facts"]["roof_area_sqm"] == 55
+    pid2 = c.post("/sessions", json={}).json()["plan"]["id"]
+    c.post(f"/sessions/{pid2}/address", json={"address": "Unbekannt 1"})
+    t = c.post(f"/sessions/{pid2}/messages", json={"text": "Skip"}).json()
+    assert "roof_area_sqm" not in t["plan"]["facts"] and (t.get("ask") or {}).get("field") != "roof_area_sqm"
+
+
+def test_roof_geometry():
+    import roof
+    assert abs(roof.area_sqm([(0, 0), (0, 0.0001), (0.0001, 0.0001), (0.0001, 0)]) - 123.6) < 1
+    assert roof.sunny_area(100, "flat") == 100 and round(roof.sunny_area(100, "gable")) == 61 and round(roof.sunny_area(100, "mono")) == 122

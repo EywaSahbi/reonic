@@ -16,8 +16,8 @@ QUESTIONS = [
                             "prompt": "Do you already have solar panels on the roof? Then I'll plan around them."}),
     (("existing_pv_kwp",), {"field": "existing_pv_kwp", "input": "number",
                             "prompt": "Roughly how big is your existing solar system, in kWp? It's on your old offer or the inverter."}),
-    (("roof_area_sqm",), {"field": "roof_area_sqm", "input": "address",
-                          "prompt": "How big is the roof area that faces the sun? Or give me your address and I'll look it up."}),
+    (("roof_area_sqm", "roof_width_m"), {"field": "roof_area_sqm", "input": "address",
+                          "prompt": "What's your address? I'll measure your roof from the map. You can also enter the roof's width and length, or skip."}),
     (("roof_type",), {"field": "roof_type", "input": "choice", "options": ["gable", "flat", "mono", "other"],
                       "prompt": "What shape is your roof? That decides how the panels are mounted."}),
     (("region",), {"field": "region", "input": "choice", "options": REGIONS,
@@ -36,7 +36,7 @@ CHIPS = {
     "building_type": [],
     "heating_type": ["Gas", "Oil", "Heat pump already", "Other"],
     "has_ev": ["Yes, already", "Planned", "No"],
-    "roof_area_sqm": ["About 40 m²", "About 60 m²", "Not sure"],
+    "roof_area_sqm": ["Enter width × length", "Skip"],
     "region": [],
     "has_existing_pv": ["Yes, I have solar", "No solar yet"],
     "existing_pv_kwp": ["About 5 kWp", "About 10 kWp", "Not sure"],
@@ -47,13 +47,14 @@ CHIPS = {
 }
 STANDING_CHIPS = ["Why this size?", "What does it cost?", "Send to installer"]
 OPENING_ASK = {"field": "num_inhabitants", "prompt": "People in your home", "input": "choice", "options": ["1", "2", "3", "4", "5+"]}
+DIMS_ASK = {"field": "roof_area_sqm", "prompt": "Sunny roof face: width × length (m)", "input": "dimensions"}  # app sends /facts {roof_width_m, roof_length_m}
 KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, from your bill)", "input": "number"}
 
 
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
     label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
-             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
+             "roof_area_sqm": "Your address (we measure the roof from the map)", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
     out["prompt"] = label.get(ask["field"], ask["prompt"])

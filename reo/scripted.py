@@ -35,6 +35,7 @@ CHIP_INTENTS = {
     "yes, send it": ("handoff", None), "send to installer": ("handoff", None), "send it": ("handoff", None),
     "not sure": ("skip", None), "no fixed budget": ("skip", None), "not yet": ("continue", None),
     "i know my yearly kwh": ("kwh", None),
+    "enter width × length": ("dims", None), "enter width x length": ("dims", None), "skip": ("skip", None),
     "yes, that's right": ("bill_yes", None), "not quite": ("bill_no", None),
     "keep it under €20,000": ("goal", "budget"), "as independent as possible": ("goal", "independence"),
     "lowest monthly bill": ("goal", "lowest_bill"),
@@ -67,7 +68,9 @@ def extract(text: str, last_field: str | None = None) -> dict:
         facts["total_demand_kwh"] = _num(m.group(1))  # as stated, incl. EV/heating (engine contract)
     if m := re.search(r"(\d+)\s*(people|persons|person|personen|leute)", t):
         facts["num_inhabitants"] = int(m.group(1))
-    if m := re.search(r"(\d[\d.,]*)\s*(m²|m2|qm|square)", t):
+    if m := re.search(r"(\d+(?:[.,]\d+)?)\s*m?\s*(?:x|×|\*|mal|by|auf)\s*(\d+(?:[.,]\d+)?)\s*m\b", t):
+        facts["roof_width_m"], facts["roof_length_m"] = _num(m.group(1)), _num(m.group(2))
+    elif m := re.search(r"(\d[\d.,]*)\s*(m²|m2|qm|square)", t):
         key = "roof_area_sqm" if re.search(r"roof|dach", t) or last_field == "roof_area_sqm" else (
             "house_size_sqm" if re.search(r"living|wohn|house|haus", t) else last_field or "roof_area_sqm")
         if key in ("roof_area_sqm", "house_size_sqm"):

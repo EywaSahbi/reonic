@@ -28,7 +28,8 @@ type Turn = {
   messages: Message[];                   // new reo messages this turn
   plan: Plan;
   suggestions: string[];                 // quick-reply chips
-  ask?: { field: keyof HomeFacts; prompt: string; input: "number" | "boolean" | "choice" | "address"; options?: string[] };
+  ask?: { field: keyof HomeFacts; prompt: string; input: "number" | "boolean" | "choice" | "address" | "dimensions"; options?: string[] };
+  // "dimensions": two number fields (width, length in m) -> POST /facts {roof_width_m, roof_length_m}
 };
 ```
 
@@ -36,6 +37,7 @@ Behaviour notes (v1):
 - `design.params_version === "engine-offline"` means the engine was unreachable: the design carries no numbers (sizes `null`, totals `0`) and reo says so. Never shown as a real design.
 - Chip taps sent as `/messages` text (exact chip/option texts) and `/facts` answer instantly without the LLM.
 - `flags` (aggregate, from data's `benchmarks.json`) are set every turn. `similar_projects` (individual train homes) are filled once handed over and returned **only by installer endpoints** (`/plans/...`); customer responses always carry `[]`.
+- Roof: the roof ask is `input: "address"` with chips `Enter width × length` / `Skip`. Width × length (from `/facts` or free text "8 x 6 m") is sent to the engine as `roof_width_m`, `roof_length_m` plus `roof_area_sqm` = width × length; the engine caps PV modules to the roof (engine NEED 21:10).
 - Locks from `/plans/{id}/edit` persist across later edits (merged per component); prices likewise.
 - A yearly kWh figure from the customer goes to `total_demand_kwh` (engine contract 336060e); the kWh ask uses that field.
 
@@ -47,7 +49,7 @@ Behaviour notes (v1):
 | POST | `/sessions` | `{}` → `Turn` (greeting; zero-fact design once engine allows `facts: {}`) | done |
 | POST | `/sessions/{id}/messages` | `{text}` → `Turn` | done |
 | POST | `/sessions/{id}/facts` | `{facts: Partial<HomeFacts>}` → `Turn` (no LLM) | done |
-| POST | `/sessions/{id}/address` | `{address}` → `Turn` (mocked roof lookup for the demo addresses in `reo/addresses.json`: roof area, orientation, tilt, roof type, region; any other address → asks for roof m²) | done |
+| POST | `/sessions/{id}/address` | `{address}` → `Turn & {roof?: {source: "OpenStreetMap" \| "demo data", label, footprint_sqm?}}`: demo addresses (`reo/addresses.json`) offline, any other German address via OpenStreetMap (Nominatim + building outline → estimated sunny roof area, region, roof type); not found → `ask` input `"dimensions"` + chip `Skip` | done |
 | POST | `/sessions/{id}/handoff` | `{name, email?}` → `Plan` (status `handed_over`) | done |
 | GET | `/sessions/{id}` | → `Plan` (customer sees the final quote once `quoted`) | done |
 

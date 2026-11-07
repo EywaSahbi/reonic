@@ -6,6 +6,7 @@
 - [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [x] installer_qa on the harness (Sonnet 5.5 / scripted)
 - [x] Mocked address lookup (`addresses.json`: Musterstraße München, Hauptstraße Hamburg, Lindenweg Dresden)
+- [x] Roof from address via OpenStreetMap (roof.py), width x length input, skip; waiting on engine for the hard module cap (NEED 21:10)
 - [ ] chat_turn onto the harness; German scripted replies; follow_up (stretch)
 
 - [x] `CONTRACT.md` v1; API (`api.py`) with plan store, all customer + installer endpoints, Claude loop, scripted fallback, engine-offline mode (M0/M1)
@@ -38,5 +39,6 @@
 - bill_reader: facts from the bill wait for the customer's 'Yes, that's right' before they enter the plan.
 - Harness: models get `read`/`propose` tools only; `evidence.similar` (individual homes) is NOT a model tool (hard rule 5), the model sees aggregate percentiles only. Grounding guard: every number in output text within persona rounding of a tool-result number of the same run; small counts <= 12 allowed.
 - Customer-side engine calls send prices {heatpump_subsidy_share: 0}: no grant line or post-grant price in the customer chat (persona + app FYI 20:27, until Raneem decides); installer views and the offer pack keep the KfW line. A planner-approved quote shows whatever the planner sent.
+- Roof lookup: OpenStreetMap (EywaSahbi's choice over Google Solar: free, no key). Overpass was at capacity, so building outlines come from the OSM map API (0.4 s). Sunny face = footprint (flat) or footprint / cos 35° / 2 (pitched), said as an estimate. Address goes to OSM (third party), only for that lookup; results cached in roof_cache.json (gitignored).
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.

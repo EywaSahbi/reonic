@@ -43,6 +43,7 @@ FACT_TYPES = {
     "roof_area_sqm": float, "roof_orientation_deg": float, "roof_tilt_deg": float,
     "electricity_price_eur_per_kwh": float, "has_existing_pv": bool, "existing_pv_kwp": float,
     "has_existing_battery": bool, "budget_eur": float, "region": str, "building_type": str, "roof_type": str,
+    "roof_width_m": float, "roof_length_m": float,
 }
 ENUMS = {"heating_type": HEATING, "building_type": ["detached", "semi", "terraced"], "roof_type": ["gable", "flat", "mono", "other"]}
 REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]
@@ -67,6 +68,7 @@ EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar
   for region the German federal state code ({", ".join(REGIONS)}), e.g. Bavaria/Bayern -> BY, a city -> its state.
   Yearly electricity use as the customer states it (e.g. from the bill) -> total_demand_kwh; annual_demand_kwh only if
   they say it excludes the car and heating.
+  Roof measured as width x length ("8 by 6 m", "8 x 6 Meter") -> roof_width_m and roof_length_m, not roof_area_sqm.
   Units: kWh per year, m², euros, EUR per kWh (35 ct -> 0.35), degrees with 180 = south.
   "we're buying an electric car" -> ev_planned true; "we have an EV" -> has_ev true; "no car" -> has_ev false and ev_planned false.
   Kilometres: put them in the field matching what was said (per year, per week or per day), no conversion.

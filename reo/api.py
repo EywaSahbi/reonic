@@ -24,6 +24,7 @@ import engine
 import evidence
 import flow
 import llm
+import roof
 import scripted
 import voice
 from harness import tools as htools
@@ -118,6 +119,13 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
         return {"messages": [m], "plan": out(plan), "suggestions": ["About 3,000 kWh", "About 4,500 kWh"], "ask": flow.KWH_ASK}
     if intent == "goal" and topic in GOALS:
         return goal_turn(db, plan, st, new, topic)
+    if intent == "dims":
+        st["last_ask"] = "roof_area_sqm"
+        m = reo_msg(plan, "Sure. How wide and how long is the roof face that gets the sun, in metres? For example \"8 x 6 m\".")
+        return {"messages": [m], "plan": out(plan), "suggestions": ["Skip"], "ask": flow.DIMS_ASK}
+    if new.get("roof_width_m") and new.get("roof_length_m"):
+        # customer's own measurement: the area is their fact (width x length); the engine fits modules from the sides
+        new = {**new, "roof_area_sqm": round(new["roof_width_m"] * new["roof_length_m"], 1)}
     if intent == "kwh":
         st["last_ask"] = "total_demand_kwh"
         m = reo_msg(plan, "Great, that's the most precise. What does your bill say per year?")
@@ -381,21 +389,21 @@ def send_bill(pid: str, image: UploadFile = File(...)):
 
 @app.post("/sessions/{pid}/address")
 def send_address(pid: str, body: Address):
-    """Mocked roof lookup for the demo addresses (addresses.json); anything else asks for the roof size."""
-    hit = next((a for a in json.loads((HERE / "addresses.json").read_text(encoding="utf-8"))["addresses"]
-                if a["match"] in body.address.lower().replace("ß", "ss").replace("strasse", "str")), None)
+    """Roof from the address: demo addresses offline, else OpenStreetMap building outline (roof.py).
+    Not found -> offer width x length or skip."""
+    hit = roof.lookup(body.address)  # network call outside the lock
     with _lock:
         db = _load()
         plan, st = _get(db, pid)
         plan["transcript"].append({"role": "customer", "text": body.address, "at": now()})
         if hit is None:
             st["last_ask"] = "roof_area_sqm"
-            m = reo_msg(plan, "I can't look up that address. Could you tell me roughly how big the sunny side of your roof is, in m²?")
+            m = reo_msg(plan, "I couldn't find that building on the map. You can enter the roof's width and length instead, or skip it.")
             _save(db)
-            return {"messages": [m], "plan": out(plan), "suggestions": ["About 40 m²", "About 60 m²", "Not sure"],
-                    "ask": {"field": "roof_area_sqm", "prompt": "Roof area (m²)", "input": "number"}}
+            return {"messages": [m], "plan": out(plan), "suggestions": ["Skip"], "ask": flow.DIMS_ASK}
         turn = customer_turn(db, pid, {"facts": dict(hit["facts"]), "intent": "facts", "topic": None}, f"address: {hit['label']}", False)
         turn["messages"][0]["text"] = f"I looked up your address: {hit['say']}. " + turn["messages"][0]["text"]
+        turn["roof"] = {"source": hit["source"], "label": hit["label"], **({"footprint_sqm": hit["footprint_sqm"]} if "footprint_sqm" in hit else {})}
         _save(db)
         return turn
 
