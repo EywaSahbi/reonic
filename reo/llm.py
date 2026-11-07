@@ -25,37 +25,59 @@ PERSONA_FILE = HERE.parent / "experience" / "persona.md"  # owned by app, loaded
 RULES_FILE = HERE / "prompt.md"
 log = logging.getLogger("reo.llm")
 
-_NUM, _BOOL = {"type": ["number", "null"]}, {"type": ["boolean", "null"]}
-FACT_FIELDS = {
-    "annual_demand_kwh": _NUM, "num_inhabitants": _NUM, "house_size_sqm": _NUM, "house_built_year": _NUM,
-    "heating_type": {"anyOf": [{"type": "string", "enum": ["gas", "oil", "heatpump", "electric", "district", "other"]},
-                               {"type": "null"}]},
-    "heating_demand_kwh": _NUM, "has_ev": _BOOL, "ev_planned": _BOOL,
-    "ev_km_per_year": _NUM, "ev_km_per_week": _NUM, "ev_km_per_day": _NUM,
-    "roof_area_sqm": _NUM, "roof_orientation_deg": _NUM, "roof_tilt_deg": _NUM,
-    "electricity_price_eur_per_kwh": _NUM, "has_existing_pv": _BOOL, "existing_pv_kwp": _NUM,
-    "has_existing_battery": _BOOL, "budget_eur": _NUM,
+# HomeFacts field -> type. The model returns facts as a list of {field, value-as-text}; a flat schema
+# compiles fast, while one optional property per field is rejected by the API as too complex.
+HEATING = ["gas", "oil", "heatpump", "electric", "district", "other"]
+FACT_TYPES = {
+    "annual_demand_kwh": float, "num_inhabitants": int, "house_size_sqm": float, "house_built_year": int,
+    "heating_type": str, "heating_demand_kwh": float, "has_ev": bool, "ev_planned": bool,
+    "ev_km_per_year": float, "ev_km_per_week": float, "ev_km_per_day": float,
+    "roof_area_sqm": float, "roof_orientation_deg": float, "roof_tilt_deg": float,
+    "electricity_price_eur_per_kwh": float, "has_existing_pv": bool, "existing_pv_kwp": float,
+    "has_existing_battery": bool, "budget_eur": float,
 }
 EXTRACT_SCHEMA = {
     "type": "object",
     "properties": {
-        "facts": {"type": "object", "properties": FACT_FIELDS, "required": list(FACT_FIELDS), "additionalProperties": False},
+        "facts": {"type": "array", "items": {
+            "type": "object",
+            "properties": {"field": {"type": "string", "enum": list(FACT_TYPES)}, "value": {"type": "string"}},
+            "required": ["field", "value"], "additionalProperties": False}},
         "intent": {"type": "string", "enum": ["facts", "question", "skip", "handoff", "other"]},
-        "topic": {"anyOf": [{"type": "string", "enum": ["pv", "battery", "heatpump", "wallbox", "price", "savings"]},
-                            {"type": "null"}]},
+        "topic": {"type": "string", "enum": ["pv", "battery", "heatpump", "wallbox", "price", "savings", "none"]},
     },
     "required": ["facts", "intent", "topic"],
     "additionalProperties": False,
 }
-EXTRACT_SYSTEM = """You read one message from a homeowner chatting with a solar installer's assistant and return JSON.
-- facts: only what this message states or clearly corrects; null for everything else. Never guess or fill defaults.
+EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar installer's assistant and return JSON.
+- facts: one {{field, value}} per fact this message states or clearly corrects; nothing else. Never guess or fill defaults.
+  value is text: a plain number ("4500", "0.35"), "true"/"false", or for heating_type one of {", ".join(HEATING)}.
   Units: kWh per year, m², euros, EUR per kWh (35 ct -> 0.35), degrees with 180 = south.
   "we're buying an electric car" -> ev_planned true; "we have an EV" -> has_ev true; "no car" -> has_ev false and ev_planned false.
   Kilometres: put them in the field matching what was said (per year, per week or per day), no conversion.
   A bare answer like "4" or "yes" answers the question named in last_question.
 - intent: facts (gives information), question (asks why / what if / how much), skip (doesn't know or skips),
   handoff (wants to send the plan, get an offer or be contacted), other (anything else).
-- topic: what a question is about, else null."""
+- topic: what a question is about, else none."""
+
+
+def _typed_facts(pairs: list[dict]) -> dict:
+    """[{field, value: text}] -> HomeFacts with proper types; drops anything that doesn't parse."""
+    facts = {}
+    for p in pairs:
+        field, raw, kind = p["field"], p["value"].strip().lower(), FACT_TYPES.get(p["field"])
+        try:
+            if kind is bool:
+                if raw in ("true", "false"):
+                    facts[field] = raw == "true"
+            elif kind is str:
+                if raw in HEATING:
+                    facts[field] = raw
+            elif kind is not None:
+                facts[field] = kind(float(raw.replace(",", "")))
+        except ValueError:
+            pass
+    return facts
 
 
 def _client() -> anthropic.Anthropic | None:
@@ -104,7 +126,8 @@ def extract(text: str, facts: dict, last_question: str | None = None) -> dict | 
         data = json.loads(out)
     except json.JSONDecodeError:
         return None
-    data["facts"] = {k: v for k, v in data["facts"].items() if v is not None}
+    data["facts"] = _typed_facts(data["facts"])
+    data["topic"] = None if data["topic"] == "none" else data["topic"]
     return data
 
 
