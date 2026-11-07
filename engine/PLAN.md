@@ -1,41 +1,31 @@
 # engine/ plan: from Step 0 to the full design
 
-Step 0 (`inputs.py`) gives PV kWp, module count, the roof check and the heat-pump suggestion. This plan closes every gap to the `Design` in [CONTRACT.md](CONTRACT.md). Order = build order.
+Step 0 (`inputs.py`) gave PV kWp, module count, the roof check and the heat-pump suggestion. This plan closed every gap to the `Design` in [CONTRACT.md](CONTRACT.md). Status 2026-11-07: **all items built**; open points at the end.
 
-## What the data says about Step 0 first
-
-`tools/derive_c.py` over 1,243 expert projects: **c = 1.93** (experts install PV that produces about twice the yearly demand; IQR 1.41–2.67). But c is **not constant**:
-
-| D (kWh/yr) | ≤ 3,000 | 3–4k | 4–5k | 5–6k | 6–8k | 8–12k | > 12k |
-|---|---|---|---|---|---|---|---|
-| Expert kWp (median) | 7.4 | 8.6 | 9.0 | 10.0 | 10.5 | 11.4 | 13.9 |
-| c (median) | 3.08 | 2.50 | 2.06 | 1.87 | 1.54 | 1.35 | 0.99 |
-
-Small homes get relatively much more PV. A fixed c misses experts by 2.9 kWp (median absolute error), worse than giving everyone 9.5 kWp (2.1). A straight line `kWp = 6.7 + 0.58 × D_MWh` matches 2.1. So step 1 of the plan is a better sizing rule; the roof check and everything below stay the same.
-
-## The plan
-
-| # | Gap | How, building on Step 0 | Needs |
+| # | Gap | How it is built | Where |
 |---|---|---|---|
-| 1 | **PV sizing rule** | Replace `kWp = D × c / Y` by `kWp = (a + b × D) × Y_nat / Y_region` (line fitted on the expert designs, region scales it). Keep c as the explanation ("produces ~1.9× your demand"). Compare fixed c, line and demand bands with `predict.py` | dataset |
-| 2 | **Existing PV** | New kWp = max(0, kWp − `existing_pv_kwp`); no battery rule change | — |
-| 3 | **Orientation and tilt** | Y × `orientation_factors[aspect/tilt]` from `params.json` (contract 180 = south → PVGIS aspect = deg − 180, nearest stored value) | done in params |
-| 4 | **Usable roof share** | A_roof × u before the roof check, u ≈ 0.75 until the Reonic experts answer | expert question |
-| 5 | **Wallbox** | Recommend 11 kW when `has_ev` or `ev_planned` and no existing wallbox (11 kW is the dataset's dominant size; 22 kW needs grid-operator approval) | — |
-| 6 | **Heat-pump size (kW)** | kW = Q_heat / full-load hours (~2,000 h/yr), snapped to the sizes in the data (5–12 kW). Q_heat from `heating_demand_kwh`, else `house_size_sqm` × specific demand by `house_built_year`, else open question | published specific demand values |
-| 7 | **Hourly simulation (Step 4)** | 8,760 hours: H0 load profile (BDEW) × D, PVGIS hourly yield per region (stored once like Y), simple battery. Numpy, < 10 ms. Gives self-consumption and autarky for any (PV, battery) | H0 profile, PVGIS hourly |
-| 8 | **Battery yes/no and kWh** | Candidates from the dataset's catalogue sizes (5, 8, 10, 15 kWh …); pick with the ratio to PV that experts use (r_B, median battery / kWp) and check the gain in autarky from #7. No battery without PV, none when one exists | dataset, #7 |
-| 9 | **Price** | `prices.json`: public German market ranges (€/kWp falling with size, €/kWh battery, heat pump by kW incl. installation, wallbox, fixed fees). Line items × sizes = total; `range_eur` from low/high prices and the size ranges. Request `prices` overrides keys | market sources |
-| 10 | **Economics** | From #7: self-consumed kWh × tariff + exported kWh × feed-in rate (EEG) = savings; payback = total / savings; `bill_today` / `bill_after` per month (app's NEED); heat pump: saved gas/oil cost minus its electricity | #7, #9 |
-| 11 | **Ranges** | Re-run sizing at the low / high plausible value of each missing input (D: dataset quartiles; region: lowest / highest state Y; roof unknown: no cap). Size range = min / max over these runs | — |
-| 12 | **`missing_inputs` ranked** | Same runs as #11: impact of a field = how far it moves kWp and price. Rank high / medium / low by that | #11 |
-| 13 | **Reasons and confidence** | Templates naming the driving input ("7,200 kWh incl. your EV → 12.5 kWp", "roof holds 18 of 22 modules"). Confidence from range width ÷ size (< 10% high, < 30% medium, else low) | #11 |
-| 14 | **Locks** | Apply after each rule: a locked component keeps its value, the rest re-derives from it (battery from locked PV, heat-pump PV from the roof left, price and economics recomputed) | #1–#10 |
-| 15 | **API** | `api.py` (FastAPI, :8000): `/health`, `/prices`, `/design` per contract, CORS for :5173 and :8001. Stub first (real Step 0 PV, simple rules for the rest), then each item above replaces a stub part | — |
-| 16 | **Evaluation** | `predict.py` runs `/design` logic on every dataset project and writes predictions; scored per component (PV kWp error, battery yes/no and kWh, wallbox, heat pump), per installer. c and the line in #1 come from the same projects, so PV numbers are in-sample for those 1–2 parameters; reported as such | dataset |
+| 1 | **PV sizing rule** | `kWp = (5.86 + 0.623 × D_MWh) × Y_nat / Y_home`, line fitted through demand-band medians of the expert designs (fixed c = 1.93 missed by 2.9 kWp, the line by 2.0) | `inputs.py`, `tools/derive_params.py` |
+| 2 | **Existing PV** | New kWp = line − `existing_pv_kwp` (default 5 kWp if only `has_existing_pv`); battery sized on existing + new | `inputs.py`, `design.py` |
+| 3 | **Orientation and tilt** | Y × PVGIS factor for the nearest stored aspect / tilt; flat roof without orientation = east-west 15° | `inputs.py` |
+| 4 | **Usable roof share** | roof × 0.75 before the roof check (*placeholder*, question for the Reonic experts) | `params.json` |
+| 5 | **Wallbox** | 11 kW when `has_ev` or `ev_planned` | `design.py` |
+| 6 | **Heat-pump kW** | heat demand ÷ 2,000 full-load hours → nearest size offered in the data (5, 7, 10, 12 kW); heat from `heating_demand_kwh`, else `house_size_sqm` × typical demand by `house_built_year`, else the dataset median 15,800 kWh | `inputs.py` |
+| 7 | **Hourly simulation** | 8,760 h: H0 × household, EV 18–22 h, heat pump by degree hours; PVGIS 2019 hourly PV; battery 95% each way, 0.5 C | `sim.py`, `tools/derive_profiles.py` |
+| 8 | **Battery** | Yes whenever there is PV and no battery (95% of expert PV offers have one); size = nearest catalogue size (5–18 kWh, offered ≥ 20× in the data) to 0.93 kWh per kWp; the simulation gives the autarky gain shown as its reason | `design.py` |
+| 9 | **Price** | `prices.json`: base + per-unit price with low / high from public German market ranges; line items, total, `range_eur`; request `prices` overrides fix a key | `prices.json`, `design.py` |
+| 10 | **Economics** | Before vs after from the simulation: import × tariff − export × feed-in (7.86 ct), plus fuel cost replaced by a heat pump; savings, payback, autarky, self-consumption, monthly bills | `design.py` |
+| 11 | **Ranges** | Re-run the design at the low / high plausible value of each missing input (`params.json` `plausible`); range = min / max size over the runs | `design.py` |
+| 12 | **`missing_inputs` ranked** | Same runs: impact = largest relative move of PV kWp, price or savings (high ≥ 15%, medium ≥ 5%); the roof check's own level is a floor | `design.py` |
+| 13 | **Reasons and confidence** | Templates naming the driving input; confidence from range width ÷ size (< 10% high, < 30% medium) | `design.py` |
+| 14 | **Locks** | Locked component keeps its value; battery re-derives from locked PV, heat-pump PV from the roof left, price and economics recomputed | `design.py` |
+| 15 | **API** | `/health`, `/prices`, `/design`, `/explain` (what-ifs), CORS for :5173 / :8001, ~15–35 ms per design | `api.py` |
+| 16 | **Evaluation** | `predict.py` over all 1,593 projects → `out/predictions_all.csv` (data's format) + `out/score_all.json`; scores in [STATUS.md](STATUS.md) | `predict.py`, `dataset.py` |
+| + | **Budget** (`budget_eur`) | Battery steps down, then PV, until the price fits; noted in reasons and assumptions | `design.py` |
 
-## Milestones
+## Open points
 
-- **Now (M0):** #15 stub → reo shows real PV numbers.
-- **M1 (Sat 23:30):** #1, #2, #5, #7, #8, #9, #10, #11, #12, #14, #16 first scores.
-- **M2:** #3, #4, #6, #13 polish, `/explain`.
+- Battery size within ±20% of the expert's: 37% vs 41% for "always the median size". Experts cluster on 5 and 10 kWh more than the ratio rule does.
+- Heat pumps: the dataset has no roof areas, so the engine never suggests one there (13 expert heat pumps in 1,593 projects); untestable on this data.
+- Wallbox: experts sell one to 23% of homes without an EV (planned EVs are not recorded); the rule only follows `has_ev` / `ev_planned`.
+- Autarky is optimistic (~10 points) because H0 is an averaged profile; payback ignores heat-pump subsidies (BEG) and price increases.
+- Placeholders still hand-set: k_EV, COP, usable roof share, full-load hours, module area, building-type factors.

@@ -5,8 +5,8 @@
     "ev_km_per_year": 13000,
     "electricity_price_eur_per_kwh": 0.32
   },
-  "_placeholders": "k_ev and cop are hand-set until taken from published measurements",
-  "c_coverage": 1.93,
+  "_placeholders": "k_ev, cop, usable_roof_share, heatpump_full_load_hours, building_type_factor are hand-set",
+  "c_coverage": 1.927,
   "k_ev_kwh_per_km": 0.18,
   "cop": 3.0,
   "module_w": 430,
@@ -124,18 +124,96 @@
     "derived_on": "2026-11-07",
     "script": "engine/tools/derive_y.py"
   },
-  "c_derivation": {
-    "projects": 1243,
-    "iqr": [
-      1.413,
-      2.672
+  "pv_line": {
+    "a_kwp": 5.863,
+    "b_kwp_per_mwh": 0.623,
+    "median_abs_error_kwp": 1.98,
+    "projects": 1242
+  },
+  "battery": {
+    "share_with_pv": 0.952,
+    "r_b_kwh_per_kwp": 0.926,
+    "catalogue_kwh": [
+      5.0,
+      6.0,
+      7.0,
+      9.0,
+      10.0,
+      12.0,
+      14.0,
+      15.0,
+      18.0
+    ]
+  },
+  "heatpump_catalogue_kw": [
+    5,
+    7,
+    10,
+    12
+  ],
+  "derived_from_dataset": {
+    "on": "2026-11-07",
+    "script": "engine/tools/derive_params.py",
+    "projects": 1593,
+    "note": "all projects, owner's decision"
+  },
+  "plausible": {
+    "_note": "low / high values tried for a missing input, to build ranges and rank missing_inputs",
+    "total_demand_kwh": [
+      4000.0,
+      7000.0
     ],
-    "per_installer": {
-      "23c108b7": 2.093,
-      "2a8ba8e2": 1.899
-    },
-    "source": "median of expert kWp × Y / D over all projects in Project Data/",
-    "derived_on": "2026-11-07",
-    "script": "engine/tools/derive_c.py"
-  }
+    "region": [
+      "SH",
+      "BY"
+    ],
+    "roof_area_sqm": [
+      25,
+      80
+    ],
+    "roof_orientation_deg": [
+      90,
+      180
+    ],
+    "heating_type": [
+      "gas",
+      "heatpump"
+    ],
+    "heating_demand_kwh": [
+      10000,
+      25000
+    ],
+    "electricity_price_eur_per_kwh": [
+      0.25,
+      0.4
+    ],
+    "has_ev": [
+      true
+    ]
+  },
+  "usable_roof_share": 0.75,
+  "heatpump_full_load_hours": 2000,
+  "heating_demand_default_kwh": 15800.0,
+  "heat_demand_kwh_per_sqm_by_built_year": {
+    "_note": "approximate, German building typology (IWU) ranges",
+    "1978": 200,
+    "1994": 150,
+    "2009": 100,
+    "9999": 60
+  },
+  "demand_by_inhabitants_kwh": {
+    "_note": "approximate, Stromspiegel für Deutschland, house without electric hot water",
+    "1": 2300,
+    "2": 3000,
+    "3": 3600,
+    "4": 4000,
+    "5": 4800
+  },
+  "building_type_factor": {
+    "detached": 1.0,
+    "semi": 0.95,
+    "terraced": 0.9
+  },
+  "existing_pv_default_kwp": 5,
+  "wallbox_kw": 11
 }

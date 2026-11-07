@@ -75,21 +75,21 @@ Every default used goes into `assumptions`; every open question goes into `missi
 ### PV size from D
 
 ```
-kWp     = D × c / Y
+kWp     = (a + b × D_MWh) × Y_national / Y_home  −  existing PV kWp
 N_mod   = round(kWp × 1,000 / P_mod)
 A_need  = N_mod × A_mod
 ```
 
 | Symbol | Meaning | Value |
 |---|---|---|
-| Y | Specific yield: kWh one kWp produces per year in average German weather | derived from data, see [below](#deriving-y-and-c-from-real-data) |
-| c | Coverage: yearly PV generation ÷ yearly demand that experts aim for | derived from data, see [below](#deriving-y-and-c-from-real-data) |
+| a, b | Expert sizing line: base size + kWp per extra MWh | **a = 5.86 kWp, b = 0.623 kWp/MWh**, fitted on the expert designs (`tools/derive_params.py`) |
+| Y_home | Yield of this roof: region's Y (else national) × orientation / tilt factor | see [below](#deriving-y-and-c-from-real-data) |
 | P_mod | Power of one module (W) | 430 |
-| N_mod | Number of modules | |
-| A_mod | Area of one module (m²) | from the datasheet of the module we use (≈ 1.95 m² for 430 W, *placeholder*) |
-| A_need | Roof area the design needs (m²) | |
+| A_mod | Area of one module (m²) | ≈ 1.95 m² for 430 W, *placeholder* until the datasheet |
 
-Example (with c / Y ≈ 1.26 kWp per MWh, *placeholder*): D = 4,500 kWh → 5.7 kWp → 13 modules → 5.6 kWp → A_need = 13 × 1.95 = 25.4 m².
+The line replaces the earlier `kWp = D × c / Y`: experts give every home a base system and add little per MWh, so a fixed c undersizes small homes and oversizes large ones (median error 2.9 kWp vs 2.0 for the line). c = 1.93 is kept only to explain the size ("produces about 2× your demand"). Dividing by Y_home keeps the yearly generation the same: a northern or east-facing roof gets more modules.
+
+Example: D = 4,500 kWh → 5.86 + 0.623 × 4.5 = 8.67 kWp → 20 modules → 8.6 kWp → A_need = 39 m².
 
 ### Roof check
 
@@ -98,6 +98,8 @@ Example (with c / Y ≈ 1.26 kWp per MWh, *placeholder*): D = 4,500 kWh → 5.7 
 | A_roof unknown | Keep the design; **open question** "roof area" in `missing_inputs` |
 | A_roof < A_need | **Open question**: the roof is too small for the ideal size. Note the gap (A_need − A_roof) and the size that fits, floor(A_roof / A_mod) modules |
 | A_roof ≥ A_need | Use the spare roof: suggest switching the heating to electricity (below) |
+
+A_roof counts only the usable share (0.75, *placeholder* until the Reonic experts answer: edges, chimneys, windows).
 
 ### Spare roof → electric heating suggestion
 
@@ -143,11 +145,9 @@ c_h  = PV_expert,h × Y / D_h
 c    = median over projects with PV > 0
 ```
 
-Implemented in `tools/derive_c.py` (writes `c_coverage` into `params.json`). Expert kWp is rebuilt per offer option from `Module` rows (count × W), else the kWp in "Complete Package … kWp" names, else the mounting / DC-install quantity (= module count) × the installer's module W; the median over a project's options is used (no flag says which was delivered). Left out: existing PV, heat pump in the offer, demand outside 1–20 MWh.
+Implemented in `tools/derive_params.py` with `dataset.py` (expert kWp rebuilt per offer from `Module` rows (count × W), else the kWp in "Complete Package … kWp" names, else the mounting / DC-install quantity (= module count) × the installer's module W; first option of each project, since no flag says which was delivered). Left out: existing PV, heat pump in the offer, demand outside 1–20 MWh, PV > 40 kWp.
 
-Result (2026-11-07, 1,243 projects): **c = 1.93** (IQR 1.41–2.67; installer 23c108b7 2.09, 2a8ba8e2 1.90), i.e. 1.78 kWp per MWh at the national Y. Experts install PV producing about twice the yearly demand.
-
-c is **not constant**: it falls from ~3.1 below 3 MWh to ~1.0 above 12 MWh, because small homes get relatively large systems. A fixed c misses expert kWp by 2.9 kWp (median absolute error); `kWp = 6.7 + 0.58 × D_MWh` by 2.1. [PLAN.md](PLAN.md) item 1 replaces the fixed c with that line.
+Result (2026-11-07, 1,242 projects): **c = 1.93** (experts install PV producing about twice the yearly demand). c is **not constant**: it falls from ~3.1 below 3 MWh to ~1.0 above 12 MWh. The engine therefore sizes with the line `kWp = 5.86 + 0.623 × D_MWh` (fitted through the medians of ten demand bands), see [PV size from D](#pv-size-from-d).
 
 - k_EV (kWh per km, incl. charging losses) and COP are still hand-set; to be taken from published measurements (ADAC Ecotest, Fraunhofer ISE heat-pump field tests).
 - The whole dataset is used for c and for evaluation (owner's decision); PV evaluation is in-sample for this one parameter.
@@ -233,6 +233,8 @@ All combinations: 6 × 5 × 3 × 4 = 360 candidates. Real catalogues come from t
 These are rules, not preferences: a violating candidate is deleted, not scored low. About 150 of 360 survive.
 
 ## Step 4: simulate one year per candidate
+
+> **Implemented** in `sim.py` (hourly, ~3 ms per year). Load = BDEW H0 profile (2019, via demandlib) × household kWh + EV charging 18–22 h + heat pump spread by heating degree hours (base 15 °C, 15% hot water flat). PV = PVGIS 2019 hourly output at the centre of Germany × kWp × Y_home. Battery: 95% efficiency each way, max 0.5 × capacity per hour. Profiles: `tools/derive_profiles.py` → `profiles.json`. *Limitation:* H0 averages many homes, so one home's peaks are smoother than reality and autarky comes out optimistic (~10 points). Steps 5–8 below (learned scorer) are not built; battery size uses the expert ratio r_B instead ([PLAN.md](PLAN.md) #8).
 
 | Symbol | Meaning |
 |---|---|

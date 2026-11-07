@@ -1,4 +1,4 @@
-# engine/ contract (v0 draft — owner `egeunluer` agrees v1 with reo at M0)
+# engine/ contract (v1 — owner `egeunluer`)
 
 HTTP JSON API on `http://localhost:8000`. Consumers: reo (all endpoints), data (via `predict.py` output).
 Changes: additive → `CONTRACT` message to reo and qa; breaking → reo must `ACK` (after M1: `DECISION`).
@@ -10,18 +10,20 @@ Changes: additive → `CONTRACT` message to reo and qa; breaking → reo must `A
 type HomeFacts = {
   total_demand_kwh?: number;            // total electricity per year INCL. EV and electric heating, as the customer states it; preferred for PV sizing
   annual_demand_kwh?: number;           // household electricity, WITHOUT EV and heat pump
-  num_inhabitants?: number;             // used to estimate demand if annual_demand_kwh is missing
+  num_inhabitants?: number;             // used to estimate demand if no demand is given
+  building_type?: "detached" | "semi" | "terraced";   // refines the inhabitants-based demand estimate
   house_size_sqm?: number;
   house_built_year?: number;
   heating_type?: "gas" | "oil" | "heatpump" | "electric" | "district" | "other";
-  heating_demand_kwh?: number;
+  heating_demand_kwh?: number;          // heat per year; else house_size_sqm × typical demand by house_built_year
   has_ev?: boolean; ev_planned?: boolean; ev_km_per_year?: number;
   ev_km_per_week?: number; ev_km_per_day?: number;   // customer's estimate; used when ev_km_per_year is absent (×52, ×365)
   roof_area_sqm?: number; roof_orientation_deg?: number; roof_tilt_deg?: number;   // 180 = south
+  roof_type?: "gable" | "flat" | "mono" | "other";   // flat without orientation = east-west racks
   region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";   // federal state (ISO 3166-2 code); sets the PV yield, else the national value
   electricity_price_eur_per_kwh?: number;
   has_existing_pv?: boolean; existing_pv_kwp?: number; has_existing_battery?: boolean;
-  budget_eur?: number;
+  budget_eur?: number;                  // design steps the battery, then the PV down until the price fits
 };
 
 type ComponentKey = "pv" | "battery" | "heatpump" | "wallbox";
@@ -37,14 +39,17 @@ type Component = {
   reasons: string[];                    // 1–3, name the input that drove the decision
 };
 
-type PriceList = Record<string, number>;   // keys as returned by GET /prices
+type PriceList = Record<string, number>;   // keys as returned by GET /prices; each has `<key>_low` / `<key>_high`.
+                                           // Overriding `<key>` fixes that price (low = high = the override).
 
 type Design = {
   components: Record<ComponentKey, Component>;
   price: { items: { label: string; qty: number; unit: string; unit_price_eur: number; total_eur: number }[];
            total_eur: number; range_eur: [number, number] };
   economics: { total_demand_kwh: number; self_consumption_pct: number; autarky_pct: number;
-               annual_savings_eur: number; payback_years: number | null };
+               annual_savings_eur: number; payback_years: number | null;
+               bill_today_eur_per_month: number; bill_after_eur_per_month: number };   // after < 0 = net feed-in credit
+  bundle: "S" | "M" | "L" | "XL" | null;                                          // by new PV kWp: < 6, < 10, < 14, else XL
   assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];     // defaults the engine used
   missing_inputs: { field: keyof HomeFacts; why: string; impact: "high" | "medium" | "low" }[];  // ranked
   params_version: string;
@@ -56,6 +61,6 @@ type Design = {
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
 | GET | `/health` | → `{ok: true, params_version}` | M0 |
-| GET | `/prices` | → `PriceList` (defaults with labels) | M0 |
-| POST | `/design` | `{facts: HomeFacts, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>, prices?: PriceList}` → `Design` | M0 stub, M1 real |
-| POST | `/explain` | `{facts, locks?, prices?, component: ComponentKey}` → `{reasons: string[], what_if: {change: string, effect: string}[]}` | M2 |
+| GET | `/prices` | → `PriceList` (defaults, with `_low` / `_high`) | M0 |
+| POST | `/design` | `{facts: HomeFacts, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>, prices?: PriceList}` → `Design` (< 100 ms) | M1 |
+| POST | `/explain` | `{facts, locks?, prices?, component: ComponentKey}` → `{reasons: string[], what_if: {change: string, effect: string}[]}` | M1 |

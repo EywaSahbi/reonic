@@ -1,9 +1,15 @@
 {
-  "_note": "stub: rough public German market ranges, installed incl. VAT 0%; replaced by sourced ranges in PLAN #9",
-  "pv_eur_per_kwp": 1400,
-  "battery_eur_per_kwh": 700,
-  "wallbox_eur": 1500,
-  "heatpump_eur_per_kw": 3000,
-  "fixed_fees_eur": 1500,
-  "feed_in_eur_per_kwh": 0.078
+  "_note": "estimates from public German market ranges (2025), installed; PV and battery 0% VAT (residential, since 2023), heat pump incl. 19% VAT. Each key has _low / _high; the installer overrides the main key",
+  "pv_base_eur": 3000, "pv_base_eur_low": 2000, "pv_base_eur_high": 4000,
+  "pv_eur_per_kwp": 1100, "pv_eur_per_kwp_low": 900, "pv_eur_per_kwp_high": 1300,
+  "battery_base_eur": 1500, "battery_base_eur_low": 1000, "battery_base_eur_high": 2000,
+  "battery_eur_per_kwh": 450, "battery_eur_per_kwh_low": 350, "battery_eur_per_kwh_high": 600,
+  "wallbox_eur": 1500, "wallbox_eur_low": 1000, "wallbox_eur_high": 2200,
+  "heatpump_base_eur": 15000, "heatpump_base_eur_low": 12000, "heatpump_base_eur_high": 20000,
+  "heatpump_eur_per_kw": 1500, "heatpump_eur_per_kw_low": 1000, "heatpump_eur_per_kw_high": 2000,
+  "feed_in_eur_per_kwh": 0.0786,
+  "gas_eur_per_kwh": 0.12,
+  "oil_eur_per_kwh": 0.11,
+  "district_eur_per_kwh": 0.13,
+  "boiler_efficiency": 0.9
 }
