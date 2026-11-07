@@ -171,7 +171,7 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     return {"home": home, "sizing": sizing, "sizes": sizes, "modules": pv_modules, "locks": lock, "profile": prof,
             "retrofit": retrofit,
             "price": {"items": items, "total_eur": total, "cost": cost}, "pv_core": (pv_kwp - hp_pv) if pv_rec else None,
-            "economics": economics, "after": after, "assumptions": assumptions,
+            "economics": economics, "after": after, "assumptions": assumptions, "facts": facts,
             "pv_total": pv_total, "hp_el": hp_el, "heat": heat}
 
 
@@ -372,7 +372,39 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
     return {"components": comps,
             "price": {"items": pr["items"], "total_eur": pr["total_eur"], "range_eur": [round(lo, -1), round(hi, -1)]},
             "economics": base["economics"], "bundle": bundle, "assumptions": base["assumptions"],
-            "missing_inputs": missing, "installer_profile": base["profile"]["installer"], "params_version": VERSION}
+            "missing_inputs": missing, "heating_comparison": heating_comparison(base, overrides),
+            "installer_profile": base["profile"]["installer"], "params_version": VERSION}
+
+
+def heating_comparison(base: dict, overrides: dict):
+    """Today's fossil / district heating vs an air-water heat pump on grid power, per year (None for electric or unknown heating).
+
+    energy_factor = COP ÷ efficiency of the old system; cost_factor = old cost per kWh of heat ÷ heat-pump cost per kWh of heat.
+    Grid power only: own solar makes the heat pump cheaper and cleaner still (the design's economics count that).
+    """
+    h = base["home"]
+    if h.heating_type not in FUEL:
+        return None
+    p = PARAMS
+    heat, note = heat_demand(base["facts"], h)
+    eff = 1.0 if h.heating_type == "district" else price_of("boiler_efficiency", overrides)[0]
+    fuel_price = price_of(FUEL[h.heating_type], overrides)[0]
+    hp_kwh = heat / p["cop"]
+    cost_now = heat / eff * fuel_price
+    cost_hp = hp_kwh * h.electricity_price_eur_per_kwh
+    out = {"fuel": h.heating_type, "heat_kwh": round(heat), "efficiency_now": eff, "cop": p["cop"],
+           "energy_factor": round(p["cop"] / eff, 1),
+           "cost_now_eur_per_year": round(cost_now), "cost_heatpump_eur_per_year": round(cost_hp),
+           "cost_factor": round(cost_now / cost_hp, 2) if cost_hp else None,
+           "co2_now_kg_per_year": None, "co2_heatpump_kg_per_year": None, "co2_reduction_pct": None,
+           "note": note["note"] if note else None}
+    ef = p["co2_kg_per_kwh"]
+    fuel_key = {"gas": "gas", "oil": "oil"}.get(h.heating_type)
+    if fuel_key:
+        now, hp = heat / eff * ef[fuel_key], hp_kwh * ef["electricity"]
+        out.update(co2_now_kg_per_year=round(now), co2_heatpump_kg_per_year=round(hp),
+                   co2_reduction_pct=round(100 * (1 - hp / now), 1))
+    return out
 
 
 def steps(component: str, size):

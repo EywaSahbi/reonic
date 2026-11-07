@@ -201,3 +201,17 @@ def test_existing_pv_size_not_asked_again():
 
 def test_invalid_demand_is_422():
     assert client.post("/design", json={"facts": {"total_demand_kwh": -5}}).status_code == 422
+
+
+def test_heating_comparison_gas_and_electric():
+    hc = post({"total_demand_kwh": 4500, "heating_type": "gas", "heating_demand_kwh": 18000})["heating_comparison"]
+    assert hc["heat_kwh"] == 18000 and hc["energy_factor"] == round(3.3 / 0.9, 1)
+    assert hc["cost_now_eur_per_year"] == 2400 and abs(hc["cost_factor"] - 2400 / hc["cost_heatpump_eur_per_year"]) < 0.02
+    assert hc["co2_now_kg_per_year"] == round(18000 / 0.9 * 0.201) and 0 < hc["co2_reduction_pct"] < 100
+    assert post({"total_demand_kwh": 4500, "heating_type": "electric"})["heating_comparison"] is None
+    assert post({"total_demand_kwh": 4500})["heating_comparison"] is None
+
+
+def test_heating_comparison_without_official_co2_factor():
+    hc = post({"total_demand_kwh": 4500, "heating_type": "district", "heating_demand_kwh": 18000})["heating_comparison"]
+    assert hc["cost_factor"] > 1 and hc["co2_reduction_pct"] is None

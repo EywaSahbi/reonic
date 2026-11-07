@@ -49,6 +49,8 @@ Most price sources are installer, comparison or advice sites (not official table
 | [BürgerNetzwerkSolar: heat pump sizing](https://www.worms.de/neu-de-wAssets/docs/zukunft-gestalten/klima-umwelt/Energie/BuergerSolarBeratung/_BNS_Waermepumpe-Praxistipps-zur-Auslegung.pdf), [reduco.ai: heat pump sizing](https://reduco.ai/blog/heizung/waermepumpe-dimensionieren-kw-tabelle) | Heat load = yearly heat demand ÷ full-load hours; 1,800–2,100 h for existing single-family houses (unrenovated 1,800–2,200, well insulated far less) | 2,000 full-load hours |
 | [wohnen-und-finanzieren: energy use by building age](https://wohnen-und-finanzieren.de/blog/energieverbrauch-einfamilienhaus), [Schwäbisch Hall 2014](https://www.schwaebisch-hall.de/content/dam/dambsh/unternehmen/dokumente/presseinformationen/archiv/2014/2014_05_Private%20Energiewende.pdf) | Heating demand by age: before 1978 unrenovated 200–300, 1978–2000 120–200, 2000–2015 70–120, new 30–70 kWh/m²a; new builds 60–70 kWh/m² | Heat demand from `house_size_sqm` × age (200 / 150 / 100 / 60) |
 
+| [UBA: CO2 per kWh of electricity 2025](https://www.umweltbundesamt.de/themen/co2-emissionen-pro-kilowattstunde-strom-2025-nur), [UBA Strom- und Wärmeversorgung in Zahlen](https://www.umweltbundesamt.de/themen/klima-energie/energieversorgung/strom-waermeversorgung-in-zahlen) | German electricity mix 344 g/kWh (2025, estimate; 353 in 2024, 379 in 2023). Gas 201 g and heating oil 266 g per kWh fuel (UBA emission factors, found via secondary tables, original not opened). District heating: no single official factor, so no CO2 shown | `co2_kg_per_kwh`, `heating_comparison` |
+
 ## Expert designs
 
 | Source | What we took | Used in |

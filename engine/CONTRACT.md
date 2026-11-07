@@ -53,6 +53,13 @@ type Design = {
                bill_today_eur_per_month: number; bill_after_eur_per_month: number };   // after < 0 = net feed-in credit
   bundle: "S" | "M" | "L" | "XL" | null;                                          // by new PV kWp: < 6, < 10, < 14, else XL
   installer_profile: string | null;     // installer whose expert habits were used, null = all installers
+  heating_comparison: {                                                           // null unless heating is gas / oil / district / other
+    fuel: string; heat_kwh: number; efficiency_now: number; cop: number;
+    energy_factor: number;                                                        // COP ÷ old efficiency: heat per kWh of electricity vs per kWh of fuel (gas 3.7)
+    cost_now_eur_per_year: number; cost_heatpump_eur_per_year: number;            // heat pump on grid power, at the home's tariff
+    cost_factor: number | null;                                                   // now ÷ heat pump (>1 = heat pump cheaper)
+    co2_now_kg_per_year: number | null; co2_heatpump_kg_per_year: number | null; co2_reduction_pct: number | null;   // null for district / other: no official factor
+    note: string | null } | null;                                                 // how the heat demand was estimated, if not given
   assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];     // defaults the engine used
   missing_inputs: { field: keyof HomeFacts; why: string; impact: "high" | "medium" | "low" }[];  // ranked
   params_version: string;
