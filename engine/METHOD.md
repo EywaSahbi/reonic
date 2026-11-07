@@ -11,8 +11,8 @@ Values marked *placeholder* are invented for the worked example. The real ones a
 
 | Step | What happens | Output |
 |---|---|---|
-| 0 | Read the home's inputs | home h |
-| 1 | Compute total electricity demand | D |
+| 0 | Read the home's inputs, size PV, check the roof | home h, kWp, open questions |
+| 1 | *Outdated:* rebuild D for dataset projects | D |
 | 2 | List every possible design | candidates c |
 | 3 | Remove impossible designs | feasible set C(h) |
 | 4 | Simulate each design for one year | autarky |
@@ -23,7 +23,7 @@ Values marked *placeholder* are invented for the worked example. The real ones a
 | 9 | Explain it | reasons |
 | 10 | Planner changes something → re-run | updated design |
 
-Steps 1–10 run per request. r_PV, r_B and the weights w (steps 5–6) are learned once, beforehand ([Training](#training-r_pv-r_b-and-w)).
+Step 0 and steps 2–10 run per request (step 1 only for dataset projects). r_PV (step 0), r_B and the weights w (steps 5–6) are learned once, beforehand ([Training](#training-r_pv-r_b-and-w)).
 
 ## Abbreviations
 
@@ -43,31 +43,105 @@ Steps 1–10 run per request. r_PV, r_B and the weights w (steps 5–6) are lear
 | softmax | Turns scores into probabilities that add up to 1 |
 | argmax | The option giving the maximum value |
 
-## Step 0: inputs
+## Step 0: inputs, PV size and roof check
 
 **h** = the home, everything we know about it.
 
-| Symbol | Meaning | Data column | Example |
+| Symbol | Meaning | Data column (for validation) | Example |
 |---|---|---|---|
-| E_house | Household electricity demand per year (kWh) | `energy_demand_wh` ÷ 1,000 | 4,500 |
-| has_EV | EV present (1/0) | `has_ev` | 1 |
-| km_EV | km driven per year (0 without EV) | `ev_annual_drive_distance_km` | 15,000 |
+| D | Total electricity demand per year (kWh), incl. EV and electric heating: **asked directly** | `energy_demand_wh` ÷ 1,000 + EV + heat pump (see [Step 1](#step-1-total-demand-d-outdated)) | 4,500 |
+| A_roof | Usable roof area (m²), if the customer knows it | `roof_area_sqm` (not in the dataset) | 40 |
+| has_EV, km_EV | EV present, km per year (drives the wallbox and *when* power is used, no longer D) | `has_ev`, `ev_annual_drive_distance_km` | 1, 15,000 |
+| heat | Existing heating type | `heating_existing_type` | gas |
 | inst | Installer (different catalogues and habits) | `installer` | A |
 
-### What reo asks the customer (implemented in `inputs.py`)
+### What reo asks the customer
 
 Field names are the `HomeFacts` names from [CONTRACT.md](CONTRACT.md) (the contract is the source of truth).
 
 | Input | `HomeFacts` field | Default if not given |
 |---|---|---|
-| E_house | `annual_demand_kwh` | 4,500 (dataset's most common value) |
+| D | `total_demand_kwh` (incl. EV and electric heating; `annual_demand_kwh` stays the household-only figure) | 4,500 (dataset's most common value) |
+| A_roof | `roof_area_sqm` | unknown → open question |
 | has_EV | `has_ev` | false |
 | km_EV | `ev_km_per_year`, else `ev_km_per_week` × 52, else `ev_km_per_day` × 365 (only used with an EV) | 13,000 km/yr (average, *placeholder*) |
 | existing PV / battery | `has_existing_pv`, `has_existing_battery` | false |
 | existing heating | `heating_type`: gas, oil, heatpump, electric, district, other | unknown |
 | price (€/kWh) | `electricity_price_eur_per_kwh`, asked directly | 0.32 €/kWh |
 
-Every default used goes into `assumptions`.
+Every default used goes into `assumptions`; every open question goes into `missing_inputs`.
+
+### PV size from D
+
+```
+kWp     = D × c / Y
+N_mod   = round(kWp × 1,000 / P_mod)
+A_need  = N_mod × A_mod
+```
+
+| Symbol | Meaning | Value |
+|---|---|---|
+| Y | Specific yield: kWh one kWp produces per year in average German weather | derived from data, see [below](#deriving-y-and-c-from-real-data) |
+| c | Coverage: yearly PV generation ÷ yearly demand that experts aim for | derived from data, see [below](#deriving-y-and-c-from-real-data) |
+| P_mod | Power of one module (W) | 430 |
+| N_mod | Number of modules | |
+| A_mod | Area of one module (m²) | from the datasheet of the module we use (≈ 1.95 m² for 430 W, *placeholder*) |
+| A_need | Roof area the design needs (m²) | |
+
+Example (with c / Y ≈ 1.26 kWp per MWh, *placeholder*): D = 4,500 kWh → 5.7 kWp → 13 modules → 5.6 kWp → A_need = 13 × 1.95 = 25.4 m².
+
+### Roof check
+
+| Case | What the engine does |
+|---|---|
+| A_roof unknown | Keep the design; **open question** "roof area" in `missing_inputs` |
+| A_roof < A_need | **Open question**: the roof is too small for the ideal size. Note the gap (A_need − A_roof) and the size that fits, floor(A_roof / A_mod) modules |
+| A_roof ≥ A_need | Use the spare roof: suggest switching the heating to electricity (below) |
+
+### Spare roof → electric heating suggestion
+
+Only when `heating_type` is **not** electricity based (gas, oil, district, other). Not for `heatpump` or `electric`; `heating_type` unknown is an open question.
+
+```
+N_spare  = floor((A_roof − A_need) / A_mod)       spare modules on the roof
+E_HP     = Q_heat / COP                           electricity the heat pump would draw (kWh/yr)
+kWp_HP   = min(E_HP × c / Y, N_spare × P_mod / 1,000)
+```
+
+| Symbol | Meaning | Value |
+|---|---|---|
+| Q_heat | Heating demand per year (kWh) | `heating_demand_kwh`; unknown → open question |
+| COP | Heat-pump efficiency over the year (seasonal performance factor) | derived from field-test data, like Y |
+| kWp_HP | Extra PV for the heat pump, limited by the spare roof | |
+
+The design then shows the heat pump as a suggestion: total PV kWp + kWp_HP, total demand D + E_HP.
+
+### Deriving Y and c from real data
+
+The PV size only depends on the ratio **r_PV = c / Y** (kWp per kWh of demand). r_PV is measured directly from the expert designs; Y comes from weather data; c follows as c = r_PV × Y. Y on its own is still needed for generation, economics and the spare-roof step.
+
+**Y from measured weather (PVGIS)**
+1. PVGIS (EU Joint Research Centre) computes the yearly yield of 1 kWp from satellite-measured irradiance (SARAH-3, multi-year) for any location, tilt and orientation, with system losses (default 14%).
+2. Query a grid of German locations (e.g. the 16 state capitals, or one point per two-digit PLZ area), each for south, 35° tilt.
+3. Y = average of these yields, weighted by how many residential PV systems are in each area (Bundesnetzagentur Marktstammdatenregister, systems ≤ 30 kWp). This is where our customers' roofs are.
+4. The same queries for east, west and other tilts give the correction factor for known roof orientation and tilt.
+5. Only generic coordinates are sent to PVGIS, never customer data.
+
+**Y sanity check from measured generation**
+Y_real = Germany's yearly PV generation (Fraunhofer ISE Energy-Charts) ÷ average installed PV capacity over the same year (Marktstammdatenregister), averaged over several years. This is what real roofs deliver, incl. poor orientation, shading and ageing, so it should come out somewhat below the PVGIS value.
+
+**c from the expert designs (our dataset, `split == train` only)**
+
+```
+D_h  = energy_demand_wh / 1,000 + km_EV × k_EV + E_HP,existing      per project h, as in Step 1
+c_h  = PV_expert,h × Y / D_h
+c    = median over train projects with PV > 0
+```
+
+- Median, because a few odd projects must not move it.
+- Check that c is the same across demand levels (if small homes get relatively more PV, use kWp = a + b × D instead), per installer, and with / without EV and battery. Pick the variant that scores best on `val`.
+- k_EV (kWh per km, incl. charging losses) and COP are taken from published measurements (ADAC Ecotest averages, Fraunhofer ISE heat-pump field tests), the same way as Y.
+- Fitting c on train needs a human `DECISION` first ([AGENTS.md](AGENTS.md), deliverable 3).
 
 ### Which inputs come from the customer
 
@@ -99,13 +173,15 @@ Probably set by the planner or the software (assumptions and defaults):
 Not inputs: `project_id`, `customer_contact_id` (IDs), `country` (always Germany), `request_created_at`, `offer_created_at`, `first_signed_at` (timeline).
 
 What this means for the engine:
-- **Core customer inputs** are annual demand, EV (+ km), existing heating type and existing PV / battery / wallbox. Price and price increase are optional, pre-filled defaults.
+- **Core customer inputs** are total annual demand D, roof area, EV (+ km), existing heating type and existing PV / battery / wallbox. Price and price increase are optional, pre-filled defaults.
 - **inst** is not a customer input but is still a model input: the two installers design differently.
 - **Missing inputs** get explicit defaults (listed in `assumptions`) and widen each size's `range`. `missing_inputs` ranks the absent facts by how much they would narrow the design (e.g. EV km and heating type move D the most), so reo can pick its next question.
 
-Open questions for the Reonic experts: which fields does the customer enter vs the planner or the tool? Is 0.32 €/kWh the tool's default? Is `heating_existing_heating_demand_wh` measured or estimated?
+Open questions for the Reonic experts: how much of a roof is usable for modules (edges, chimneys, windows)? Which fields does the customer enter vs the planner or the tool? Is 0.32 €/kWh the tool's default? Is `heating_existing_heating_demand_wh` measured or estimated?
 
-## Step 1: total demand D
+## Step 1: total demand D (outdated)
+
+> **Outdated for requests:** D is now asked directly in Step 0. This step is kept because it is still how D is rebuilt for the **dataset** projects, whose `energy_demand_wh` excludes EV and heat pump (used to derive c and to validate).
 
 ```
 D = E_house + km_EV × k_EV
@@ -113,6 +189,7 @@ D = E_house + km_EV × k_EV
 
 | Symbol | Meaning | Example |
 |---|---|---|
+| E_house | Household electricity demand per year, without EV and heat pump (kWh) | 4,500 |
 | D | Total yearly electricity use incl. EV (kWh) | 7,200 |
 | k_EV | EV consumption per km (kWh/km), standard value | 0.18 |
 

@@ -8,6 +8,7 @@ Changes: additive → `CONTRACT` message to reo and qa; breaking → reo must `A
 ```ts
 // Every field optional. Field names are shared with data/processed/projects.parquet.
 type HomeFacts = {
+  total_demand_kwh?: number;            // total electricity per year INCL. EV and electric heating, as the customer states it; preferred for PV sizing
   annual_demand_kwh?: number;           // household electricity, WITHOUT EV and heat pump
   num_inhabitants?: number;             // used to estimate demand if annual_demand_kwh is missing
   house_size_sqm?: number;
