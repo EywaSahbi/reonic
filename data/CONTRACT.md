@@ -106,6 +106,8 @@ Retrofits: homes the expert sold no PV are mostly retrofits with unrecorded exis
 
 ## Score JSON (`data/reports/score_<name>_<split>.json`)
 
+Published names stay fixed and are overwritten on every re-score: `score_val_val.json` (engine, val), `score_val_profiles_val.json` (engine with installer profiles, val), `score_test_test.json` (engine, test; re-scored once at M3). Pick files by these names, not by file time.
+
 ```json
 {"split": "val", "model": "<file name after predictions_>", "n": 238, "missing_predictions": 0,
  "components": {"pv": {"n_expert": 185, "presence_acc": 0.782, "f1": 0.877, "size_n": 185, "size_mae": 2.49,
