@@ -27,7 +27,7 @@
 .reo-entry-btn { display: inline-flex; align-items: center; gap: 14px; padding: 8px 22px 8px 8px; border: 0; border-radius: 9999px; background: #fff; color: var(--ink); font-size: 17px; font-weight: 600; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35), 0 0 0 6px rgba(255, 255, 255, 0.14); transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s; }
 .reo-entry-btn:hover { transform: translateY(-2px); box-shadow: 0 22px 60px rgba(0, 0, 0, 0.4), 0 0 0 8px rgba(255, 255, 255, 0.18); }
 .reo-entry-btn:active { transform: scale(0.98); }
-.reo-entry-face { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; background: var(--sunset); color: #fff; font-size: 14px; font-weight: 700; letter-spacing: -0.3px; }
+.reo-entry-face { width: 48px; height: 48px; display: grid; place-items: center; }
 .reo-entry-arrow { font-size: 18px; color: var(--ink-500); transition: transform 0.2s; }
 .reo-entry-btn:hover .reo-entry-arrow { transform: translateX(3px); color: var(--ink); }
 .reo-entry-note { font-size: 13px; color: rgba(255, 255, 255, 0.75); }
@@ -74,3 +74,4 @@
   .reo-sheet-inner { border-radius: 0; }
   .widget-stage .plan { width: auto; }
 }
+.reo-avatar-slot { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; }

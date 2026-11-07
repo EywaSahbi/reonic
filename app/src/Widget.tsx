@@ -4,6 +4,7 @@ import type { Ask, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
 import { MicButton, useReoAudio, voiceForced } from "./Voice";
+import { ReoAvatar } from "./ReoAvatar";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
@@ -160,7 +161,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     <div className={`widget ${hasDesign ? "widget-wide" : ""} ${variant === "stage" ? "widget-stage" : ""}`} role="dialog" aria-label="reo energy advisor">
       <div className="widget-head">
         <div className="reo-id">
-          <span className="reo-avatar">reo</span>
+          <span className="reo-avatar-slot" aria-hidden><ReoAvatar size={36} greet={false} winkKey={messages.length} /></span>
           <div>
             <strong>Energy advisor</strong>
             <span>reo · powered by Reonic</span>

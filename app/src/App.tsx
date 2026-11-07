@@ -4,6 +4,7 @@ import { USING_MOCK } from "./api";
 import houseHero from "./assets/house-hero.jpg";
 import "./home.css";
 import { SonnfeldMark } from "./Logo";
+import { ReoAvatar } from "./ReoAvatar";
 
 // Sonnfeld: the installer's website (customer view). reo is not a corner chat bubble here: it is the site's one
 // call to action, centre stage. Opening reo pulls the hero copy back and slides reo's sheet down from the top.
@@ -82,12 +83,12 @@ export function App() {
 }
 
 // Centre-stage entry to reo, where a site would put its main call to action.
-// slot: reo's animated avatar is built separately (ReoAvatar / ReoIntro); it replaces <span className="reo-entry-face" />.
+// reo's animated avatar (ReoAvatar, owned by the avatar work): follows the cursor, waves on hover, winks on click.
 function ReoEntry({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="reo-entry">
       <button className="reo-entry-btn" onClick={onOpen} aria-label="Plan your home with reo">
-        <span className="reo-entry-face" aria-hidden>reo</span>
+        <span className="reo-entry-face" aria-hidden><ReoAvatar size={44} /></span>
         <span className="reo-entry-text">Plan my home with reo</span>
         <span className="reo-entry-arrow" aria-hidden>→</span>
       </button>
