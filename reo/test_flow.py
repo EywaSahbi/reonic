@@ -15,3 +15,10 @@ def test_no_key_means_fallback(monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     assert llm.extract("we use 4500 kWh", {}) is None
     assert llm.reply(audience="customer", latest_message="hi", facts={}, engine_result=None) is None
+
+
+def test_scripted_states_and_house():
+    import scripted
+    got = scripted.extract("Wir wohnen in einem Reihenhaus mit Flachdach in Hamburg")["facts"]
+    assert got == {"building_type": "terraced", "roof_type": "flat", "region": "HH"}
+    assert scripted.extract("wir wohnen in Niedersachsen")["facts"] == {"region": "NI"}

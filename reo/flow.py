@@ -14,6 +14,8 @@ QUESTIONS = [
                                 "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
     (("roof_area_sqm",), {"field": "roof_area_sqm", "input": "address",
                           "prompt": "How big is the roof area that faces the sun? Or give me your address and I'll look it up."}),
+    (("roof_type",), {"field": "roof_type", "input": "choice", "options": ["gable", "flat", "mono", "other"],
+                      "prompt": "What shape is your roof? That decides how the panels are mounted."}),
     (("region",), {"field": "region", "input": "choice", "options": REGIONS,
                    "prompt": "Which federal state do you live in? That sets how much sun your panels get."}),
     (("house_size_sqm",), {"field": "house_size_sqm", "input": "number",
@@ -32,6 +34,7 @@ CHIPS = {
     "has_ev": ["Yes, already", "Planned", "No"],
     "roof_area_sqm": ["About 40 m²", "About 60 m²", "Not sure"],
     "region": [],
+    "roof_type": [],
     "house_size_sqm": ["About 120 m²", "About 160 m²"],
     "electricity_price_eur_per_kwh": ["About 35 ct", "About 40 ct", "Not sure"],
     "budget_eur": ["Under €15,000", "€15,000–25,000", "No fixed budget"],
@@ -44,7 +47,7 @@ KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, 
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
     label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
-             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "house_size_sqm": "Living space (m²)",
+             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
     out["prompt"] = label.get(ask["field"], ask["prompt"])
