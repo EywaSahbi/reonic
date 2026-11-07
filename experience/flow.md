@@ -85,7 +85,7 @@ Standing chips after every design turn (when nothing more specific fits): `Why t
 ### Stage 5: Handoff
 
 reo **offers** the handoff (once, then leaves the `Send to installer` chip) when any of these is true:
-- heating type, EV and existing solar are known (or skipped) **and** the price range is narrow (high ≤ 1.5 × low), or
+- heating type, EV and existing solar are known (or skipped) **and** the price range is narrow (high ≤ 1.7 × low; market price spread alone is ~1.6×, engine 7aecd88), or
 - the engine has no `high`-impact `missing_inputs` left, or
 - the customer asks ("send it", "I want an offer", "can someone call me").
 
