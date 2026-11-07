@@ -302,3 +302,28 @@ h1, h2, h3 { color: var(--ink); }
   .detail-grid { grid-template-columns: 1fr; }
   .detail-total { text-align: left; padding: 0; }
 }
+
+/* ---------- picture tap cards (choice asks) ---------- */
+.tap-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 8px; }
+.tap-card { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 84px; padding: 12px 8px; background: var(--white); border: 1px solid var(--line); border-radius: 14px; color: var(--ink); font-size: 13px; font-weight: 500; text-align: center; line-height: 1.2; box-shadow: var(--shadow-ui); animation: rise 0.25s ease-out both; transition: border-color 0.15s, background 0.15s, transform 0.15s; }
+.tap-card svg { color: var(--ink-700); }
+.tap-card:hover { border-color: var(--ink); background: var(--sunset-tint); }
+.tap-card:hover svg { color: var(--ink); }
+.tap-card:active { transform: scale(0.96); }
+
+/* ---------- the house that builds itself ---------- */
+.house { margin: -4px 0 0; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 10px 8px; }
+.house svg { display: block; width: 100%; height: auto; overflow: visible; }
+.house figcaption { font-size: 12px; color: var(--ink-500); text-align: center; margin-top: 2px; }
+.house figcaption strong { color: var(--ink); font-weight: 600; }
+.h-line { fill: none; stroke: var(--ink-400); stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.h-wall { fill: var(--paper-sand); stroke: var(--ink-400); stroke-width: 1.4; }
+.h-roof { fill: #3f3f46; stroke: var(--ink); stroke-width: 1.4; stroke-linejoin: round; }
+.h-box { fill: var(--white); stroke: var(--ink); stroke-width: 1.4; }
+.h-accent { fill: #f2784b; }
+.h-car { fill: var(--ink); }
+.h-wheel { fill: var(--white); stroke: var(--ink); stroke-width: 2; }
+.h-panel { fill: #18181b; stroke: #a1a1aa; stroke-width: 0.8; opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2); transform-box: fill-box; }
+.h-panel.on { opacity: 1; transform: none; }
+.h-part { opacity: 0; transform: translateY(8px) scale(0.92); transform-box: fill-box; transform-origin: center bottom; transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.h-part.on { opacity: 1; transform: none; }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { Ask, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
+import { iconFor } from "./Icons";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
@@ -119,6 +120,9 @@ export function Widget({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Chips that repeat a tap card are hidden; others (e.g. "I know my yearly kWh") stay.
+  const cardLabels = new Set((ask?.input === "boolean" ? ["Yes", "No"] : ask?.input === "choice" ? ask.options ?? [] : []).flatMap((o) => [o, label(o)].map((x) => x.toLowerCase())));
+  const visibleChips = chips.filter((c) => !cardLabels.has(c.toLowerCase()) && !(ask?.field === "heating_type" && /^(gas|oil|other|heat pump already)$/i.test(c)));
   const handedOver = plan?.status === "handed_over" || plan?.status === "quoted";
   const hasDesign = !!plan && (plan.history.length > 0 || Object.keys(plan.facts).length > 0);
 
@@ -161,9 +165,9 @@ export function Widget({ onClose }: { onClose: () => void }) {
                   onAddress={(a) => id && run(() => api.sendAddress(id, a), a)}
                 />
               )}
-              {chips.length > 0 && !busy && !(ask && (ask.input === "choice" || ask.input === "boolean")) && (
+              {visibleChips.length > 0 && !busy && (
                 <div className="chips">
-                  {chips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
+                  {visibleChips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
                 </div>
               )}
               <form className="composer" onSubmit={(e) => { e.preventDefault(); say(text); }}>
@@ -180,7 +184,7 @@ export function Widget({ onClose }: { onClose: () => void }) {
   );
 }
 
-const CHOICE_LABEL: Record<string, string> = { heatpump: "Heat pump", district: "District heating" };
+const CHOICE_LABEL: Record<string, string> = { heatpump: "Heat pump", district: "District heating", semi: "Semi-detached", gable: "Gable roof", flat: "Flat roof", mono: "Mono-pitch", "1": "Just me", "5+": "5 or more" };
 const label = (o: string) => CHOICE_LABEL[o] ?? o.charAt(0).toUpperCase() + o.slice(1);
 
 // Maps a choice answer to HomeFacts. EV options map to has_ev / ev_planned per experience/flow.md.
@@ -207,10 +211,12 @@ function AskInput({ ask, onFacts, onAddress }: {
     return (
       <div className="ask">
         <span className="ask-label">{ask.prompt}</span>
-        <div className="chips">
-          {options.map((o) => (
-            <button key={o} className="chip chip-solid" onClick={() => onFacts(ask.input === "boolean" ? { [ask.field]: o === "Yes" } as Partial<HomeFacts> : choiceFacts(ask, o), label(o))}>
-              {label(o)}
+        <div className={options.some((o) => iconFor(o)) ? "tap-cards" : "chips"}>
+          {options.map((o, i) => (
+            <button key={o} className={iconFor(o) ? "tap-card" : "chip chip-solid"} style={{ animationDelay: `${i * 40}ms` }}
+              onClick={() => onFacts(ask.input === "boolean" ? { [ask.field]: o === "Yes" } as Partial<HomeFacts> : choiceFacts(ask, o), label(o))}>
+              {iconFor(o)}
+              <span>{label(o)}</span>
             </button>
           ))}
         </div>

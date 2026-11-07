@@ -15,6 +15,7 @@
 ## Published
 
 - `experience/persona.md`, `experience/flow.md` v1 (installer brand: SolarHaus Müller)
+- Tap-first visuals: `choice` asks render as picture tap cards (`src/Icons.tsx`: people, heating, EV, building, roof icons); plan card opens with a house that builds itself (`src/House.tsx`: panels = engine `pv.quantity`, battery, heat pump, car + wallbox animate in/out).
 - Customer view on mock: `cd app && npm install && npm run dev` → :5173. `VITE_API_URL` empty = in-browser mock (`src/mock.ts`, fake numbers), `http://localhost:8001` = live reo. Files: `src/types.ts` (contract types), `src/api.ts` (client + switch), `src/Widget.tsx`, `src/PlanCard.tsx`.
 - Installer view at `#/installer` (footer link "Planner login"): inbox, summary, flags, component toggle/resize (locks), facts editor, price breakdown, similar projects, ask reo why, transcript, edit log, finalise with note. Customer widget resumes its session after reload and shows the confirmed quote.
 

@@ -1,4 +1,5 @@
 import { COMPONENT_KEYS, type ComponentKey, type Plan } from "./types";
+import { House } from "./House";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
 const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("en");
@@ -14,6 +15,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
 
   return (
     <aside className="plan" aria-label="Your plan">
+      <House design={d} />
       <div className="plan-head">
         <span className="plan-kicker">
           {quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}
