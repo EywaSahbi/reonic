@@ -106,6 +106,6 @@ def offer_handoff(facts: dict, design: dict | None, skipped: set[str] = frozense
 
 
 def narrow(design: dict | None) -> bool:
-    """Price range tight enough to call the plan solid (high end at most 1.5x the low end)."""
+    """Price range tight enough to call the plan solid (high end at most 1.7x the low end; market spread alone is ~1.6x, engine 7aecd88)."""
     lo, hi = (design or {}).get("price", {}).get("range_eur", [0, 0])
-    return lo > 0 and hi <= 1.5 * lo
+    return lo > 0 and hi <= 1.7 * lo

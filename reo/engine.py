@@ -54,3 +54,13 @@ def offline_design() -> dict:
                       "annual_savings_eur": 0, "payback_years": None},
         "assumptions": [], "missing_inputs": [], "params_version": OFFLINE,
     }
+
+
+def explain(facts: dict, component: str, locks: dict | None = None, prices: dict | None = None) -> dict | None:
+    """POST /explain: reasons + what-ifs for one component, or None."""
+    body = {"facts": facts, "component": component}
+    if locks:
+        body["locks"] = locks
+    if prices:
+        body["prices"] = prices
+    return _post("/explain", body)

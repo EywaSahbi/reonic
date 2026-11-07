@@ -83,7 +83,8 @@ type TraceStep = { step: number; tool: string; summary: string };   // tool: "en
 type OfferPack = { status: "preparing" | "ready" | "failed"; variants: Variant[]; recommended: Variant["name"];
                    flags: Plan["flags"]; site_visit_checklist: string[]; open_questions: string[];
                    customer_message_draft: string; actions: Action[]; trace: TraceStep[];
-                   duration_s: number; model: string; prepared_at: string };   // model: "claude-opus-5-5" or "scripted"
+                   duration_s: number; model: string; prepared_at: string;   // model: "claude-opus-5-5" or "scripted"
+                   chosen?: Variant["name"] };                               // set by POST /variant
 type GoalResult = { goal: "budget" | "independence" | "lowest_bill"; budget_eur?: number;
                     recommendation: Variant; alternatives: Variant[]; trace: TraceStep[] };
 
@@ -97,7 +98,7 @@ Turn.bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false
 |---|---|---|---|
 | POST | `/plans/{id}/prepare` | `{}` → `Plan` with `offer_pack.status = "preparing"`; runs in the background (also starts automatically on `/handoff`). Poll `GET /plans/{id}` until `ready` (Opus ~30–60 s, scripted < 1 s) | Sun 03:00 |
 | POST | `/plans/{id}/variant` | `{name}` → `Plan` (applies that variant's locks as installer edits, recorded) | Sun 03:00 |
-| POST | `/plans/{id}/actions/{action_id}/approve` | `{payload?}` (e.g. a different slot) → `Plan`; runs the mocked tool: `book_visit` → calendar (JSON under `reo/`), `create_crm_task` / `request_document` → CRM log, `send_quote` → finalise (status `quoted`) | Sun 03:00 |
+| POST | `/plans/{id}/actions/{action_id}/approve` | `{payload?}` (e.g. a different slot) → `Plan`; runs the mocked tool: `book_visit` (payload `{slot}` from `/calendar/slots` overrides the proposed slot) → calendar (JSON under `reo/`), `create_crm_task` / `request_document` → CRM log, `send_quote` (payload `{message}` = the planner's edited draft, sent to the customer as the finalise note) → finalise (status `quoted`) | Sun 03:00 |
 | GET | `/calendar/slots` | → `{slots: string[]}` (mock, next free site-visit slots) | Sun 03:00 |
 | POST | `/sessions/{id}/bill` | multipart `image` (jpg/png/pdf) → `Turn` with `bill.read` and chips `["Yes, that's right", "Not quite"]`; facts are applied only after "Yes, that's right" | Sun 03:00 |
 | POST | `/sessions/{id}/messages` | unchanged; a goal message returns `Turn.goal_result` (recommendation + 2 alternatives + trace) | Sun 09:00 |

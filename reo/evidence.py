@@ -39,9 +39,17 @@ def _band(kwh: float | None, bands: list[str]) -> str:
     return "unknown"
 
 
+def _household_kwh(facts: dict) -> float | None:
+    """Benchmark bands are household-only (data c0cb87e). A customer's total equals that only without EV and
+    electric heating; otherwise we don't band at all (falls back to a coarser segment)."""
+    if facts.get("annual_demand_kwh"):
+        return facts["annual_demand_kwh"]
+    no_extra = not (facts.get("has_ev") or facts.get("ev_planned")) and facts.get("heating_type") not in ("heatpump", "electric")
+    return facts.get("total_demand_kwh") if no_extra else None
+
+
 def _home_key(facts: dict, bands: list[str]) -> dict:
-    # shortcut: the dataset's demand is household-only; we use annual_demand_kwh if given, else the customer's total
-    kwh = facts.get("annual_demand_kwh") or facts.get("total_demand_kwh")
+    kwh = _household_kwh(facts)
     return {"demand_band": _band(kwh, bands), "has_ev": bool(facts.get("has_ev") or facts.get("ev_planned")),
             "heating_type": facts.get("heating_type") or "unknown"}
 
@@ -88,7 +96,7 @@ def similar_projects(facts: dict, k: int = 3) -> list[dict]:
     b = _benchmarks()
     if p is None or b is None:
         return []
-    kwh = facts.get("annual_demand_kwh") or facts.get("total_demand_kwh")
+    kwh = _household_kwh(facts)
     ev = bool(facts.get("has_ev") or facts.get("ev_planned"))
     pool = p[p["has_ev"].fillna(False) == ev] if ev else p[p["has_ev"].fillna(False) == False]  # noqa: E712
     if facts.get("heating_type") and (pool["heating_type"] == facts["heating_type"]).sum() >= k:

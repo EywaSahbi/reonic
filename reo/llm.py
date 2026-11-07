@@ -19,7 +19,8 @@ from dotenv import load_dotenv
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
 
-MODEL = os.getenv("REO_MODEL", "claude-opus-5-5")
+MODEL = os.getenv("REO_MODEL", "claude-sonnet-5-5")  # chat turns (phase 2 decision)
+AGENT_MODEL = os.getenv("REO_AGENT_MODEL", "claude-opus-5-5")  # offer agent
 EFFORT = os.getenv("REO_EFFORT", "low")  # chat turns; low keeps replies fast
 PERSONA_FILE = HERE.parent / "experience" / "persona.md"  # owned by app, loaded as is
 RULES_FILE = HERE / "prompt.md"
@@ -91,7 +92,7 @@ def _typed_facts(pairs: list[dict]) -> dict:
     return facts
 
 
-def _client() -> anthropic.Anthropic | None:
+def client() -> anthropic.Anthropic | None:
     # shortcut: gate on the env var so "no key" means scripted mode; profiles via `ant auth login` are ignored
     if not os.getenv("ANTHROPIC_API_KEY"):
         return None
@@ -99,14 +100,14 @@ def _client() -> anthropic.Anthropic | None:
 
 
 def _call(system: str, content: str, max_tokens: int, schema: dict | None = None) -> str | None:
-    client = _client()
-    if client is None:
+    c = client()
+    if c is None:
         return None
     output_config = {"effort": EFFORT}
     if schema:
         output_config["format"] = {"type": "json_schema", "schema": schema}
     try:
-        r = client.beta.messages.create(
+        r = c.beta.messages.create(
             model=MODEL,
             max_tokens=max_tokens,
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
