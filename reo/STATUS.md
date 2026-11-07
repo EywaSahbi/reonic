@@ -26,7 +26,7 @@
 
 (one line each: what, why)
 - Two LLM calls per turn (extract -> engine -> reply), not a tool loop: the engine is always called in code each turn, so every number is from this turn (hard rule 2).
-- Model `claude-opus-5-5` at effort `low` (override `REO_MODEL`, `REO_EFFORT`); server-side `fallbacks: "default"` on; any LLM failure returns None -> scripted fallback.
+- Chat model `claude-haiku-5-5`, offer agent `claude-sonnet-5-5` (EywaSahbi's call, replaces Sonnet chat / Opus agent), effort `low` (override `REO_MODEL`, `REO_EFFORT`); server-side `fallbacks: "default"` on; any LLM failure returns None -> scripted fallback.
 - Persona stays in `experience/persona.md` (app); reo only adds `reo/prompt.md` (how to use the engine result).
 - Heating and EV are always asked while unknown (engine only assumes them, never lists them as missing); after that reo asks what the engine lists as high or medium impact. Handoff offer: heating + EV known, or nothing left to ask.
 - `region` (engine 718cd3f) asked after roof as a choice of state codes; extracted from state or city names.

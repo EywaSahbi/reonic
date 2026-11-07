@@ -19,8 +19,15 @@ from dotenv import load_dotenv
 HERE = Path(__file__).parent
 load_dotenv(HERE / ".env")
 
-MODEL = os.getenv("REO_MODEL", "claude-sonnet-5-5")  # chat turns (phase 2 decision)
-AGENT_MODEL = os.getenv("REO_AGENT_MODEL", "claude-opus-5-5")  # offer agent
+MODEL = os.getenv("REO_MODEL", "claude-haiku-5-5")  # chat turns + bill photo (EywaSahbi: fast and cheap)
+AGENT_MODEL = os.getenv("REO_AGENT_MODEL", "claude-sonnet-5-5")  # offer agent (EywaSahbi)
+
+
+def fallback_kwargs(model: str) -> dict:
+    """Server-side refusal fallback where the model supports it (not on Haiku 5.5)."""
+    if "haiku" in model:
+        return {}
+    return {"betas": ["server-side-fallback-2026-07-01"], "fallbacks": "default"}
 EFFORT = os.getenv("REO_EFFORT", "low")  # chat turns; low keeps replies fast
 PERSONA_FILE = HERE.parent / "experience" / "persona.md"  # owned by app, loaded as is
 RULES_FILE = HERE / "prompt.md"
@@ -115,8 +122,7 @@ def _call(system: str, content: str, max_tokens: int, schema: dict | None = None
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
             messages=[{"role": "user", "content": content}],
             output_config=output_config,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",  # a declined request is re-run on Anthropic's recommended fallback model
+            **fallback_kwargs(MODEL),  # a declined request is re-run on Anthropic's recommended fallback model
         )
     except anthropic.APIConnectionError as e:
         log.warning("LLM unreachable, using scripted fallback: %s", e)

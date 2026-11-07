@@ -104,7 +104,7 @@ Turn.bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false
 | POST | `/sessions/{id}/messages` | unchanged; a goal message returns `Turn.goal_result` (recommendation + 2 alternatives + trace) | Sun 09:00 |
 | POST | `/plans/{id}/ask` | → `{answer, goal_result?}` (goal questions from the planner) | Sun 09:00 |
 
-Models (env-overridable): chat turns `REO_MODEL` = `claude-sonnet-5-5`; offer agent + goal planning `REO_AGENT_MODEL` = `claude-opus-5-5`. Without an API key the scripted path builds the same `OfferPack` from fixed lock sets (`model: "scripted"`).
+Models (env-overridable): chat turns + bill photo `REO_MODEL` = `claude-haiku-5-5`; offer agent `REO_AGENT_MODEL` = `claude-sonnet-5-5`. Without an API key the scripted path builds the same `OfferPack` from fixed lock sets (`model: "scripted"`).
 
 ## Agent harness (v1.2, additive; docs/plan.md "reo: the reo agent harness")
 

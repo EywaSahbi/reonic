@@ -103,7 +103,7 @@ class Runner:
             try:
                 r = c.beta.messages.create(model=self.run["model"], max_tokens=16000, system=self.skill.prompt(), tools=tools,
                                            messages=messages, output_config={"effort": self.skill.effort},
-                                           betas=["server-side-fallback-2026-07-01"], fallbacks="default")
+                                           **llm.fallback_kwargs(self.run["model"]))
             except anthropic.APIError as e:
                 self.step("think", "llm", self.run["model"], f"LLM error {type(e).__name__}", int((time.time() - t) * 1000), ok=False)
                 return False
