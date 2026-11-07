@@ -35,7 +35,7 @@ from harness.skills import SKILLS
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
 GREETING = ("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
-            "with a price estimate. To start: how many people live in your home?")
+            "with a price estimate. To start: roughly how many kWh of electricity do you use per year? It's on your bill.")
 HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit "
                  "to see the roof, and send you a final quote. You're not committing to anything.")
 OFFLINE_TEXT = "My calculator isn't reachable right now, so I can't give you numbers yet."
@@ -155,7 +155,7 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     if intent == "goal" and topic in GOALS:
         return goal_turn(db, plan, st, new, topic)
     if intent == "dims":
-        st["last_ask"] = "roof_area_sqm"
+        st["last_ask"] = "roof_dims"
         m = reo_msg(plan, "Sure. How wide and how long is the roof face that gets the sun, in metres? For example \"8 x 6 m\".")
         return {"messages": [m], "plan": out(plan), "suggestions": ["Skip"], "ask": flow.DIMS_ASK}
     if new.get("roof_width_m") and new.get("roof_length_m"):
@@ -311,6 +311,8 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer) -> str:
         parts.append("No problem, I'll work with a typical value for now.")
     elif intent == "other" and not new:
         parts.append("I'm only here to help with your home's energy plan. Shall we continue with that?")
+    if "heating_type" in new and (advice := scripted.heating_advice(d)):
+        parts.append(advice)
     if ask:
         parts.append(ask["prompt"])
     elif offer:
@@ -352,10 +354,10 @@ def start_session(_: dict | None = None):
                 "flags": [], "installer_edits": [],
                 "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}
         db["plans"][pid] = plan
-        db["state"][pid] = {"skipped": [], "offered": False, "last_ask": "num_inhabitants", "locks": {}, "prices": {}}
+        db["state"][pid] = {"skipped": [], "offered": False, "last_ask": "total_demand_kwh", "locks": {}, "prices": {}}
         m = reo_msg(plan, GREETING)
         _save(db)
-        return {"messages": [m], "plan": out(plan), "suggestions": ["I know my yearly kWh"], "ask": flow.OPENING_ASK}
+        return {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS["total_demand_kwh"], "ask": flow.ui_ask(flow.OPENING_ASK)}
 
 
 @app.post("/sessions/{pid}/messages")
@@ -461,7 +463,7 @@ def send_address(pid: str, body: Address):
         plan, st = _get(db, pid)
         plan["transcript"].append({"role": "customer", "text": body.address, "at": now()})
         if hit is None:
-            st["last_ask"] = "roof_area_sqm"
+            st["last_ask"] = "roof_dims"
             m = reo_msg(plan, "I couldn't find that building on the map. You can enter the roof's width and length instead, or skip it.")
             _save(db)
             return {"messages": [m], "plan": out(plan), "suggestions": ["Skip"], "ask": flow.DIMS_ASK}

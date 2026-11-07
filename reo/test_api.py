@@ -21,6 +21,10 @@ def fake_design(facts, locks=None, prices=None):
                       "total_eur": total, "range_eur": [total - 1800, total + 1900]},
             "economics": {"total_demand_kwh": 4500, "self_consumption_pct": 60, "autarky_pct": 70,
                           "annual_savings_eur": 1243, "payback_years": 11},
+            "heating_comparison": {"fuel": "gas", "energy_factor": 3.7, "cost_now_eur_per_year": 3004, "cost_heatpump_eur_per_year": 2182,
+                                   "cost_factor": 1.38, "heatpump_cheaper": True, "co2_now_kg_per_year": 5025,
+                                   "co2_heatpump_kg_per_year": 2345, "co2_reduction_pct": 53.3, "note": None}
+            if facts.get("heating_type") == "gas" else None,
             "assumptions": [], "missing_inputs": [{"field": "heating_type", "why": "", "impact": "high"}]
             if not facts.get("heating_type") else [], "params_version": "test"}
 
@@ -36,21 +40,27 @@ def test_demo_flow(tmp_path, monkeypatch):
     c = client(tmp_path, monkeypatch)
     t = c.post("/sessions", json={}).json()
     pid = t["plan"]["id"]
-    assert t["ask"]["field"] == "num_inhabitants"
+    assert t["ask"]["field"] == "total_demand_kwh" and "Skip" in t["suggestions"]
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we use about 4,500 kWh a year"}).json()
     assert t["plan"]["facts"]["total_demand_kwh"] == 4500
     assert "8 kWp" in t["messages"][0]["text"] and "estimate" in t["messages"][0]["text"]
     assert "For your home, I'd suggest" in t["messages"][0]["text"]
-    assert t["ask"]["field"] == "heating_type"
+    assert t["ask"]["field"] == "roof_area_sqm" and t["ask"]["input"] == "address"  # location right after kWh
 
-    t = c.post(f"/sessions/{pid}/messages", json={"text": "Gas"}).json()  # chip
-    assert t["plan"]["facts"]["heating_type"] == "gas"
-    assert t["ask"]["field"] == "has_ev"  # EV is always asked, the engine only assumes it
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Skip"}).json()
+    assert t["ask"]["field"] == "region"
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "BY"}).json()  # state given: no dimensions
+    assert t["plan"]["facts"]["region"] == "BY" and t["ask"]["field"] == "has_ev"
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we're buying an electric car next year"}).json()
     assert t["plan"]["facts"]["ev_planned"] is True
     assert "added a wallbox" in t["messages"][0]["text"]
+    assert t["ask"]["field"] == "heating_type"
+
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Gas"}).json()  # chip
+    assert t["plan"]["facts"]["heating_type"] == "gas"
+    assert "heat pump" in t["messages"][0]["text"] and "€2,180" in t["messages"][0]["text"]  # engine's heating_comparison
     assert t["ask"]["field"] == "has_existing_pv"
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "No solar yet"}).json()  # chip
@@ -111,7 +121,7 @@ def test_address_lookup(tmp_path, monkeypatch):
     assert t["plan"]["facts"]["roof_area_sqm"] == 48 and t["plan"]["facts"]["region"] == "BY"
     assert t["messages"][0]["text"].startswith("I looked up your address")
     t = c.post(f"/sessions/{pid}/address", json={"address": "Irgendwo 1"}).json()
-    assert t["ask"]["field"] == "roof_area_sqm"
+    assert t["ask"]["field"] == "roof_dims"
 
 
 def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
@@ -128,10 +138,27 @@ def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
     pid2 = c.post("/sessions", json={}).json()["plan"]["id"]
     c.post(f"/sessions/{pid2}/address", json={"address": "Unbekannt 1"})
     t = c.post(f"/sessions/{pid2}/messages", json={"text": "Skip"}).json()
-    assert "roof_area_sqm" not in t["plan"]["facts"] and (t.get("ask") or {}).get("field") != "roof_area_sqm"
+    assert "roof_area_sqm" not in t["plan"]["facts"] and (t.get("ask") or {}).get("field") not in ("roof_area_sqm", "roof_dims")
 
 
 def test_roof_geometry():
     import roof
     assert abs(roof.area_sqm([(0, 0), (0, 0.0001), (0.0001, 0.0001), (0.0001, 0)]) - 123.6) < 1
     assert roof.sunny_area(100, "flat") == 100 and round(roof.sunny_area(100, "gable")) == 61 and round(roof.sunny_area(100, "mono")) == 122
+
+
+def test_kwh_skip_goes_through_people_then_state_then_dimensions(tmp_path, monkeypatch):
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    say = lambda text: c.post(f"/sessions/{pid}/messages", json={"text": text}).json()
+    assert say("Skip")["ask"]["field"] == "num_inhabitants"
+    t = say("3")
+    assert t["plan"]["facts"]["num_inhabitants"] == 3 and t["ask"]["field"] == "roof_area_sqm"
+    assert say("Skip")["ask"]["field"] == "region"
+    t = say("Skip")
+    assert t["ask"]["field"] == "roof_dims" and t["ask"]["input"] == "dimensions"
+    t = say("Skip")
+    assert t["ask"]["field"] == "has_ev"                                       # nothing known about the roof: assumed, on to EV
+    assert say("No")["ask"]["field"] == "heating_type"
+    t = say("electric")
+    assert "heat pump would be worth" not in t["messages"][0]["text"] and t["ask"]["field"] == "has_existing_pv"

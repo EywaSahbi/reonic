@@ -1,43 +1,42 @@
 """Which question reo asks next, and when it offers the handoff. Follows experience/flow.md Stage 3 and 5."""
 
 REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]  # engine HomeFacts.region
-ALWAYS_ASK = {"heating_type", "has_ev", "has_existing_pv"}  # existing PV: data 7fd5ecb, most PV yes/no misses are homes that already have solar  # flow.md: the two facts that change the design most; engine only assumes them
 
-# (fields that count as "known", ask) in the order of flow.md Stage 3.
+# Prompts per field. The order is fixed by next_question() below (customer-backend flow of 2026-11-08).
 QUESTIONS = [
-    (("building_type",), {"field": "building_type", "input": "choice", "options": ["detached", "semi", "terraced"],
-                          "prompt": "What kind of house is it? That tells me roughly how much roof and heating you have."}),
+    (("total_demand_kwh", "annual_demand_kwh"), {"field": "total_demand_kwh", "input": "number",
+                                                  "prompt": "To start: roughly how many kWh of electricity do you use per year? It's on your bill."}),
+    (("num_inhabitants",), {"field": "num_inhabitants", "input": "choice", "options": ["1", "2", "3", "4", "5+"],
+                            "prompt": "No problem. How many people live in your home? I can estimate the usage from that."}),
+    (("roof_area_sqm", "roof_width_m"), {"field": "roof_area_sqm", "input": "address",
+                          "prompt": "What's your address? I'll measure your roof from the map. You can also skip."}),
+    (("region",), {"field": "region", "input": "choice", "options": REGIONS,
+                   "prompt": "Which federal state do you live in? That sets how much sun your panels get."}),
+    (("roof_dims",), {"field": "roof_dims", "input": "dimensions",
+                      "prompt": "Sunny roof face: width × length (m)"}),
+    (("has_ev", "ev_planned"), {"field": "has_ev", "input": "choice", "options": ["Yes, already", "Planned", "No"],
+                                "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
     (("heating_type",), {"field": "heating_type", "input": "choice",
                          "options": ["gas", "oil", "heatpump", "electric", "district", "other"],
                          "prompt": "How do you heat today? That decides whether a heat pump makes sense."}),
-    (("has_ev", "ev_planned"), {"field": "has_ev", "input": "choice", "options": ["Yes, already", "Planned", "No"],
-                                "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
     (("has_existing_pv",), {"field": "has_existing_pv", "input": "choice", "options": ["Yes, I have solar", "No solar yet"],
                             "prompt": "Do you already have solar panels on the roof? Then I'll plan around them."}),
     (("existing_pv_kwp",), {"field": "existing_pv_kwp", "input": "number",
                             "prompt": "Roughly how big is your existing solar system, in kWp? It's on your old offer or the inverter."}),
-    (("roof_area_sqm", "roof_width_m"), {"field": "roof_area_sqm", "input": "address",
-                          "prompt": "What's your address? I'll measure your roof from the map. You can also enter the roof's width and length, or skip."}),
-    (("roof_type",), {"field": "roof_type", "input": "choice", "options": ["gable", "flat", "mono", "other"],
-                      "prompt": "What shape is your roof? That decides how the panels are mounted."}),
-    (("region",), {"field": "region", "input": "choice", "options": REGIONS,
-                   "prompt": "Which federal state do you live in? That sets how much sun your panels get."}),
-    (("house_size_sqm",), {"field": "house_size_sqm", "input": "number",
-                           "prompt": "How big is the living space, and roughly when was the house built? That sizes the heat pump."}),
-    (("electricity_price_eur_per_kwh",), {"field": "electricity_price_eur_per_kwh", "input": "number",
-                                          "prompt": "What do you pay per kWh? I've assumed a typical rate so far."}),
-    (("budget_eur",), {"field": "budget_eur", "input": "number",
-                       "prompt": "Do you have a budget in mind? Then I can show what fits."}),
 ]
+ASK = {a["field"]: a for _, a in QUESTIONS}
 
 
 # Chips shown with each ask (flow.md Stage 3 table).
 CHIPS = {
+    "total_demand_kwh": ["About 3,000 kWh", "About 4,500 kWh", "Skip"],
+    "num_inhabitants": ["Skip"],
     "building_type": [],
     "heating_type": ["Gas", "Oil", "Heat pump already", "Other"],
     "has_ev": ["Yes, already", "Planned", "No"],
     "roof_area_sqm": ["Enter width × length", "Skip"],
-    "region": [],
+    "region": ["Skip"],
+    "roof_dims": ["Skip"],
     "has_existing_pv": ["Yes, I have solar", "No solar yet"],
     "existing_pv_kwp": ["About 5 kWp", "About 10 kWp", "Not sure"],
     "roof_type": [],
@@ -46,14 +45,15 @@ CHIPS = {
     "budget_eur": ["Under €15,000", "€15,000–25,000", "No fixed budget"],
 }
 STANDING_CHIPS = ["Why this size?", "What does it cost?", "Send to installer"]
-OPENING_ASK = {"field": "num_inhabitants", "prompt": "People in your home", "input": "choice", "options": ["1", "2", "3", "4", "5+"]}
-DIMS_ASK = {"field": "roof_area_sqm", "prompt": "Sunny roof face: width × length (m)", "input": "dimensions"}  # app sends /facts {roof_width_m, roof_length_m}
+PEOPLE_ASK = {"field": "num_inhabitants", "prompt": "People in your home", "input": "choice", "options": ["1", "2", "3", "4", "5+"]}
+DIMS_ASK = {"field": "roof_dims", "prompt": "Sunny roof face: width × length (m)", "input": "dimensions"}  # app sends /facts {roof_width_m, roof_length_m}
 KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, from your bill)", "input": "number"}
+OPENING_ASK = KWH_ASK
 
 
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
-    label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
+    label = {"num_inhabitants": "People in your home", "total_demand_kwh": "Yearly electricity use (kWh)", "roof_dims": "Roof width × length (m)", "building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
              "roof_area_sqm": "Your address (we measure the roof from the map)", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
@@ -61,52 +61,32 @@ def ui_ask(ask: dict) -> dict:
     return out
 
 
-def _missing(design: dict | None, impact: str) -> set[str]:
-    return {m["field"] for m in (design or {}).get("missing_inputs", []) if m.get("impact") == impact}
+def next_question(facts: dict, design: dict | None = None, skipped: set[str] = frozenset()) -> dict | None:
+    """The one ask for this turn, or None when the flow is done. Fixed order, skips branch:
+    kWh (skipped: people) -> address (skipped: state; state skipped too: roof width x length) -> EV -> heating -> existing solar."""
+    def known(*names):
+        return any(facts.get(n) is not None for n in names)
+    roof = known("roof_area_sqm", "roof_width_m")
+    if not known("total_demand_kwh", "annual_demand_kwh"):
+        if "total_demand_kwh" not in skipped:
+            return ASK["total_demand_kwh"]
+        if not known("num_inhabitants") and "num_inhabitants" not in skipped:
+            return ASK["num_inhabitants"]
+    if not roof:
+        if "roof_area_sqm" not in skipped and "roof_dims" not in skipped:
+            return ASK["roof_area_sqm"]
+        if not known("region") and "region" not in skipped:
+            return ASK["region"]
+        if "region" in skipped and "roof_dims" not in skipped:
+            return ASK["roof_dims"]
+    for field in ("has_ev", "heating_type", "has_existing_pv"):
+        if not known(*next(k for k, a in QUESTIONS if a["field"] == field)) and field not in skipped:
+            return ASK[field]
+    if facts.get("has_existing_pv") and not known("existing_pv_kwp") and "existing_pv_kwp" not in skipped:
+        return ASK["existing_pv_kwp"]
+    return None
 
 
-def _askable(design: dict | None) -> set[str]:
-    """Worth asking: heating and EV always, otherwise what the engine lists as high or medium impact.
-    Without an engine result, fall back to flow.md's main rows."""
-    if design is None:
-        return ALWAYS_ASK | {"roof_area_sqm"}
-    return ALWAYS_ASK | {m["field"] for m in design.get("missing_inputs", []) if m.get("impact") in ("high", "medium")}
-
-
-def next_question(facts: dict, design: dict | None, skipped: set[str] = frozenset()) -> dict | None:
-    """The one ask for this turn, or None when nothing important is left."""
-    open_qs = []
-    for known, ask in QUESTIONS:
-        if any(facts.get(f) is not None for f in known) or ask["field"] in skipped:
-            continue
-        if ask["field"] == "existing_pv_kwp":
-            if facts.get("has_existing_pv"):
-                open_qs.append(ask)  # asked right after "yes, I have solar": it drives the price range
-            continue
-        if ask["field"] not in _askable(design):
-            continue
-        if ask["field"] == "house_size_sqm" and not (design or {}).get("components", {}).get("heatpump", {}).get("recommended"):
-            continue  # only size the heat pump when it is in play
-        open_qs.append(ask)
-    if not open_qs:
-        return None  # nothing worth asking left (flow.md stop rule)
-    # flow.md order: heating, EV and existing solar first, in that order; then the engine's high-impact inputs
-    first = [q for q in open_qs if q["field"] in ALWAYS_ASK | {"existing_pv_kwp"}]
-    if first:
-        return first[0]
-    high = _missing(design, "high")
-    return next((q for q in open_qs if q["field"] in high), open_qs[0])
-
-
-def offer_handoff(facts: dict, design: dict | None, skipped: set[str] = frozenset()) -> bool:
-    """flow.md Stage 5: heating, EV and existing solar known and the price range narrow, or nothing worth asking is left."""
-    ev_known = facts.get("has_ev") is not None or facts.get("ev_planned") is not None
-    pv_known = facts.get("has_existing_pv") is not None or "has_existing_pv" in skipped
-    basics = facts.get("heating_type") is not None and ev_known and pv_known
-    return (basics and narrow(design)) or next_question(facts, design, skipped) is None
-
-
-def narrow(design: dict | None) -> bool:
-    """Price range tight enough to call the plan solid (high end at most 1.7x the low end; market spread alone is ~1.6x, engine 7aecd88)."""
-    lo, hi = (design or {}).get("price", {}).get("range_eur", [0, 0])
-    return lo > 0 and hi <= 1.7 * lo
+def offer_handoff(facts: dict, design: dict | None = None, skipped: set[str] = frozenset()) -> bool:
+    """The flow is done: offer the handoff."""
+    return next_question(facts, design, skipped) is None

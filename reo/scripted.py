@@ -44,6 +44,10 @@ CHIP_INTENTS = {
 }
 
 
+NUMBER_FIELDS = {"total_demand_kwh", "num_inhabitants", "roof_area_sqm", "existing_pv_kwp", "house_size_sqm",
+                 "electricity_price_eur_per_kwh", "budget_eur"}   # a bare number answers these asks
+
+
 def chip(text: str) -> dict | None:
     """Exact chip tap -> {"facts", "intent", "topic"}, or None if this is free text."""
     t = text.strip().lower()
@@ -71,7 +75,7 @@ def extract(text: str, last_field: str | None = None) -> dict:
     if m := re.search(r"(\d+(?:[.,]\d+)?)\s*m?\s*(?:x|×|\*|mal|by|auf)\s*(\d+(?:[.,]\d+)?)\s*m\b", t):
         facts["roof_width_m"], facts["roof_length_m"] = _num(m.group(1)), _num(m.group(2))
     elif m := re.search(r"(\d[\d.,]*)\s*(m²|m2|qm|square)", t):
-        key = "roof_area_sqm" if re.search(r"roof|dach", t) or last_field == "roof_area_sqm" else (
+        key = "roof_area_sqm" if re.search(r"roof|dach", t) or last_field in ("roof_area_sqm", "roof_dims") else (
             "house_size_sqm" if re.search(r"living|wohn|house|haus", t) else last_field or "roof_area_sqm")
         if key in ("roof_area_sqm", "house_size_sqm"):
             facts[key] = _num(m.group(1))
@@ -102,7 +106,7 @@ def extract(text: str, last_field: str | None = None) -> dict:
         if re.search(rf"\b({names})\b", t):
             facts["region"] = code
             break
-    if not facts and last_field and (m := re.fullmatch(r"\s*(\d[\d.,]*)\s*", t)):
+    if not facts and last_field in NUMBER_FIELDS and (m := re.fullmatch(r"\s*(\d[\d.,]*)\s*", t)):
         facts[last_field] = _num(m.group(1))
     intent = "facts" if facts else "other"
     topic = None
@@ -173,6 +177,26 @@ def headline(d: dict) -> str:
     items = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
     lo, hi = d["price"]["range_eur"]
     return f"I'd suggest {items}. That would cost roughly {eur(lo)}–{eur(hi)[1:]} (estimate)."
+
+
+def heating_advice(d: dict) -> str | None:
+    """Why a heat pump beats today's fossil / district heating, from the engine's heating_comparison (None = nothing to claim)."""
+    hc = d.get("heating_comparison")
+    if not hc:
+        return None
+    name = {"gas": "gas heating", "oil": "oil heating", "district": "district heating"}.get(hc["fuel"], "your current heating")
+    now, hp = rnd(hc["cost_now_eur_per_year"], 10), rnd(hc["cost_heatpump_eur_per_year"], 10)
+    out = [f"A heat pump would be worth a look: for the same heat it needs about {rnd(hc['energy_factor'], 0.1):g} times less energy than {name}."]
+    if hc["heatpump_cheaper"]:
+        out.append(f"On grid power it would cost around €{hp:,} a year instead of €{now:,}, and less with your own solar.")
+    else:
+        out.append(f"On grid power it would cost around €{hp:,} a year against €{now:,} today, so the case rests on your own solar.")
+    if (hc.get("co2_reduction_pct") or 0) > 0:
+        saved = hc["co2_now_kg_per_year"] - hc["co2_heatpump_kg_per_year"]
+        out.append(f"It would cut your heating CO₂ by about {rnd(hc['co2_reduction_pct'])}% (roughly {rnd(saved, 100):,} kg a year).")
+    if hc.get("note"):
+        out.append("These are estimates; your heat demand is assumed.")
+    return " ".join(out)
 
 
 def changes(before: dict | None, after: dict) -> str | None:
