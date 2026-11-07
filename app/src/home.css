@@ -5,7 +5,7 @@
 
 /* ---------- hero ---------- */
 .home { position: relative; min-height: 100svh; display: flex; flex-direction: column; color: #fff; overflow: hidden; isolation: isolate; }
-.home-bg { position: absolute; inset: 0; background-size: cover; background-position: 62% 50%; transform: scale(1.04); z-index: -2; transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s ease; }
+.home-bg { position: absolute; inset: 0; background-size: cover; background-position: 50% 78%; transform: scale(1.04); z-index: -2; transition: transform 1.2s cubic-bezier(0.22, 1, 0.36, 1), filter 0.6s ease; }
 .home-shade { position: absolute; inset: 0; z-index: -1; background:
   linear-gradient(180deg, rgba(9, 9, 11, 0.62) 0%, rgba(9, 9, 11, 0.18) 28%, rgba(9, 9, 11, 0.22) 58%, rgba(9, 9, 11, 0.78) 100%),
   radial-gradient(60% 45% at 50% 52%, rgba(9, 9, 11, 0.35), transparent 70%); }

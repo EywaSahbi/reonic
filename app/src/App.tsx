@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Widget } from "./Widget";
 import { USING_MOCK } from "./api";
-import houseDusk from "./assets/house-dusk.jpg";
+import houseHero from "./assets/house-hero.jpg";
 import "./home.css";
 import { SonnfeldMark } from "./Logo";
 
@@ -26,7 +26,7 @@ export function App() {
   return (
     <div className={`home-page ${open ? "is-reo" : ""}`}>
       <section className="home" aria-label="Sonnfeld">
-        <div className="home-bg" style={{ backgroundImage: `url(${houseDusk})` }} aria-hidden />
+        <div className="home-bg" style={{ backgroundImage: `url(${houseHero})` }} aria-hidden />
         <div className="home-shade" aria-hidden />
 
         <header className="home-top">
