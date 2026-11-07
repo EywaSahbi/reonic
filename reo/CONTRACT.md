@@ -105,3 +105,29 @@ Turn.bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false
 | POST | `/plans/{id}/ask` | → `{answer, goal_result?}` (goal questions from the planner) | Sun 09:00 |
 
 Models (env-overridable): chat turns `REO_MODEL` = `claude-sonnet-5-5`; offer agent + goal planning `REO_AGENT_MODEL` = `claude-opus-5-5`. Without an API key the scripted path builds the same `OfferPack` from fixed lock sets (`model: "scripted"`).
+
+## Agent harness (v1.2, additive; docs/plan.md "reo: the reo agent harness")
+
+```ts
+type RunStep = { n: number; kind: "think" | "tool" | "guard"; tool?: string;   // e.g. "engine.design", "evidence.percentile", "grounding", "effect_gate"
+                 effect?: "read" | "propose" | "execute"; args_summary: string; result_summary: string; ms: number;
+                 ok?: boolean };                                                   // guards: ok false = violation (then retry or scripted)
+type Run = { id: string; skill: "chat_turn" | "offer_prep" | "goal_planner" | "bill_reader" | "installer_qa" | "follow_up";
+             plan_id: string; trigger: string;                                    // "handoff", "prepare", "goal message", "bill upload", "approve a2", ...
+             status: "running" | "done" | "failed" | "needs_approval";           // needs_approval: finished with proposed actions waiting
+             steps: RunStep[]; output: unknown | null; model: string;            // "claude-opus-5-5" | "claude-sonnet-5-5" | "scripted"
+             started_at: string; duration_s: number | null };
+
+OfferPack.run_id: string;       // the offer_prep run; OfferPack.trace stays as the short summary
+GoalResult.run_id: string;
+```
+
+| Method | Path | Body → Response | Milestone |
+|---|---|---|---|
+| GET | `/runs/{id}` | → `Run` | Sat 23:30 |
+| GET | `/runs/{id}/events` | Server-Sent Events: one `event: step` per `RunStep` (data = JSON step) as it happens, then `event: done` (data = `{status, duration_s}`). Replays past steps first, so a late subscriber sees the whole run | Sun 03:00 |
+| GET | `/plans/{id}/runs` | → `Run[]` without `output` (newest first) | Sat 23:30 |
+| POST | `/plans/{id}/actions/{action_id}/approve` | as v1.1; runs the `execute` tool and appends a step to the offer run | Sat 23:30 |
+| POST | `/plans/{id}/actions/{action_id}/reject` | `{reason?}` → `Plan` (action `status: "rejected"`, nothing executed) | Sat 23:30 |
+
+`Action.status` gains `"rejected"`. Effect classes: models only ever call `read` and `propose` tools; `execute` tools (`calendar.book`, `crm.create_task`, `quote.send`) run only from `/approve`. Installer edits re-run the guards on an existing pack and mark variants `stale: true` (`Variant.stale?: boolean`) instead of silently changing them.
