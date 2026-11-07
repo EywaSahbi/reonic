@@ -208,6 +208,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const cardLabels = new Set((ask?.input === "boolean" ? ["Yes", "No"] : ask?.input === "choice" ? ask.options ?? [] : []).flatMap((o) => [o, label(o)].map((x) => x.toLowerCase())));
   const visibleChips = chips.filter((c) => !(ask?.input === "address" && /^(enter width × length|skip)$/i.test(c)) && !cardLabels.has(c.toLowerCase()) && !(ask?.field === "heating_type" && /^(gas|oil|other|heat pump already)$/i.test(c)));
   const handedOver = plan?.status === "handed_over" || plan?.status === "quoted";
+  const latestAdvisorIndex = messages.map((m) => m.role).lastIndexOf("reo");
   const hasDesign = !!plan && (plan.history.length > 0 || Object.keys(plan.facts).length > 0);
 
   return (
@@ -229,7 +230,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
         <div className="chat">
           <div className="chat-log" aria-live="polite">
             {messages.map((m, i) => (
-              m.role === "reo" ? (
+              m.role === "reo" && i === latestAdvisorIndex ? (
                 <div key={i} className="reo-message">
                   <span className="reo-message-avatar" aria-hidden><ReoAvatar size={104} greet={false} interactive={false} /></span>
                   <div className="bubble bubble-reo">{m.text}</div>
