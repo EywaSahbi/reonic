@@ -5,16 +5,18 @@
 - [x] Profile the raw CSVs → `docs/dataset_explanation.md`
 - [x] `build.py` → `processed/projects.parquet` (HomeFacts column names) + `processed/split.csv`; `CONTRACT.md` v1 → `DONE` to engine, reo, qa (M0)
 - [x] `score.py` + naive baseline on `val` → `DONE` to engine, qa (M1). Engine `all` on val: bundle 0.56 vs baseline 0.55
-- [ ] Engine params must come from `train` only, or test numbers are in-sample (NEED to engine)
+- [x] Engine params must come from `train` only (engine ac50586)
 - [x] `benchmarks.json` from `train` → `DONE` to reo, qa (M1)
-- [ ] Test-set report, deviation analysis, charts → `DONE` to reo, app (M2)
+- [x] Test-set report, deviation analysis, charts → `DONE` to reo, app (M2): `reports/reality_check_test.md` + 3 PNGs
+- [ ] Re-run `report.py` / `score.py` when engine changes (val for diagnostics; test only for the final frozen numbers at M3)
 
 ## Published
 
 - `docs/dataset_explanation.md` (commits 60f5b08, b81a28c)
 - `processed/projects.parquet` (1,571 rows) + `processed/split.csv` (1,098 / 238 / 235), `CONTRACT.md` v1, `NOTES.md` (1e37ff2)
 - `score.py`, `reports/score_all_val.json` (engine v0-handset+line on val) (10e725a)
-- `benchmarks.py` → `processed/benchmarks.json` (46 segments, 21 with n >= 15)
+- `benchmarks.py` → `processed/benchmarks.json` (46 segments, 21 with n >= 15) (ca6f1b3)
+- `report.py` → `reports/reality_check_{val,test}.md`, `vs_baseline_*.png`, `pv_scatter_*.png`, `no_pv_*.png`; scores `score_test_test.json`, `score_val_val.json` (engine train-only params)
 
 ## Decisions
 
