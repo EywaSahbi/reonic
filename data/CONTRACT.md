@@ -67,6 +67,24 @@ Built by `uv run python benchmarks.py` from `train` only.
 - The example is the real level-2 segment at the time of writing; read the file for current values.
 - Percentile fields: `p10`, `p25`, `p50`, `p75`, `p90` (p25 / p75 added for variant anchors).
 
+## `data/processed/scenarios.json` (reo harness evals)
+
+Built by `uv run python scenarios.py`. 9 real homes from `val` (`gas_to_heatpump` from `train`: val has no expert heat pump), never `test`.
+
+```json
+{"built_from": "...", "scenarios": [
+  {"id": "ev_planned", "project_id": "…", "split": "val", "installer": "2a8ba8e2", "why": "…",
+   "facts": {"annual_demand_kwh": 4500.0, "has_ev": false, "electricity_price_eur_per_kwh": 0.32, "ev_planned": true},
+   "added_facts": {"ev_planned": true},
+   "existing_heating_electricity_kwh": null,
+   "expert": {"pv": {"recommended": true, "size": 7.12, "unit": "kWp"}, "battery": {...}, "heatpump": {...}, "wallbox": {...}},
+   "target_source": "mount_count", "expect": "With ev_planned the design adds a wallbox …"}]}
+```
+
+- `facts`: HomeFacts, ready for engine `/design`; includes `added_facts`.
+- `added_facts`: facts the data cannot hold (`ev_planned`, `budget_eur`), added for the scenario. The expert design did not see them, so compare against `expect`, not the expert sizes, for those aspects.
+- Ids: `typical`, `retrofit_existing_pv`, `retrofit_unrecorded_pv`, `ev_driver`, `ev_planned`, `gas_to_heatpump`, `tiny_demand`, `big_demand`, `tight_budget`.
+
 ## Lookups for reo (spec; reference code `data/lookup.py`, tested in `test_lookup.py`)
 
 reo reads the files and implements these itself (no imports across folders). Only `train` homes are used or shown.

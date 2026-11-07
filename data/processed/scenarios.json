@@ -1,0 +1,379 @@
+{
+ "built_from": "val (gas_to_heatpump from train), never test",
+ "scenarios": [
+  {
+   "id": "typical",
+   "project_id": "0cd9424e134c70c9",
+   "split": "val",
+   "installer": "23c108b7",
+   "why": "The most common home: 4,500 kWh household, no EV, heating unknown.",
+   "facts": {
+    "annual_demand_kwh": 4500.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.39,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 13.5,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 9.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    }
+   },
+   "target_source": "package_name",
+   "expect": "PV + battery near the segment median; no heat pump; wallbox not pushed."
+  },
+  {
+   "id": "retrofit_existing_pv",
+   "project_id": "31ec5ab9f0ccdb85",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "Home already has PV (recorded); expert added only a battery.",
+   "facts": {
+    "annual_demand_kwh": 4500.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.32,
+    "has_existing_pv": true,
+    "existing_pv_kwp": 10.8,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": false,
+     "size": null,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 5.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    }
+   },
+   "target_source": "none",
+   "expect": "No new PV; battery sized to the existing array."
+  },
+  {
+   "id": "retrofit_unrecorded_pv",
+   "project_id": "ad726d9b0db56686",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "Expert sold only a battery but existing PV is not recorded (49 of 52 such test homes).",
+   "facts": {
+    "annual_demand_kwh": 10000.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.32,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": false,
+     "size": null,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 10.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    }
+   },
+   "target_source": "none",
+   "expect": "reo asks 'do you already have solar?' before proposing PV."
+  },
+  {
+   "id": "ev_driver",
+   "project_id": "199389f15add6014",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "EV with known mileage; expert sold PV + wallbox.",
+   "facts": {
+    "annual_demand_kwh": 2200.0,
+    "heating_type": "heatpump",
+    "heating_demand_kwh": 17500.0,
+    "has_ev": true,
+    "ev_km_per_year": 25000.0,
+    "electricity_price_eur_per_kwh": 0.3,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": 5000.0,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 9.98,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 15.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": true,
+     "size": 11.0,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "Wallbox 11 kW; PV sized for household + EV."
+  },
+  {
+   "id": "ev_planned",
+   "project_id": "11e9d39e95ce3aca",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "Expert sold a wallbox to a home without a recorded EV (57 of 62 val wallboxes): an EV is planned.",
+   "facts": {
+    "annual_demand_kwh": 4500.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.32,
+    "has_existing_pv": false,
+    "has_existing_battery": false,
+    "ev_planned": true
+   },
+   "added_facts": {
+    "ev_planned": true
+   },
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 7.12,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": false,
+     "size": null,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": true,
+     "size": 22.0,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "With ev_planned the design adds a wallbox and sizes PV for the future EV."
+  },
+  {
+   "id": "gas_to_heatpump",
+   "project_id": "0e2f86210198e21c",
+   "split": "train",
+   "installer": "2a8ba8e2",
+   "why": "Gas heating replaced by a heat pump. From train: val has no expert heat pump.",
+   "facts": {
+    "annual_demand_kwh": 2500.0,
+    "heating_type": "gas",
+    "heating_demand_kwh": 20463.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.32,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 6.65,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 7.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": true,
+     "size": 10.5,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "Heat pump proposed; PV sized for household + heat pump consumption."
+  },
+  {
+   "id": "tiny_demand",
+   "project_id": "04ebc451f8bcf740",
+   "split": "val",
+   "installer": "23c108b7",
+   "why": "Smallest plausible household demand with PV in val.",
+   "facts": {
+    "annual_demand_kwh": 1500.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.33,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 6.3,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 6.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": true,
+     "size": 11.0,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "Small PV, small or no battery; flags if sizes exceed similar homes."
+  },
+  {
+   "id": "big_demand",
+   "project_id": "4b1a1f488238a07a",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "Largest plausible household demand with PV in val.",
+   "facts": {
+    "annual_demand_kwh": 20000.0,
+    "heating_type": "heatpump",
+    "heating_demand_kwh": 14000.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.37,
+    "has_existing_pv": false,
+    "has_existing_battery": false
+   },
+   "added_facts": {},
+   "existing_heating_electricity_kwh": 4000.0,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 25.18,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 15.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "Large PV (roof permitting), larger battery; no oversize flag vs the 6000+ segment."
+  },
+  {
+   "id": "tight_budget",
+   "project_id": "d3c14788ceb4ba76",
+   "split": "val",
+   "installer": "2a8ba8e2",
+   "why": "Typical PV + battery home with an added tight budget; the expert design did not see the budget.",
+   "facts": {
+    "annual_demand_kwh": 5000.0,
+    "has_ev": false,
+    "electricity_price_eur_per_kwh": 0.27,
+    "has_existing_pv": false,
+    "has_existing_battery": false,
+    "budget_eur": 12000
+   },
+   "added_facts": {
+    "budget_eur": 12000
+   },
+   "existing_heating_electricity_kwh": null,
+   "expert": {
+    "pv": {
+     "recommended": true,
+     "size": 11.4,
+     "unit": "kWp"
+    },
+    "battery": {
+     "recommended": true,
+     "size": 15.0,
+     "unit": "kWh"
+    },
+    "heatpump": {
+     "recommended": false,
+     "size": null,
+     "unit": "kW"
+    },
+    "wallbox": {
+     "recommended": true,
+     "size": 11.0,
+     "unit": "kW"
+    }
+   },
+   "target_source": "mount_count",
+   "expect": "Total price within budget_eur, battery reduced or dropped first, the budget variant says what was cut."
+  }
+ ]
+}
