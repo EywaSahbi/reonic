@@ -146,6 +146,7 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     intent, topic, new = parsed["intent"], parsed.get("topic"), parsed["facts"]
     if plan["status"] != "drafting":
         return after_handoff_turn(plan, intent, topic)
+    new = {k: v for k, v in new.items() if k not in non_positive(new)}  # "0 m²" is not an answer: ask again
 
     if intent == "bill_yes":  # confirm what bill_reader read
         new = st.pop("bill_pending", None) or {}
@@ -215,6 +216,15 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     if ask:
         turn["ask"] = flow.ui_ask(ask)
     return turn
+
+
+POSITIVE = ("total_demand_kwh", "annual_demand_kwh", "roof_area_sqm", "roof_width_m", "roof_length_m")
+
+
+def non_positive(facts: dict) -> list[str]:
+    """Fields the engine rejects with 422 when <= 0 (engine 11f5a6a); reo never sends them, so a 422 is never
+    mistaken for 'engine down'."""
+    return [k for k in POSITIVE if isinstance(facts.get(k), (int, float)) and facts[k] <= 0]
 
 
 def after_handoff_turn(plan: dict, intent: str, topic: str | None) -> dict:
@@ -525,6 +535,8 @@ def edit_plan(pid: str, body: Edit):
         db = _load()
         plan, st = _get(db, pid)
         _not_quoted(plan)
+        if bad := non_positive(body.facts or {}):
+            raise HTTPException(422, f"must be greater than 0: {', '.join(bad)}")
         st["locks"].update(body.locks or {})  # locks persist across edits, merged per component
         st["prices"].update(body.prices or {})
         facts = {**plan["facts"], **(body.facts or {})}

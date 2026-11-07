@@ -116,6 +116,15 @@ def test_restart_during_preparation_recovers(tmp_path, monkeypatch):
     c.post(f"/plans/{pid}/prepare", json={})  # recovery path: prepare again works
 
 
+def test_non_positive_inputs_never_reach_the_engine(tmp_path, monkeypatch):
+    """engine 11f5a6a answers 422 for demand/roof <= 0; reo must not send them (a 422 would read as 'engine down')."""
+    c, pid, _ = setup(tmp_path, monkeypatch)
+    assert c.post(f"/plans/{pid}/edit", json={"facts": {"roof_area_sqm": 0}}).status_code == 422
+    sid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{sid}/facts", json={"facts": {"roof_width_m": 0, "roof_length_m": 6}}).json()
+    assert "roof_width_m" not in t["plan"]["facts"] and t["plan"]["design"]["params_version"] != engine.OFFLINE
+
+
 def test_engine_down_quote_not_sent(tmp_path, monkeypatch):
     c, pid, p = setup(tmp_path, monkeypatch)
     monkeypatch.setattr(engine, "design", lambda *a, **k: None)
