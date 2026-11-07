@@ -19,6 +19,7 @@ type HomeFacts = {
   has_ev?: boolean; ev_planned?: boolean; ev_km_per_year?: number;
   ev_km_per_week?: number; ev_km_per_day?: number;   // customer's estimate; used when ev_km_per_year is absent (×52, ×365)
   roof_area_sqm?: number; roof_orientation_deg?: number; roof_tilt_deg?: number;   // 180 = south
+  roof_width_m?: number; roof_length_m?: number;   // sunny roof face as measured; both given = they win over roof_area_sqm (best grid of 1.722 × 1.134 m modules after a 0.3 m edge margin); a known roof is a HARD cap on new PV modules
   roof_type?: "gable" | "flat" | "mono" | "other";   // flat without orientation = east-west racks
   region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";   // federal state (ISO 3166-2 code); sets the PV yield, else the national value
   electricity_price_eur_per_kwh?: number;
@@ -34,6 +35,7 @@ type Component = {
   unit: "kWp" | "kWh" | "kW";
   range: [number, number] | null;       // sizes comparable expert designs choose, incl. what is still unknown (~80% of expert sizes fall inside on val)
   quantity?: number;                    // e.g. number of PV modules
+  max_modules?: number;                 // pv only, when the roof is known: modules the roof holds (net of existing panels); size/quantity never exceed it, a pv lock above it is cut to it with a reason
   confidence: "low" | "medium" | "high";   // how much the still-missing inputs could move the size
   locked: boolean;
   reasons: string[];                    // 1–3, name the input that drove the decision

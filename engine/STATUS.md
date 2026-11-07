@@ -49,7 +49,7 @@ Baseline (same as data's `score.py`): every home gets PV and a battery at the **
 - Region = federal state; Y per state from PVGIS weighted by MaStR, national Y when unknown (owner).
 - Parameters fitted on data's `train` split only; `test` scored once, reported as it came out (owner + data's NEED, 2026-11-07). Earlier all-data fit superseded.
 - PV sized by the expert line instead of a fixed c (owner, 2026-11-07).
-- Roof too small stays an open question, PV is not capped (owner); the range shows the gap.
+- Roof known = hard cap on new PV modules (reo NEED, 2026-11-07, supersedes "PV is not capped"); `roof_width_m`/`roof_length_m` grid fit with 0.3 m edge margin win over `roof_area_sqm`; unknown roof is not probed in ranges.
 - Battery recommended whenever there is PV and no battery (95% of expert PV offers); size = experts' most common size per PV band (chosen on val over ratio rule and fixed 5/7/10/15 steps).
 - Existing PV = retrofit, no new panels unless locked (51 of 52 no-PV test homes).
 - Test is not re-scored after these changes; data freezes final test numbers at M3.

@@ -59,12 +59,13 @@ Example, 4,500 kWh, no installer, national sun: 6.15 + 0.603 × 4.5 = 8.86 kWp �
 
 ## 3. Roof check and heat pump
 
-Usable roof = `roof_area_sqm` × 0.75 (placeholder, question for the Reonic experts) − area of existing panels.
+Usable roof = `roof_area_sqm` × 0.75 (placeholder, question for the Reonic experts) − area of existing panels, or the measured grid below. An unknown roof is not probed in the plausible re-runs (a guessed small roof would cap the range).
 
 | Case | Engine |
 |---|---|
 | Roof unknown | Design kept; `roof_area_sqm` is a missing input |
-| Roof too small | Design kept (owner's decision, PV is not capped); high-impact open question naming the shortfall in m² and how many modules fit |
+| Roof known, holds fewer modules than wanted | **Hard cap**: modules = what fits, kWp = modules × module W, reasons say the roof is the limit; a PV lock above the cap is cut to it (reason says so). `components.pv.max_modules` exposes the cap; with `roof_area_sqm` only, a high-impact question names the shortfall |
+| `roof_width_m` + `roof_length_m` given | They win over the area: best grid of 1.722 × 1.134 m modules (portrait or landscape) after a 0.3 m edge margin per side (`grid_modules`), minus existing panels |
 | Roof fits, heating gas / oil / district / other, spare modules | Heat pump suggested: heat demand ÷ 2,000 full-load hours → nearest size offered in train (6, 8, 10, 12 kW); electricity = heat ÷ COP 3.3 (Fraunhofer ISE field test); extra PV = 0.603 kWp per extra MWh, capped by the spare modules |
 | Heating already electric (`heatpump`, `electric`) | No heat pump |
 | Heating unknown | Open question |

@@ -42,6 +42,8 @@ class Home:
     orientation_factor: float
     electricity_price_eur_per_kwh: float
     assumptions: list[dict] = field(default_factory=list)
+    roof_width_m: float | None = None   # sunny roof face as measured; with roof_length_m it wins over roof_area_sqm
+    roof_length_m: float | None = None
 
 
 @dataclass
@@ -59,6 +61,7 @@ class PvSizing:
     heat_demand_kwh: float | None       # heat the suggested heat pump would deliver
     heatpump_kw: float | None
     missing_inputs: list[dict] = field(default_factory=list)
+    capped_from: int | None = None      # modules wanted before the roof cut them (also a lock above the cap)
 
 
 def orientation_factor(orientation_deg, tilt_deg, roof_type):
@@ -146,9 +149,13 @@ def read_inputs(facts: dict) -> Home:
 
     price = given_or_default("electricity_price_eur_per_kwh", d["electricity_price_eur_per_kwh"], "default tariff")
 
+    for name in ("roof_width_m", "roof_length_m"):
+        if facts.get(name) is not None and facts[name] <= 0:
+            raise ValueError(f"{name} must be positive")
+
     return Home(float(demand), float(ev_kwh), float(hp_kwh), bool(has_ev), ev_planned, float(km), bool(has_pv),
                 float(existing_kwp), bool(has_battery), heating, heat, facts.get("roof_area_sqm"), region,
-                float(y * of), float(of), float(price), assumptions)
+                float(y * of), float(of), float(price), assumptions, facts.get("roof_width_m"), facts.get("roof_length_m"))
 
 
 def heat_demand(facts: dict, home: Home):
@@ -185,6 +192,17 @@ def pv_kwp_for(demand_kwh, home: Home, line: dict | None = None):
     return (line["a_kwp"] + line["b_kwp_per_mwh"] * demand_kwh / 1000) * nat / home.y_kwh_per_kwp
 
 
+def grid_modules(width_m: float, length_m: float, module_w: float) -> int:
+    """Modules that fit a width × length roof face: best grid, portrait or landscape, after the edge margin."""
+    p = PARAMS
+    scale = math.sqrt(module_w / p["module_w"])        # shortcut: same module shape, area scales with W
+    a, b = (d * scale for d in p["module_dims_m"])
+    w, l = width_m - 2 * p["roof_edge_margin_m"], length_m - 2 * p["roof_edge_margin_m"]
+    if w <= 0 or l <= 0:
+        return 0
+    return max(math.floor(w / a) * math.floor(l / b), math.floor(w / b) * math.floor(l / a))
+
+
 def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None = None,
             line: dict | None = None, packages: list | None = None, module_w: float | None = None) -> PvSizing:
     """PV from the expert line, minus existing PV, snapped to modules; then the roof check (METHOD.md step 0)."""
@@ -200,21 +218,26 @@ def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None =
             # installers that sell fixed packages: the package they sell most often for this demand (train)
             need = next(kwp for upper, kwp in packages if upper is None or home.total_demand_kwh <= upper)
         modules = round(need * 1000 / w)
-    area_needed = modules * area
     missing = []
-    roof, fitting = "unknown", None
+    roof, fitting, capped_from = "unknown", None, None
+    grid = home.roof_width_m is not None and home.roof_length_m is not None      # measured sides win over the area
+    known = grid or home.roof_area_sqm is not None
     hp = {"suggested": False, "kwp": 0.0, "modules": 0, "kwh": None, "heat": None, "kw": None}
 
-    if home.roof_area_sqm is None:
+    if not known:
         missing.append({"field": "roof_area_sqm", "why": "needed to check the design fits the roof", "impact": "medium"})
     else:
         existing_modules = round(home.existing_pv_kwp * 1000 / w)      # existing panels already use roof
-        fitting = max(0, math.floor(home.roof_area_sqm * p["usable_roof_share"] / area) - existing_modules)
+        on_roof = grid_modules(home.roof_width_m, home.roof_length_m, w) if grid \
+            else math.floor(home.roof_area_sqm * p["usable_roof_share"] / area)
+        fitting = max(0, on_roof - existing_modules)
         if fitting < modules:
-            roof = "too_small"
-            missing.append({"field": "roof_area_sqm",
-                            "why": f"usable roof holds {fitting} of {modules} modules, "
-                                   f"{area_needed - fitting * area:.1f} m² short", "impact": "high"})
+            # hard cap: the roof limits the PV, a lock above it is cut too
+            roof, capped_from, modules = "too_small", modules, fitting
+            if not grid:
+                missing.append({"field": "roof_area_sqm",
+                                "why": f"usable roof holds only {fitting} of {capped_from} wanted modules, "
+                                       f"{(capped_from - fitting) * area:.1f} m² short", "impact": "high"})
         else:
             roof = "fits"
             spare = fitting - modules
@@ -233,5 +256,5 @@ def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None =
                 hp = {"suggested": True, "kwp": hp_modules * w / 1000, "modules": hp_modules, "kwh": hp_kwh,
                       "heat": heat, "kw": kw}
 
-    return PvSizing(modules * w / 1000, w, modules, area_needed, roof, fitting, hp["suggested"], hp["kwp"],
-                    hp["modules"], hp["kwh"], hp["heat"], hp["kw"], missing)
+    return PvSizing(modules * w / 1000, w, modules, modules * area, roof, fitting, hp["suggested"], hp["kwp"],
+                    hp["modules"], hp["kwh"], hp["heat"], hp["kw"], missing, capped_from)

@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
-from inputs import PARAMS, orientation_factor, pv_kwp_for, read_inputs, size_pv  # noqa: E402
+from inputs import PARAMS, grid_modules, orientation_factor, pv_kwp_for, read_inputs, size_pv  # noqa: E402
 
 LINE = PARAMS["pv_line"]
 
@@ -119,3 +119,27 @@ def test_no_heatpump_when_heating_already_electric():
 def test_unknown_heating_with_spare_roof_is_open_question():
     s = size_pv(read_inputs({"total_demand_kwh": 4500, "roof_area_sqm": 100}))
     assert [m["field"] for m in s.missing_inputs] == ["heating_type"]
+
+
+def test_grid_modules_best_orientation_after_margin():
+    # 6.0 x 3.0 m face, 0.3 m margin → 5.4 x 2.4 m; portrait columns 1.134 wide: 4 x 1 (1.722 < 2.4) = 4,
+    # landscape 1.722 wide: 3 x 2 (1.134 x 2 = 2.268 <= 2.4) = 6
+    assert grid_modules(6.0, 3.0, 430) == 6
+    assert grid_modules(0.5, 5.0, 430) == 0
+
+
+def test_measured_roof_wins_over_area_and_is_a_hard_cap():
+    s = size_pv(read_inputs({"total_demand_kwh": 9000, "roof_area_sqm": 500, "roof_width_m": 6.0, "roof_length_m": 3.0}))
+    assert (s.roof, s.modules_fitting, s.modules) == ("too_small", 6, 6)
+    assert s.capped_from > 6 and s.kwp == pytest.approx(6 * 0.43)
+    assert not s.missing_inputs                 # the sides are measured, no roof question left
+
+
+def test_area_roof_caps_pv_instead_of_exceeding_it():
+    s = size_pv(read_inputs({"total_demand_kwh": 9000, "roof_area_sqm": 20}))
+    assert s.modules == s.modules_fitting == 7 and s.capped_from > 7
+
+
+def test_pv_lock_above_the_roof_is_cut():
+    s = size_pv(read_inputs({"total_demand_kwh": 4500, "roof_area_sqm": 20}), pv_kwp_locked=12.0)
+    assert s.modules == 7 and s.capped_from == 28

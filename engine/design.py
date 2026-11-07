@@ -75,6 +75,8 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     hp_el = heat / p["cop"] if hp_rec and heat else 0.0
 
     adds_hp_pv = hp_rec and pv_locked is None                  # heat-pump PV on the spare roof, also in retrofits
+    if sizing.capped_from is not None and pv_locked:
+        pv_locked = sizing.kwp                                 # a lock above the roof is cut to the cap
     pv_kwp = pv_locked if pv_locked else sizing.kwp + (sizing.heatpump_extra_kwp if adds_hp_pv else 0.0)
     pv_modules = sizing.modules + (sizing.heatpump_extra_modules if adds_hp_pv else 0)
     pv_rec = pv_kwp > 0 if not lock["pv"] else lock["pv"]["recommended"]
@@ -180,8 +182,10 @@ def missing_fields(facts: dict, base: dict) -> list[str]:
         out.append("total_demand_kwh")
     if facts.get("has_existing_pv") is None:
         out.append("has_existing_pv")
+    roof_measured = facts.get("roof_width_m") is not None and facts.get("roof_length_m") is not None
     for k in ("region", "roof_area_sqm", "roof_orientation_deg", "heating_type", "electricity_price_eur_per_kwh"):
-        if facts.get(k) is None and not (k == "roof_orientation_deg" and facts.get("roof_type") == "flat"):
+        if facts.get(k) is None and not (k == "roof_orientation_deg" and facts.get("roof_type") == "flat") \
+                and not (k == "roof_area_sqm" and roof_measured):
             out.append(k)
     if base["sizes"]["heatpump"] and facts.get("heating_demand_kwh") is None and not facts.get("house_size_sqm"):
         out.append("heating_demand_kwh")
@@ -202,6 +206,9 @@ def reasons_for(key, r, no_battery_autarky):
     who = f"installer {r['profile']['installer']}'s" if r["profile"]["installer"] else "comparable expert"
     if key == "pv":
         if r["locks"]["pv"]:
+            if s.capped_from is not None and r["locks"]["pv"]["recommended"]:
+                return [f"set by the installer, but the roof holds only {s.modules_fitting} modules: cut to "
+                        f"{size:g} kWp"]
             return ["set by the installer"]
         if r["retrofit"] and not size:
             return [f"you already have {h.existing_pv_kwp:g} kWp; in retrofits experts add storage or a wallbox, "
@@ -221,7 +228,8 @@ def reasons_for(key, r, no_battery_autarky):
                    + (f", plus ~{h.existing_pv_kwp * h.y_kwh_per_kwp:,.0f} from your existing {h.existing_pv_kwp:g} kWp"
                       if h.existing_pv_kwp else ""))
         if s.roof == "too_small":
-            out.append(f"your usable roof holds only {s.modules_fitting} modules")
+            out.append(f"the roof is the limit: it holds only {s.modules_fitting} modules "
+                       f"({s.capped_from} would match your demand)")
         elif s.heatpump_suggested and r["sizes"]["heatpump"]:
             out.append(f"includes {s.heatpump_extra_modules} modules for the heat pump on the spare roof")
         return out[:3]
@@ -294,8 +302,9 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
     if budget_note:
         base["assumptions"].append({"field": "budget_eur", "value": facts["budget_eur"], "note": budget_note})
     plausible = PARAMS["plausible"]
+    # an unknown roof is not probed: a guessed roof would cap the PV range; the roof check ranks it as a floor instead
     runs = {f: [core({**facts, f: v}, locks, overrides, installer) for v in plausible[f]]
-            for f in missing_fields(facts, base)}
+            for f in missing_fields(facts, base) if f != "roof_area_sqm"}
     every = [base] + [r for rs in runs.values() for r in rs]
 
     # missing inputs: impact = largest relative move of PV size, price or savings
@@ -344,6 +353,11 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
              "range": rng, "confidence": conf, "locked": locked, "reasons": reasons}
         if k == "pv" and size:
             c["quantity"] = base["modules"]
+        if k == "pv" and base["sizing"].modules_fitting is not None:
+            c["max_modules"] = base["sizing"].modules_fitting          # hard roof cap, net of existing panels
+            if rng:
+                cap_kwp = round(c["max_modules"] * base["sizing"].module_w / 1000, 2)
+                c["range"] = [min(rng[0], cap_kwp), min(rng[1], cap_kwp)]
         comps[k] = c
 
     pv_new = base["sizes"]["pv"] or 0

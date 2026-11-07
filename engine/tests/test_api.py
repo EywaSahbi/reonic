@@ -162,3 +162,19 @@ def test_subsidy_share_zero_hides_grant_line():
     d = post(GAS_HOME, prices={"heatpump_subsidy_share": 0})
     assert not any(i["label"].startswith("KfW") for i in d["price"]["items"])
     assert d["price"]["total_eur"] > post(GAS_HOME)["price"]["total_eur"]
+
+
+def test_roof_is_a_hard_cap_end_to_end():
+    d = post({"total_demand_kwh": 9000, "roof_area_sqm": 20})
+    pv = d["components"]["pv"]
+    assert pv["max_modules"] == 7 and pv["quantity"] == 7 and pv["size"] == 3.01
+    assert pv["range"][1] <= 3.01 and any("roof is the limit" in r for r in pv["reasons"])
+
+
+def test_roof_sides_and_locked_pv_above_the_cap():
+    facts = {"total_demand_kwh": 9000, "roof_width_m": 6.0, "roof_length_m": 3.0, "roof_area_sqm": 500}
+    d = post(facts, locks={"pv": {"recommended": True, "size": 12.0}})
+    pv = d["components"]["pv"]
+    assert pv["max_modules"] == 6 and pv["quantity"] == 6 and pv["size"] == 2.58 and pv["locked"]
+    assert "cut to" in pv["reasons"][0]
+    assert post({"total_demand_kwh": 9000})["components"]["pv"].get("max_modules") is None
