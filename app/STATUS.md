@@ -68,3 +68,11 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Codex continuation: planner answers now expose their harness run timeline; roof fields have explicit labels, positive decimal validation and typed width/length facts. Mock supports dimension chips and address fallback. Build verified before push.
 
 - README setup/architecture/limits drafted; demo script updated to engine a56e3f9 reported metrics and the reality-check panel. Initial Sonnfeld web search found related names (Sonnfeld ZT architecture; EWS Sonnenfeld project), no exact installer match; this is not name clearance. Voice choice, real-bill test and QA rehearsal still pending.
+
+## Address frontend (Codex)
+
+- Dedicated Find my roof form available from customer tools and backend address asks; uses existing reo `/sessions/{id}/address` only.
+- Loading status, retained input on request errors, result card for backend label/source/sunny roof area/footprint/tilt, explicitly estimated. Demo results labeled as demo data.
+- Unknown address falls back to width/length; manual dimensions and skip remain available. Opening lookup from another question and cancelling restores that question rather than skipping it on the backend.
+- Backend has no map coordinates/outline in its published response, so no invented map or satellite image is shown.
+- Browser verified in mock mode: demo address result, unknown-address fallback, decimal width/length submission. Live OSM path not exercised in this frontend session. Production build passes.

@@ -303,7 +303,8 @@ export const mockApi: Api = {
       plan.transcript.push(...messages);
       return delay({ messages, plan: save(plan), suggestions: ["Skip"], ask: { field: "roof_area_sqm", prompt: "Sunny roof dimensions", input: "dimensions" } });
     }
-    return delay(respondToFacts(plan, { roof_area_sqm: 48, roof_orientation_deg: 180, roof_tilt_deg: 35 }, `address: ${address}`, (skippedBySession[id] ??= new Set())));
+    const turn = respondToFacts(plan, { roof_area_sqm: 48, roof_orientation_deg: 180, roof_tilt_deg: 35 }, `address: ${address}`, (skippedBySession[id] ??= new Set()));
+    return delay({ ...turn, roof: { source: "demo data", label: address } });
   },
 
   async handoff(id, name, email) {

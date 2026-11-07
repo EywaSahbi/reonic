@@ -5,6 +5,7 @@ import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
 import { MicButton, useReoAudio, voiceForced } from "./Voice";
 import { ReoAvatar } from "./ReoAvatar";
+import { AddressLookup, RoofResultCard, type RoofResult } from "./AddressLookup";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
@@ -28,6 +29,9 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const [notice, setNotice] = useState<string | null>(null);
   const [billRead, setBillRead] = useState<Turn["bill"]>();
   const [goalResult, setGoalResult] = useState<GoalResult>();
+  const [roofResult, setRoofResult] = useState<RoofResult>();
+  const [lookingUpRoof, setLookingUpRoof] = useState(false);
+  const roofReturn = useRef<{ ask?: Ask; chips: string[] } | null>(null);
   const billInput = useRef<HTMLInputElement>(null);
   const reoAudio = useReoAudio();
 
@@ -63,18 +67,22 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     if (customerText) setMessages((m) => [...m, { role: "customer", text: customerText, at: stamp() }]);
     setBusy(true);
     setError(null);
+    const previousChips = chips;
     setChips([]);
-    setAsk(undefined);
     try {
       const t = await p();
       setMessages((m) => [...m, ...t.messages]);
+      roofReturn.current = null;
       setPlan(t.plan);
       setChips(t.suggestions);
       setAsk(t.ask);
       setBillRead(t.bill);
       setGoalResult(t.goal_result);
+      if (t.roof) setRoofResult({ roof: t.roof, facts: t.plan.facts });
+      else if (t.plan.facts.roof_area_sqm !== roofResult?.facts.roof_area_sqm) setRoofResult(undefined);
     } catch (e) {
       setError(errText(e));
+      setChips(previousChips);
     } finally {
       setBusy(false);
     }
@@ -99,7 +107,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   function startOver() {
     writeSaved(null);
-    setMessages([]); setPlan(null); setChips([]); setAsk(undefined); setBillRead(undefined); setGoalResult(undefined); setHandoffOpen(false); setError(null);
+    roofReturn.current = null;
+    setMessages([]); setPlan(null); setChips([]); setAsk(undefined); setBillRead(undefined); setGoalResult(undefined); setRoofResult(undefined); setHandoffOpen(false); setError(null);
     run(() => api.startSession());
   }
 
@@ -129,6 +138,10 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   function say(s: string) {
     if (!id || !s.trim()) return;
+    if (/^skip$/i.test(s.trim()) && roofReturn.current && ask?.field === "roof_area_sqm") {
+      setAsk(roofReturn.current.ask); setChips(roofReturn.current.chips); roofReturn.current = null;
+      return;
+    }
     if (billRead && /^(yes, that's right|not quite)$/i.test(s.trim())) {
       const read = billRead.read;
       setBillRead(undefined);
@@ -177,9 +190,23 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     }
   }
 
+  function openRoofLookup() {
+    if (!roofReturn.current && ask?.field !== "roof_area_sqm") roofReturn.current = { ask, chips };
+    setAsk({ field: "roof_area_sqm", prompt: "Enter your address to estimate the roof area, or add dimensions yourself.", input: "address" });
+    setChips([]);
+  }
+
+  async function lookupRoof(address: string) {
+    if (!id) return;
+    setLookingUpRoof(true);
+    setRoofResult(undefined);
+    try { await run(() => api.sendAddress(id, address), address); }
+    finally { setLookingUpRoof(false); }
+  }
+
   // Chips that repeat a tap card are hidden; others (e.g. "I know my yearly kWh") stay.
   const cardLabels = new Set((ask?.input === "boolean" ? ["Yes", "No"] : ask?.input === "choice" ? ask.options ?? [] : []).flatMap((o) => [o, label(o)].map((x) => x.toLowerCase())));
-  const visibleChips = chips.filter((c) => !cardLabels.has(c.toLowerCase()) && !(ask?.field === "heating_type" && /^(gas|oil|other|heat pump already)$/i.test(c)));
+  const visibleChips = chips.filter((c) => !(ask?.input === "address" && /^(enter width × length|skip)$/i.test(c)) && !cardLabels.has(c.toLowerCase()) && !(ask?.field === "heating_type" && /^(gas|oil|other|heat pump already)$/i.test(c)));
   const handedOver = plan?.status === "handed_over" || plan?.status === "quoted";
   const hasDesign = !!plan && (plan.history.length > 0 || Object.keys(plan.facts).length > 0);
 
@@ -206,6 +233,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>
             ))}
             {busy && <div className="bubble bubble-reo typing"><span /><span /><span /></div>}
+            {lookingUpRoof && <div className="address-progress" role="status">Looking up your building and estimating the sunny roof area…</div>}
+            {roofResult && <RoofResultCard result={roofResult} onChange={!handedOver && !busy ? openRoofLookup : undefined} />}
             {goalResult && <div className="goal-result"><strong>Matched to your goal · {goalResult.goal.replace("_", " ")}</strong><GoalVariant variant={goalResult.recommendation} /><div className="goal-alternatives">{goalResult.alternatives.map((v) => <GoalVariant key={v.name} variant={v} />)}</div></div>}
             {error && <div className="chat-error">Something went wrong: {error}</div>}
             {handoffOpen && !handedOver && (
@@ -216,11 +245,13 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
           {!handedOver && !handoffOpen && (
             <div className="chat-controls">
-              {ask && !busy && (
+              {ask?.input === "address" ? <AddressLookup prompt={ask.prompt} busy={busy} onSubmit={lookupRoof}
+                onDimensions={() => { setAsk({ field: "roof_area_sqm", prompt: "Width and length of the sunny roof area", input: "dimensions" }); setChips(["Skip"]); }}
+                onSkip={() => say("Skip")} /> : ask && !busy && (
                 <AskInput
                   ask={ask}
                   onFacts={(f, label) => id && run(() => api.sendFacts(id, f), label)}
-                  onAddress={(a) => id && run(() => api.sendAddress(id, a), a)}
+                  onAddress={lookupRoof}
                 />
               )}
               {visibleChips.length > 0 && !busy && (
@@ -229,6 +260,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                 </div>
               )}
               {!billRead && !handedOver && <div className="customer-tools">
+                <button type="button" className="chip" onClick={openRoofLookup} disabled={busy}>⌖ Find my roof</button>
                 <button type="button" className="chip" onClick={() => billInput.current?.click()} disabled={busy}>▧ Add a bill photo</button>
                 <input ref={billInput} type="file" accept="image/*,.pdf" hidden onChange={(e) => uploadBill(e.target.files?.[0])} />
                 {[["Keep it under €20,000", "Keep it under €20,000"], ["As independent as possible", "As independent as possible"], ["Lowest monthly bill", "Lowest monthly bill"]].map(([label, value]) => <button key={value} type="button" className="chip" disabled={busy} onClick={() => say(value)}>{label}</button>)}

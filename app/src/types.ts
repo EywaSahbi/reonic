@@ -86,7 +86,9 @@ export type Ask = {
   options?: string[];
 };
 
-export type Turn = { messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask; bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false }; goal_result?: GoalResult };
+export type RoofLookup = { source: "OpenStreetMap" | "demo data"; label: string; footprint_sqm?: number };
+
+export type Turn = { roof?: RoofLookup; messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask; bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false }; goal_result?: GoalResult };
 
 /** POST /sessions/{id}/voice: a normal turn plus what reo heard and its spoken reply (base64 mp3). */
 export type VoiceTurn = Turn & { heard: string; audio: string | null };
