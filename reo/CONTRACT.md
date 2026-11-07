@@ -70,3 +70,37 @@ Behaviour notes (v1):
 | GET | `/health` | → `{ok: true, llm: boolean, voice: boolean}` (app shows the mic only when `voice`) | done |
 | POST | `/sessions/{id}/voice` | multipart `audio` (webm/opus, mp3 or wav, ≤ ~30 s) → `Turn & {heard: string, audio: string \| null}` (`heard` = transcript, `audio` = base64 mp3 of reo's reply) | done |
 | POST | `/tts` | `{text}` → `audio/mpeg` (read any reo message aloud; 503 if voice off) | done |
+
+## Phase 2 (v1.1, additive; app may mock against this)
+
+```ts
+type Variant = { name: "Basic" | "Recommended" | "Independence"; locks: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>;
+                 design: Design; why: string };            // every number in `why` comes from `design`
+type Action = { id: string; kind: "book_visit" | "send_quote" | "create_crm_task" | "request_document";
+                label: string; payload: Record<string, unknown>; status: "proposed" | "approved" | "done";
+                result?: string; at?: string };             // nothing runs until the planner approves
+type TraceStep = { step: number; tool: string; summary: string };   // tool: "engine.design" | "engine.explain" | "benchmarks" | "calendar" | "crm" | "llm" | "scripted"
+type OfferPack = { status: "preparing" | "ready" | "failed"; variants: Variant[]; recommended: Variant["name"];
+                   flags: Plan["flags"]; site_visit_checklist: string[]; open_questions: string[];
+                   customer_message_draft: string; actions: Action[]; trace: TraceStep[];
+                   duration_s: number; model: string; prepared_at: string };   // model: "claude-opus-5-5" or "scripted"
+type GoalResult = { goal: "budget" | "independence" | "lowest_bill"; budget_eur?: number;
+                    recommendation: Variant; alternatives: Variant[]; trace: TraceStep[] };
+
+// additions
+Plan.offer_pack?: OfferPack;          // installer endpoints only
+Turn.goal_result?: GoalResult;        // when the customer states a goal ("keep it under €20,000")
+Turn.bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false };   // after a bill photo
+```
+
+| Method | Path | Body → Response | Milestone |
+|---|---|---|---|
+| POST | `/plans/{id}/prepare` | `{}` → `Plan` with `offer_pack.status = "preparing"`; runs in the background (also starts automatically on `/handoff`). Poll `GET /plans/{id}` until `ready` (Opus ~30–60 s, scripted < 1 s) | Sun 03:00 |
+| POST | `/plans/{id}/variant` | `{name}` → `Plan` (applies that variant's locks as installer edits, recorded) | Sun 03:00 |
+| POST | `/plans/{id}/actions/{action_id}/approve` | `{payload?}` (e.g. a different slot) → `Plan`; runs the mocked tool: `book_visit` → calendar (JSON under `reo/`), `create_crm_task` / `request_document` → CRM log, `send_quote` → finalise (status `quoted`) | Sun 03:00 |
+| GET | `/calendar/slots` | → `{slots: string[]}` (mock, next free site-visit slots) | Sun 03:00 |
+| POST | `/sessions/{id}/bill` | multipart `image` (jpg/png/pdf) → `Turn` with `bill.read` and chips `["Yes, that's right", "Not quite"]`; facts are applied only after "Yes, that's right" | Sun 03:00 |
+| POST | `/sessions/{id}/messages` | unchanged; a goal message returns `Turn.goal_result` (recommendation + 2 alternatives + trace) | Sun 09:00 |
+| POST | `/plans/{id}/ask` | → `{answer, goal_result?}` (goal questions from the planner) | Sun 09:00 |
+
+Models (env-overridable): chat turns `REO_MODEL` = `claude-sonnet-5-5`; offer agent + goal planning `REO_AGENT_MODEL` = `claude-opus-5-5`. Without an API key the scripted path builds the same `OfferPack` from fixed lock sets (`model: "scripted"`).
