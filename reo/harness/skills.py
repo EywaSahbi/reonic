@@ -68,19 +68,41 @@ def _draft(name: str, d: dict, slot: str) -> str:
             f"site visit?\n\nBest regards,\nSolarHaus Müller")
 
 
+def _total(ctx: Ctx, name: str) -> float:
+    return ctx.variants[name]["design"]["price"]["total_eur"] if name in ctx.variants else 0
+
+
+def _make_distinct(ctx: Ctx, call) -> None:
+    """If an anchor variant came out like Recommended, use the engine's one-step what-ifs instead (cheaper / dearer)."""
+    rec = _total(ctx, "Recommended")
+    whatifs = []
+    for comp in ("battery", "pv"):
+        whatifs += [w for w in call("engine.explain", {"component": comp}).get("what_if", []) if w.get("locks")]
+    if _total(ctx, "Basic") >= rec:
+        for w in sorted((w for w in whatifs if w["delta"]["price_eur"] < 0), key=lambda w: -w["delta"]["price_eur"]):
+            call("plan.propose_variant", {"name": "Basic", "locks": {"heatpump": {"recommended": False}, **w["locks"]}, "why": ""})
+            if _total(ctx, "Basic") < rec:
+                break
+    if _total(ctx, "Independence") <= rec:
+        for w in sorted((w for w in whatifs if w["delta"]["price_eur"] > 0), key=lambda w: (w["delta"]["autarky_pct"] <= 0, w["delta"]["price_eur"])):
+            call("plan.propose_variant", {"name": "Independence", "locks": w["locks"], "why": ""})
+            if _total(ctx, "Independence") > rec:
+                break
+
+
 def offer_scripted(ctx: Ctx, call) -> None:
     call("plan.read", {})
     pct = call("evidence.percentile", {})
     anchors = pct.get("anchors") or {"Basic": {"battery": {"recommended": False}, "heatpump": {"recommended": False}},
                                      "Recommended": {}, "Independence": {}}
     for n in NAMES:
-        r = call("plan.propose_variant", {"name": n, "locks": anchors.get(n, {}), "why": ""})
-        if "error" not in r:
-            ctx.variants[n]["why"] = _why(n, ctx.variants[n]["design"])
+        call("plan.propose_variant", {"name": n, "locks": anchors.get(n, {}), "why": ""})
     if "Recommended" not in ctx.variants:
         return  # engine down: completeness guard reports it
+    _make_distinct(ctx, call)
+    for n, v in ctx.variants.items():
+        v["why"] = _why(n, v["design"])
     base = ctx.variants["Recommended"]["design"]
-    call("engine.explain", {"component": "battery"})
     slot = call("calendar.slots", {})["slots"][0]
     name = ctx.plan["customer"].get("name") or "the customer"
     call("plan.propose_action", {"kind": "book_visit", "label": f"Book site visit {slot}", "payload": {"slot": slot}})
@@ -109,6 +131,9 @@ def offer_missing(ctx: Ctx) -> str | None:
     gaps = [n for n in NAMES if n not in ctx.variants]
     if gaps:
         return f"missing variants: {', '.join(gaps)}"
+    totals = [v["design"]["price"]["total_eur"] for v in ctx.variants.values()]
+    if len(set(totals)) < 3:
+        return "the three variants must differ (Basic cheaper, Independence dearer than Recommended)"
     if not ctx.draft:
         return "no draft message"
     if not any(a["kind"] == "send_quote" for a in ctx.actions):
