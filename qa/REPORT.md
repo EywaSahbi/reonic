@@ -6,7 +6,7 @@ Newest first. Only build, contract, metric, and demo findings are tracked.
 
 - Rewrote `qa/smoke.py` for current engine and reo contract shapes, including every contracted endpoint and milestone-gated optional routes. Added data column and split coverage checks using the renamed `HomeFacts` fields.
 - Syntax check: passed with `python -m py_compile qa/smoke.py`.
-- Runtime checks: engine and reo stubs are not yet present in this clone; processed artifacts are not published. The checks will be run after their `DONE` handoffs.
+- Runtime check: `python qa/smoke.py` stops at the engine health call because `localhost:8000` actively refused the connection; engine/reo service code and processed artifacts are not yet published in this clone. Full checks await the M0 `DONE` handoffs.
 
 ## 2026-11-07 — initial QA setup
 
