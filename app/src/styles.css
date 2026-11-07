@@ -323,7 +323,7 @@ h1, h2, h3 { color: var(--ink); }
 .h-accent { fill: #f2784b; }
 .h-car { fill: var(--ink); }
 .h-wheel { fill: var(--white); stroke: var(--ink); stroke-width: 2; }
-.h-panel { fill: #18181b; stroke: #a1a1aa; stroke-width: 0.8; opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2); transform-box: fill-box; }
+.h-panel { fill: #18181b; stroke: #a1a1aa; stroke-width: 0.8; opacity: 0; transform: translateY(-6px); transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.22, 1, 0.36, 1); transform-box: fill-box; }
 .h-panel.on { opacity: 1; transform: none; }
-.h-part { opacity: 0; transform: translateY(8px) scale(0.92); transform-box: fill-box; transform-origin: center bottom; transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2); }
+.h-part { opacity: 0; transform: translateY(8px) scale(0.92); transform-box: fill-box; transform-origin: center bottom; transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
 .h-part.on { opacity: 1; transform: none; }
