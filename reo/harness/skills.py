@@ -65,9 +65,9 @@ def _questions(d: dict) -> list[str]:
 
 def _draft(name: str, d: dict, slot: str) -> str:
     suggestion = scripted.headline(d).removeprefix("I'd suggest ")
-    return (f"Hello {name},\n\nthank you for planning your solar system with SolarHaus Müller. Based on your details we suggest "
+    return (f"Hello {name},\n\nthank you for planning your solar system with Sonnfeld. Based on your details we suggest "
             f"{suggestion} Before we confirm the final price we would like to see your roof. Would {slot} suit you for a short "
-            f"site visit?\n\nBest regards,\nSolarHaus Müller")
+            f"site visit?\n\nBest regards,\nSonnfeld")
 
 
 def _total(ctx: Ctx, name: str) -> float:

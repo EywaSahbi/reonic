@@ -24,7 +24,7 @@ def setup(tmp_path, monkeypatch):
     for m in ["we use about 4,500 kWh a year", "Gas", "No", "No solar yet"]:
         c.post(f"/sessions/{pid}/messages", json={"text": m})
     c.post(f"/sessions/{pid}/handoff", json={"name": "Anna"})
-    for _ in range(50):  # offer_prep runs in the background
+    for _ in range(200):  # offer_prep runs in the background (first run loads the project data)
         p = c.get(f"/plans/{pid}").json()
         if p["offer_pack"]["status"] != "preparing":
             break

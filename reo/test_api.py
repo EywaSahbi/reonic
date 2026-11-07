@@ -77,7 +77,7 @@ def test_demo_flow(tmp_path, monkeypatch):
     assert len(p["installer_edits"]) == 2
 
     p = c.post(f"/plans/{pid}/finalize", json={"note": "See you Tuesday."}).json()
-    assert p["status"] == "quoted" and "confirmed by SolarHaus Müller" in p["transcript"][-1]["text"]
+    assert p["status"] == "quoted" and "confirmed by Sonnfeld" in p["transcript"][-1]["text"]
 
 
 def test_engine_down_never_invents_numbers(tmp_path, monkeypatch):

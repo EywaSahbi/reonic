@@ -33,9 +33,9 @@ from harness.skills import SKILLS
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
 REPORTS = HERE.parent / "data" / "reports"  # data/CONTRACT.md: score_<name>_<split>.json
-GREETING = ("Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system "
+GREETING = ("Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
             "with a price estimate. To start: how many people live in your home?")
-HANDOFF_OFFER = ("This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it, usually visit "
+HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit "
                  "to see the roof, and send you a final quote. You're not committing to anything.")
 OFFLINE_TEXT = "My calculator isn't reachable right now, so I can't give you numbers yet."
 
@@ -374,7 +374,7 @@ def handoff(pid: str, body: Handoff):
         plan["status"] = "handed_over"
         plan["customer"] = {"name": body.name, **({"email": body.email} if body.email else {})}
         attach_evidence(plan)
-        reo_msg(plan, f"Done. Your plan is with SolarHaus Müller, {body.name}. "
+        reo_msg(plan, f"Done. Your plan is with Sonnfeld, {body.name}. "
                       "You'll see the final quote here once your planner has confirmed it.")
         plan["updated_at"] = now()
         _save(db)
@@ -480,7 +480,7 @@ def _finalize(plan: dict, note: str | None) -> None:
     plan["status"] = "quoted"
     total = scripted.eur(plan["design"]["price"]["total_eur"])
     design = scripted.headline(plan["design"]).split(". That would")[0].removeprefix("I'd suggest ")
-    reo_msg(plan, f"Your planner has confirmed your plan: {design}, total {total} (confirmed by SolarHaus Müller)."
+    reo_msg(plan, f"Your planner has confirmed your plan: {design}, total {total} (confirmed by Sonnfeld)."
                   + (f" {note}" if note else ""))
     plan["updated_at"] = now()
 
@@ -633,7 +633,7 @@ def approve(pid: str, aid: str, body: Payload | None = None):
                     st["locks"], plan["design"], pack["chosen"] = dict(v["locks"]), d, v["name"]
             _finalize(plan, payload.get("message"))
         elif a["kind"] == "book_visit":
-            reo_msg(plan, f"Your site visit with SolarHaus Müller is booked for {payload['slot']}.")
+            reo_msg(plan, f"Your site visit with Sonnfeld is booked for {payload['slot']}.")
         elif a["kind"] == "request_document":
             reo_msg(plan, f"Your planner would like a few documents: {', '.join(payload.get('documents', []))}. "
                           "You can send them by email or bring them to the site visit.")
