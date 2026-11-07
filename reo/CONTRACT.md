@@ -52,3 +52,11 @@ type Turn = {
 | POST | `/plans/{id}/ask` | `{text}` → `{answer: string}` ("why a 10 kWh battery?") | M2 |
 | POST | `/plans/{id}/finalize` | `{note?}` → `Plan` (status `quoted`) | M1 |
 | GET | `/validation` | → data's latest score JSON (for the reality-check panel) | M2 |
+
+## Voice (planned, additive, waiting for a human `DECISION`; details in [VOICE.md](VOICE.md))
+
+| Method | Path | Body → Response | Milestone |
+|---|---|---|---|
+| GET | `/health` | → `{ok: true, llm: boolean, voice: boolean}` (app shows the mic only when `voice`) | M2 |
+| POST | `/sessions/{id}/voice` | multipart `audio` (webm/opus, mp3 or wav, ≤ ~30 s) → `Turn & {heard: string, audio: string \| null}` (`heard` = transcript, `audio` = base64 mp3 of reo's reply) | M2 |
+| POST | `/tts` | `{text}` → `audio/mpeg` (read any reo message aloud) | M2 |
