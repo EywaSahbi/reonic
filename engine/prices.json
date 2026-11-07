@@ -1,0 +1,9 @@
+{
+  "_note": "stub: rough public German market ranges, installed incl. VAT 0%; replaced by sourced ranges in PLAN #9",
+  "pv_eur_per_kwp": 1400,
+  "battery_eur_per_kwh": 700,
+  "wallbox_eur": 1500,
+  "heatpump_eur_per_kw": 3000,
+  "fixed_fees_eur": 1500,
+  "feed_in_eur_per_kwh": 0.078
+}

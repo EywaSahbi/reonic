@@ -5,7 +5,7 @@
 Full plan with how-to per item: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.md).
 
 - [x] Step 0 (`inputs.py`): HomeFacts → home, PV kWp from total demand, roof check, heat-pump suggestion; Y from PVGIS + MaStR (`tools/derive_y.py`), c from the dataset (`tools/derive_c.py`)
-- [ ] Stub API `/health`, `/prices`, `/design` (PLAN #15) → `DONE` to reo, qa (M0)
+- [x] Stub API `/health`, `/prices`, `/design` (PLAN #15) → `DONE` to reo, qa (M0)
 - [ ] PV sizing line `a + b × D` instead of fixed c, existing PV (PLAN #1, #2) (M1)
 - [ ] Hourly simulation, battery, wallbox (PLAN #5, #7, #8) (M1)
 - [ ] `prices.json` from market ranges, economics, bills (PLAN #9, #10) (M1)
@@ -15,7 +15,8 @@ Full plan with how-to per item: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.m
 
 ## Published
 
-- `CONTRACT.md`: `ev_km_per_week`, `ev_km_per_day` (f38af8a), `total_demand_kwh` (336060e), `region`
+- `CONTRACT.md`: `ev_km_per_week`, `ev_km_per_day` (f38af8a), `total_demand_kwh` (336060e), `region` (718cd3f)
+- `api.py` stub on :8000: real Step 0 PV + roof check, placeholder battery / wallbox / price / economics
 
 ## Scores
 

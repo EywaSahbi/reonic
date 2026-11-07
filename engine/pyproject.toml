@@ -3,11 +3,16 @@ name = "engine"
 version = "0.0.0"
 requires-python = ">=3.12"
 dependencies = [
+    "fastapi>=0.162.2",
     "pandas>=3.1.1",
+    "uvicorn[standard]>=0.54.0",
 ]
 
 [dependency-groups]
-dev = ["pytest"]
+dev = [
+    "httpx>=0.28.1",
+    "pytest",
+]
 
 [tool.uv]
 package = false
