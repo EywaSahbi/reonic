@@ -2,6 +2,11 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — tap-first customer opening (commit 9ac9490)
+
+- `cd app && npm run build`: passed.
+- Browser check passed: new session asks household size with one-tap choices `1`, `2`, `3`, `4`, `5+`; choosing `3` produces a design, a price range, and an assumption explaining the demand estimate. The current reo contract permits `num_inhabitants` as an ask field. New `building_type` and `roof_type` prompts are explicitly conditional on their engine contract fields shipping.
+
 ## 2026-11-07 — app installer mock handoff (commit 0e16e40)
 
 - `cd app && npm run build`: passed after pulling the installer view.
