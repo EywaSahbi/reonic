@@ -91,28 +91,53 @@ def flags(facts: dict, design: dict) -> list[dict]:
 
 
 def similar_projects(facts: dict, k: int = 3) -> list[dict]:
-    """The k train projects closest in demand within the same EV group. Installer view only."""
+    """data/CONTRACT.md lookup: train homes, filters kept only if >= k remain (EV group, existing PV, heating),
+    then nearest household demand, ties by installer and project_id. Installer view only."""
     p = _projects()
-    b = _benchmarks()
-    if p is None or b is None:
+    if p is None:
         return []
+    pool = p
+    for col, want in [("has_ev", bool(facts.get("has_ev") or facts.get("ev_planned"))),
+                      ("has_existing_pv", facts.get("has_existing_pv")), ("heating_type", facts.get("heating_type"))]:
+        if want is None:
+            continue
+        col_vals = pool[col].fillna(False) if col != "heating_type" else pool[col]
+        if (col_vals == want).sum() >= k:
+            pool = pool[col_vals == want]
     kwh = _household_kwh(facts)
-    ev = bool(facts.get("has_ev") or facts.get("ev_planned"))
-    pool = p[p["has_ev"].fillna(False) == ev] if ev else p[p["has_ev"].fillna(False) == False]  # noqa: E712
-    if facts.get("heating_type") and (pool["heating_type"] == facts["heating_type"]).sum() >= k:
-        pool = pool[pool["heating_type"] == facts["heating_type"]]
-    pool = pool[pool["annual_demand_kwh"].notna()]
-    if kwh is not None:
-        pool = pool.assign(_d=(pool["annual_demand_kwh"] - kwh).abs()).sort_values("_d")
+    pool = pool.assign(_d=(pool["annual_demand_kwh"] - kwh).abs() if kwh is not None else 0)
+    pool = pool.sort_values(["_d", "installer", "project_id"], na_position="last")
     out = []
     for _, r in pool.head(k).iterrows():
         val = lambda c: None if r[c] != r[c] else r[c]  # NaN -> None
         out.append({
             "project_id": r["project_id"],
-            "facts": {f: (bool(val(f)) if f == "has_ev" else val(f)) for f in
-                      ("annual_demand_kwh", "num_inhabitants", "heating_type", "has_ev", "house_size_sqm") if val(f) is not None},
+            "facts": {f: (bool(val(f)) if f in ("has_ev", "has_existing_pv") else val(f)) for f in
+                      ("annual_demand_kwh", "num_inhabitants", "heating_type", "has_ev", "has_existing_pv", "house_size_sqm")
+                      if val(f) is not None},
             "expert": {"pv": val("pv_kwp") if r["has_pv"] else None, "battery": val("battery_kwh") if r["has_battery"] else None,
                        "heatpump": val("heatpump_kw") if r["has_heatpump"] else None,
                        "wallbox": val("wallbox_kw") if r["has_wallbox"] else None},
         })
     return out
+
+
+def variant_locks(facts: dict, design: dict) -> dict[str, dict]:
+    """Lock sets for the three offer variants (data c0cb87e anchors). Numbers still come from the engine."""
+    seg = segment(facts)
+    c = design["components"]
+    basic, indep = {"heatpump": {"recommended": False}}, {}
+    if seg:
+        bat, pv = seg["battery_kwh"], seg["pv_kwp"]
+        if seg["attach_rate"].get("battery", 1) < 0.5:
+            basic["battery"] = {"recommended": False}
+        else:
+            basic["battery"] = {"recommended": True, "size": min(bat.get("p25", bat["p10"]), c["battery"]["size"] or 99)}
+        indep["battery"] = {"recommended": True, "size": max(bat.get("p75", bat["p90"]), c["battery"]["size"] or 0)}
+        if not facts.get("has_existing_pv"):
+            indep["pv"] = {"recommended": True, "size": max(pv.get("p75", pv["p90"]), c["pv"]["size"] or 0)}
+    else:  # no benchmarks: plain lock sets
+        basic["battery"] = {"recommended": False}
+        if c["battery"]["size"]:
+            indep["battery"] = {"recommended": True, "size": round(c["battery"]["size"] * 1.5)}
+    return {"Basic": basic, "Recommended": {}, "Independence": indep}
