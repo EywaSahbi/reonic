@@ -3,7 +3,7 @@
 ## Backlog (top = next)
 
 - [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
-- [ ] bill_reader skill (`/sessions/{id}/bill`, vision) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
+- [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [ ] chat_turn and installer_qa onto the harness; follow_up (stretch)
 
 - [x] `CONTRACT.md` v1; API (`api.py`) with plan store, all customer + installer endpoints, Claude loop, scripted fallback, engine-offline mode (M0/M1)
@@ -33,6 +33,8 @@
 - Customer-stated yearly kWh -> `total_demand_kwh` (engine 336060e), not `annual_demand_kwh`.
 - Engine down -> contract-shaped design with no numbers (`params_version: engine-offline`), reo says it can't calculate; installer edits return 503.
 - Existing solar is asked after EV (choice 'Yes, I have solar' / 'No solar yet'): data's test report 7fd5ecb shows 49 of 52 PV yes/no misses are homes that already have solar.
+- goal_planner runs as a fixed, logged search over engine what-ifs + anchors (< 1 s), not an Opus loop: a customer chat turn can't wait 30 s; EV homes keep their wallbox. Customer goal = customer's choice, so the best variant becomes the plan; installer goal questions apply nothing.
+- bill_reader: facts from the bill wait for the customer's 'Yes, that's right' before they enter the plan.
 - Harness: models get `read`/`propose` tools only; `evidence.similar` (individual homes) is NOT a model tool (hard rule 5), the model sees aggregate percentiles only. Grounding guard: every number in output text within persona rounding of a tool-result number of the same run; small counts <= 12 allowed.
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.

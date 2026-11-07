@@ -79,3 +79,33 @@ def test_engine_down_fails_cleanly(monkeypatch):
     run = Runner(OFFER_PREP, Ctx(plan, {"locks": {}, "prices": {}}, []), "test").go()
     assert run["output"]["status"] == "failed" and run["status"] == "done"
     assert any(s["tool"] == "completeness" and not s["ok"] for s in run["steps"])
+
+
+def test_goal_and_bill(tmp_path, monkeypatch):
+    import llm
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.setattr(api, "STORE", tmp_path / "plans.json")
+    monkeypatch.setattr(engine, "design", fake_design)
+    steps = [{"change": "no battery", "delta": {"price_eur": -9000, "autarky_pct": -30}, "locks": {"battery": {"recommended": False}}},
+             {"change": "battery 15 kWh", "delta": {"price_eur": 4500, "autarky_pct": 4}, "locks": {"battery": {"recommended": True, "size": 15}}}]
+    monkeypatch.setattr(engine, "explain", lambda *a, **k: {"reasons": ["r"], "what_if": steps})
+    monkeypatch.setattr(llm, "read_bill", lambda data, media: {"total_demand_kwh": 3900, "electricity_price_eur_per_kwh": 0.36,
+                                                               "provider": "Stadtwerke", "monthly_payment_eur": None})
+    c = TestClient(api.app)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+
+    t = c.post(f"/sessions/{pid}/bill", files={"image": ("bill.jpg", b"img", "image/jpeg")}).json()
+    assert t["bill"]["read"]["total_demand_kwh"] == 3900 and "3,900 kWh" in t["messages"][0]["text"]
+    assert "total_demand_kwh" not in t["plan"]["facts"]  # waits for confirmation
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Yes, that's right"}).json()
+    assert t["plan"]["facts"]["total_demand_kwh"] == 3900 and t["plan"]["facts"]["electricity_price_eur_per_kwh"] == 0.36
+
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Keep it under €20,000"}).json()
+    g = t["goal_result"]
+    assert g["goal"] == "budget" and g["budget_eur"] == 20000 and g["fits_budget"]
+    assert g["recommendation"]["design"]["price"]["total_eur"] <= 20000 and len(g["alternatives"]) == 2
+    assert t["plan"]["design"]["price"]["total_eur"] == g["recommendation"]["design"]["price"]["total_eur"]
+    run = c.get(f"/runs/{g['run_id']}").json()
+    assert run["skill"] == "goal_planner" and any(s["tool"] == "grounding" and s["ok"] for s in run["steps"])
+    skills = [r["skill"] for r in c.get(f"/plans/{pid}/runs").json()]
+    assert skills.count("bill_reader") == 1 and skills.count("goal_planner") == 1

@@ -98,6 +98,16 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     plan, st = _get(db, pid)
     intent, topic, new = parsed["intent"], parsed.get("topic"), parsed["facts"]
 
+    if intent == "bill_yes":  # confirm what bill_reader read
+        new = st.pop("bill_pending", None) or {}
+        intent = "facts" if new else "continue"
+    if intent == "bill_no":
+        st.pop("bill_pending", None)
+        st["last_ask"] = "total_demand_kwh"
+        m = reo_msg(plan, "No problem. What does your bill say per year?")
+        return {"messages": [m], "plan": out(plan), "suggestions": ["About 3,000 kWh", "About 4,500 kWh"], "ask": flow.KWH_ASK}
+    if intent == "goal" and topic in GOALS:
+        return goal_turn(db, plan, st, new, topic)
     if intent == "kwh":
         st["last_ask"] = "total_demand_kwh"
         m = reo_msg(plan, "Great, that's the most precise. What does your bill say per year?")
@@ -146,6 +156,45 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     if ask:
         turn["ask"] = flow.ui_ask(ask)
     return turn
+
+
+GOALS = {"budget": "your budget", "independence": "as much independence as possible", "lowest_bill": "the lowest monthly bill"}
+GOAL_CHIPS = ["Keep it under €20,000", "As independent as possible", "Lowest monthly bill"]
+
+
+def run_skill(db: dict, skill: str, plan: dict, st: dict, trigger: str, inputs: dict | None = None) -> dict:
+    """Run a harness skill synchronously on a copy of this plan; the run is stored with the plan store."""
+    ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
+    ctx.inputs = inputs or {}
+    run = Runner(SKILLS[skill], ctx, trigger).go()
+    db.setdefault("runs", {})[run["id"]] = run
+    RUNS.pop(run["id"], None)
+    return run
+
+
+def goal_turn(db: dict, plan: dict, st: dict, new: dict, goal: str) -> dict:
+    """Trigger: goal message -> goal_planner. The best variant becomes the plan (customer's choice), two alternatives shown."""
+    plan["facts"].update(new)
+    run = run_skill(db, "goal_planner", plan, st, "goal message", {"goal": goal})
+    res = run["output"] or {}
+    rec = res.get("recommendation")
+    if not rec:
+        m = reo_msg(plan, OFFLINE_TEXT)
+        return {"messages": [m], "plan": out(plan), "suggestions": flow.STANDING_CHIPS}
+    st["locks"] = {k: v for k, v in rec["locks"].items()}
+    plan["design"] = rec["design"]
+    plan["history"].append({"at": now(), "trigger": f"goal: {goal}", "total_eur": rec["design"]["price"]["total_eur"]})
+    attach_evidence(plan)
+    lead = f"For {GOALS[goal]}, " + scripted.headline(rec["design"])
+    if goal == "budget" and not res.get("fits_budget"):
+        lead = "Nothing I can design fits that budget, so here is the lowest-priced option. " + scripted.headline(rec["design"])
+    alts = [f"{a['why'].split(': ', 1)[1].split(';')[0]} for about {scripted.eur(a['design']['price']['total_eur'])}"
+            for a in res.get("alternatives", [])]
+    text = lead + (f" Alternatives: {' or '.join(alts)} (estimates)." if alts else "")
+    m = reo_msg(plan, text)
+    plan["updated_at"] = now()
+    return {"messages": [m], "plan": out(plan), "suggestions": ["Send to installer", "Why this size?"]
+            + [c for c in GOAL_CHIPS if c.lower().split()[0] not in goal], "goal_result": res}
 
 
 def template(d, intent, topic, new, changed, had_numbers, ask, offer) -> str:
@@ -269,6 +318,41 @@ def send_facts(pid: str, body: Facts):
         return turn
 
 
+@app.post("/sessions/{pid}/bill")
+def send_bill(pid: str, image: UploadFile = File(...)):
+    """Trigger: bill upload -> bill_reader. Facts wait for the customer's 'Yes, that's right'."""
+    data, media = image.file.read(), image.content_type or "image/jpeg"
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        snap_plan, snap_st, booked = json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", []))
+    ctx = htools.Ctx(snap_plan, snap_st, booked)
+    ctx.inputs = {"bill": data, "media_type": media}
+    run = Runner(SKILLS["bill_reader"], ctx, "bill upload").go()  # vision call outside the lock
+    read = (run["output"] or {}).get("read", {})
+    facts = {k: read[k] for k in ("total_demand_kwh", "electricity_price_eur_per_kwh") if read.get(k)}
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        db.setdefault("runs", {})[run["id"]] = run
+        RUNS.pop(run["id"], None)
+        plan["transcript"].append({"role": "customer", "text": "(photo of my electricity bill)", "at": now()})
+        if facts:
+            st["bill_pending"] = facts
+            bits = ([f"about {facts['total_demand_kwh']:,.0f} kWh a year"] if "total_demand_kwh" in facts else []) + \
+                   ([f"{facts['electricity_price_eur_per_kwh'] * 100:.1f} ct per kWh"] if "electricity_price_eur_per_kwh" in facts else [])
+            who = f" from {read['provider']}" if read.get("provider") else ""
+            m = reo_msg(plan, f"I read this from your bill{who}: {' and '.join(bits)}. Is that right?")
+            turn = {"messages": [m], "plan": out(plan), "suggestions": ["Yes, that's right", "Not quite"],
+                    "bill": {"read": {**facts, **({"provider": read["provider"]} if read.get("provider") else {})}, "confirmed": False}}
+        else:
+            st["last_ask"] = "total_demand_kwh"
+            m = reo_msg(plan, "I couldn't read that bill. Could you type your yearly electricity use instead?")
+            turn = {"messages": [m], "plan": out(plan), "suggestions": ["About 3,000 kWh", "About 4,500 kWh"], "ask": flow.KWH_ASK}
+        _save(db)
+        return turn
+
+
 @app.post("/sessions/{pid}/address")
 def send_address(pid: str, body: Address):
     # shortcut: address lookup mock lands in M2; until then ask for the roof size directly
@@ -366,6 +450,17 @@ def ask_plan(pid: str, body: Ask):
     d = engine.design(plan["facts"], st["locks"], st["prices"])  # fresh engine call for this answer
     if d is None:
         return {"answer": "The calculation isn't reachable right now, so I can't explain the numbers yet."}
+    parsed = scripted.extract(body.text)
+    if parsed["intent"] == "goal" and parsed["topic"] in GOALS:  # planner asks for a goal: goal_planner, nothing applied
+        with _lock:
+            db = _load()
+            plan, st = _get(db, pid)
+            plan = {**plan, "facts": {**plan["facts"], **parsed["facts"]}}
+            run = run_skill(db, "goal_planner", plan, st, "installer goal question", {"goal": parsed["topic"]})
+            _save(db)
+        res = run["output"] or {}
+        lines = [res["recommendation"]["why"]] + [a["why"] for a in res.get("alternatives", [])] if res.get("recommendation") else []
+        return {"answer": " ".join(lines) or "No variant found.", "goal_result": res}
     answer = llm.reply(audience="installer", latest_message=body.text, facts=plan["facts"], engine_result=d,
                        transcript=plan["transcript"], flags=evidence.flags(plan["facts"], d))  # aggregate only, no other homes
     return {"answer": answer or scripted.answer(d, scripted.extract(body.text)["topic"])}
