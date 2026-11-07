@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from api import app  # noqa: E402
 from design import sim  # noqa: E402
+from inputs import PARAMS  # noqa: E402
 
 client = TestClient(app)
 GAS_HOME = {"total_demand_kwh": 4500, "heating_type": "gas", "roof_area_sqm": 100, "region": "NW",
@@ -56,7 +57,7 @@ def test_ev_adds_wallbox_and_evening_load():
 def test_gas_home_with_spare_roof_gets_heatpump_priced_and_saved():
     d = post(GAS_HOME)
     hp = d["components"]["heatpump"]
-    assert hp["recommended"] and hp["size"] == 7 and "gas" in hp["reasons"][0]
+    assert hp["recommended"] and hp["size"] in PARAMS["heatpump_catalogue_kw"] and "gas" in hp["reasons"][0]
     assert any("heat pump" in i["label"].lower() for i in d["price"]["items"])
     assert d["economics"]["total_demand_kwh"] == 4500 + 5000
     assert d["economics"]["bill_today_eur_per_month"] > d["economics"]["bill_after_eur_per_month"]

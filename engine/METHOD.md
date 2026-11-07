@@ -82,14 +82,14 @@ A_need  = N_mod × A_mod
 
 | Symbol | Meaning | Value |
 |---|---|---|
-| a, b | Expert sizing line: base size + kWp per extra MWh | **a = 5.86 kWp, b = 0.623 kWp/MWh**, fitted on the expert designs (`tools/derive_params.py`) |
+| a, b | Expert sizing line: base size + kWp per extra MWh | **a = 6.15 kWp, b = 0.603 kWp/MWh, fitted on `train` only**, fitted on the expert designs (`tools/derive_params.py`) |
 | Y_home | Yield of this roof: region's Y (else national) × orientation / tilt factor | see [below](#deriving-y-and-c-from-real-data) |
 | P_mod | Power of one module (W) | 430 |
 | A_mod | Area of one module (m²) | ≈ 1.95 m² for 430 W, *placeholder* until the datasheet |
 
 The line replaces the earlier `kWp = D × c / Y`: experts give every home a base system and add little per MWh, so a fixed c undersizes small homes and oversizes large ones (median error 2.9 kWp vs 2.0 for the line). c = 1.93 is kept only to explain the size ("produces about 2× your demand"). Dividing by Y_home keeps the yearly generation the same: a northern or east-facing roof gets more modules.
 
-Example: D = 4,500 kWh → 5.86 + 0.623 × 4.5 = 8.67 kWp → 20 modules → 8.6 kWp → A_need = 39 m².
+Example: D = 4,500 kWh → 6.15 + 0.603 × 4.5 = 8.86 kWp → 21 modules → 9.0 kWp → A_need = 41 m².
 
 ### Roof check
 
@@ -147,10 +147,10 @@ c    = median over projects with PV > 0
 
 Implemented in `tools/derive_params.py` with `dataset.py` (expert kWp rebuilt per offer from `Module` rows (count × W), else the kWp in "Complete Package … kWp" names, else the mounting / DC-install quantity (= module count) × the installer's module W; first option of each project, since no flag says which was delivered). Left out: existing PV, heat pump in the offer, demand outside 1–20 MWh, PV > 40 kWp.
 
-Result (2026-11-07, 1,242 projects): **c = 1.93** (experts install PV producing about twice the yearly demand). c is **not constant**: it falls from ~3.1 below 3 MWh to ~1.0 above 12 MWh. The engine therefore sizes with the line `kWp = 5.86 + 0.623 × D_MWh` (fitted through the medians of ten demand bands), see [PV size from D](#pv-size-from-d).
+Result (2026-11-07, 1,242 projects): **c = 1.93** (experts install PV producing about twice the yearly demand). c is **not constant**: it falls from ~3.1 below 3 MWh to ~1.0 above 12 MWh. The engine therefore sizes with the line `kWp = 6.15 + 0.603 × D_MWh` (fitted through the medians of ten demand bands), see [PV size from D](#pv-size-from-d).
 
 - k_EV (kWh per km, incl. charging losses) and COP are still hand-set; to be taken from published measurements (ADAC Ecotest, Fraunhofer ISE heat-pump field tests).
-- The whole dataset is used for c and for evaluation (owner's decision); PV evaluation is in-sample for this one parameter.
+- Parameters are fitted on data's `train` split only (1,098 projects); `test` is scored once with data's `score.py` (see [STATUS.md](STATUS.md)).
 
 ### Which inputs come from the customer
 

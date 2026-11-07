@@ -6,7 +6,7 @@
     "electricity_price_eur_per_kwh": 0.32
   },
   "_placeholders": "k_ev, cop, usable_roof_share, heatpump_full_load_hours, building_type_factor are hand-set",
-  "c_coverage": 1.927,
+  "c_coverage": 1.94,
   "k_ev_kwh_per_km": 0.18,
   "cop": 3.0,
   "module_w": 430,
@@ -125,13 +125,13 @@
     "script": "engine/tools/derive_y.py"
   },
   "pv_line": {
-    "a_kwp": 5.863,
-    "b_kwp_per_mwh": 0.623,
+    "a_kwp": 6.154,
+    "b_kwp_per_mwh": 0.603,
     "median_abs_error_kwp": 1.98,
-    "projects": 1242
+    "projects": 862
   },
   "battery": {
-    "share_with_pv": 0.952,
+    "share_with_pv": 0.951,
     "r_b_kwh_per_kwp": 0.926,
     "catalogue_kwh": [
       5.0,
@@ -139,23 +139,22 @@
       7.0,
       9.0,
       10.0,
-      12.0,
       14.0,
       15.0,
       18.0
     ]
   },
   "heatpump_catalogue_kw": [
-    5,
-    7,
+    6,
+    8,
     10,
     12
   ],
   "derived_from_dataset": {
     "on": "2026-11-07",
     "script": "engine/tools/derive_params.py",
-    "projects": 1593,
-    "note": "all projects, owner's decision"
+    "projects": 1098,
+    "split": "train"
   },
   "plausible": {
     "_note": "low / high values tried for a missing input, to build ranges and rank missing_inputs",

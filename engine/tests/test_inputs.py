@@ -94,7 +94,7 @@ def test_spare_roof_suggests_heatpump_for_gas():
                              "heating_type": "gas", "heating_demand_kwh": 15000}))
     assert s.roof == "fits" and s.heatpump_suggested
     assert s.heatpump_electricity_kwh == pytest.approx(5000)
-    assert s.heatpump_kw == 7                         # 15,000 kWh / 2,000 h = 7.5 → nearest catalogue size
+    assert s.heatpump_kw == min(PARAMS["heatpump_catalogue_kw"], key=lambda k: abs(k - 7.5))   # 15,000 kWh / 2,000 h
     assert 0 < s.heatpump_extra_modules <= s.modules_fitting - s.modules
 
 

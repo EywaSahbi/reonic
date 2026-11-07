@@ -4,7 +4,7 @@ Step 0 (`inputs.py`) gave PV kWp, module count, the roof check and the heat-pump
 
 | # | Gap | How it is built | Where |
 |---|---|---|---|
-| 1 | **PV sizing rule** | `kWp = (5.86 + 0.623 × D_MWh) × Y_nat / Y_home`, line fitted through demand-band medians of the expert designs (fixed c = 1.93 missed by 2.9 kWp, the line by 2.0) | `inputs.py`, `tools/derive_params.py` |
+| 1 | **PV sizing rule** | `kWp = (6.15 + 0.603 × D_MWh) × Y_nat / Y_home`, line fitted through demand-band medians of the expert designs (fixed c = 1.93 missed by 2.9 kWp, the line by 2.0) | `inputs.py`, `tools/derive_params.py` |
 | 2 | **Existing PV** | New kWp = line − `existing_pv_kwp` (default 5 kWp if only `has_existing_pv`); battery sized on existing + new | `inputs.py`, `design.py` |
 | 3 | **Orientation and tilt** | Y × PVGIS factor for the nearest stored aspect / tilt; flat roof without orientation = east-west 15° | `inputs.py` |
 | 4 | **Usable roof share** | roof × 0.75 before the roof check (*placeholder*, question for the Reonic experts) | `params.json` |

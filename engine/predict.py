@@ -1,10 +1,11 @@
 """Run the engine on every dataset project and compare with what the experts offered (PLAN.md #16).
 
-    uv run python predict.py          → out/predictions_all.csv (data/CONTRACT.md format) + scores printed
+    uv run python predict.py --split test   → out/predictions_test.csv (data/CONTRACT.md format) + scores printed
+    (cd ../data && uv run python score.py ../engine/out/predictions_test.csv --split test)   ← official scorer
 
-The whole dataset is used (owner's decision); the PV line, r_B and catalogues were derived from the same
-projects, so these scores are in-sample for those few parameters. data's score.py stays the official scorer.
+Fit params on train first (tools/derive_params.py --split train), so val / test scores are out-of-sample.
 """
+import argparse
 import json
 from pathlib import Path
 
@@ -46,27 +47,32 @@ def score(truth, pred):
 
 
 def baseline(truth):
-    """Simple rules to beat: PV and battery always at the experts' median size, wallbox iff EV."""
+    """Simple rules to beat: PV and battery always at the train experts' median size, wallbox iff EV."""
     b = truth[["project_id"]].copy()
-    b["pv_kwp"] = truth.pv_kwp[truth.pv_kwp > 0].median()
-    b["battery_kwh"] = truth.battery_kwh[truth.battery_kwh > 0].median()
+    train = expert_designs(PARAMS["k_ev_kwh_per_km"], PARAMS["cop"], "train")
+    b["pv_kwp"] = train.pv_kwp[train.pv_kwp > 0].median()
+    b["battery_kwh"] = train.battery_kwh[train.battery_kwh > 0].median()
     b["heatpump_kw"] = 0.0
-    b["wallbox_kw"] = truth.has_ev.map({True: 11.0, False: 0.0})
+    b["wallbox_kw"] = truth.has_ev.astype(bool).map({True: 11.0, False: 0.0})
     return b
 
 
 def main():
-    truth = expert_designs(PARAMS["k_ev_kwh_per_km"], PARAMS["cop"])
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--split", choices=["train", "val", "test"], default=None)
+    split = ap.parse_args().split
+    name = split or "all"
+    truth = expert_designs(PARAMS["k_ev_kwh_per_km"], PARAMS["cop"], split)
     pred = predict(truth)
     OUT.mkdir(exist_ok=True)
-    pred.to_csv(OUT / "predictions_all.csv", index=False)
+    pred.to_csv(OUT / f"predictions_{name}.csv", index=False)
 
-    report = {"split": "all", "n": len(truth), "model": VERSION, "components": score(truth, pred),
+    report = {"split": name, "params_fitted_on": PARAMS["derived_from_dataset"].get("split", "all"), "n": len(truth), "model": VERSION, "components": score(truth, pred),
               "baseline": score(truth, baseline(truth)),
               "per_installer": {i: score(truth[truth.installer == i], pred[truth.installer == i])
                                 for i in sorted(truth.installer.unique())}}
-    (OUT / "score_all.json").write_text(json.dumps(report, indent=2))
-    print(f"{len(truth)} projects, model {VERSION}")
+    (OUT / f"score_{name}.json").write_text(json.dumps(report, indent=2))
+    print(f"{len(truth)} {name} projects, params fitted on {report['params_fitted_on']}, model {VERSION}")
     for k in report["components"]:
         e, b = report["components"][k], report["baseline"][k]
         print(f"  {k:9} presence {e['presence_acc']:.0%} (baseline {b['presence_acc']:.0%})  "
