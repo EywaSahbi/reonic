@@ -60,7 +60,8 @@ def read_inputs(facts: dict) -> Home:
         assumptions.append({"field": name, "value": default, "note": note})
         return default
 
-    has_ev = given_or_default("has_ev", False, "no EV unless the customer says so")
+    has_ev = given_or_default("has_ev", False, "no EV today, one is planned" if facts.get("ev_planned")
+                              else "no EV unless the customer says so")
     km = 0
     if has_ev:
         if facts.get("ev_km_per_year") is None and facts.get("ev_km_per_week") is not None:

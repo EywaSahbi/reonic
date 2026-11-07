@@ -104,9 +104,17 @@ def design(facts: dict, locks: dict, price_overrides: dict) -> dict:
     apply_lock("wallbox")
 
     hp_kw = nearest(HEATPUMP_SIZES, home.heating_demand_kwh / 2000) if home.heating_demand_kwh else None
-    hp_reasons = ([f"your {home.heating_type} heating could run on the spare roof's solar power"
-                   + (f" (+{pv.heatpump_extra_kwp:.1f} kWp)" if pv.heatpump_extra_kwp else "")]
-                  if pv.heatpump_suggested else ["heating already electric, roof unknown or no spare roof"])
+    if pv.heatpump_suggested:
+        hp_reasons = [f"your {home.heating_type} heating could run on the spare roof's solar power"
+                      + (f" (+{pv.heatpump_extra_kwp:.1f} kWp)" if pv.heatpump_extra_kwp else "")]
+    elif home.heating_type in ("heatpump", "electric"):
+        hp_reasons = [f"your heating is already electric ({home.heating_type}), no heat pump needed"]
+    elif home.heating_type is None:
+        hp_reasons = ["heating type unknown, so no heat-pump decision yet"]
+    elif pv.roof == "unknown":
+        hp_reasons = [f"{home.heating_type} heating could switch to a heat pump; roof area needed to check it fits"]
+    else:
+        hp_reasons = ["the roof is fully used by the PV for your electricity demand"]
     comps["heatpump"] = component(pv.heatpump_suggested, hp_kw, "kW", hp_reasons, confidence="low")
     apply_lock("heatpump")
 

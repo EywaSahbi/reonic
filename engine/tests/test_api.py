@@ -51,3 +51,11 @@ def test_fast_enough():
     t = time.perf_counter()
     client.post("/design", json={"facts": {}})
     assert time.perf_counter() - t < 0.1
+
+
+def test_reasons_match_facts():
+    d = client.post("/design", json={"facts": {"total_demand_kwh": 4500, "heating_type": "gas",
+                                               "ev_planned": True, "region": "BY"}}).json()
+    assert "gas" in d["components"]["heatpump"]["reasons"][0]
+    assert "electric" not in d["components"]["heatpump"]["reasons"][0]
+    assert [a["note"] for a in d["assumptions"] if a["field"] == "has_ev"] == ["no EV today, one is planned"]
