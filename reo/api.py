@@ -10,13 +10,14 @@ import base64
 import json
 import os
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 import engine
@@ -25,6 +26,9 @@ import flow
 import llm
 import scripted
 import voice
+from harness import tools as htools
+from harness.runner import RUNS, Runner
+from harness.skills import SKILLS
 
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
@@ -43,14 +47,15 @@ _lock = threading.Lock()
 
 # ---------- store ----------
 
-def _load() -> dict:
-    if STORE.exists():
-        return json.loads(STORE.read_text(encoding="utf-8"))
+def _load(store: Path | None = None) -> dict:
+    f = store or STORE
+    if f.exists():
+        return json.loads(f.read_text(encoding="utf-8"))
     return {"plans": {}, "state": {}}
 
 
-def _save(db: dict) -> None:
-    STORE.write_text(json.dumps(db, ensure_ascii=False, indent=1), encoding="utf-8")
+def _save(db: dict, store: Path | None = None) -> None:
+    (store or STORE).write_text(json.dumps(db, ensure_ascii=False, indent=1), encoding="utf-8")
 
 
 def now() -> str:
@@ -289,7 +294,8 @@ def handoff(pid: str, body: Handoff):
                       "You'll see the final quote here once your planner has confirmed it.")
         plan["updated_at"] = now()
         _save(db)
-        return out(plan)
+    start_offer_prep(pid, "handoff")  # trigger: handoff -> offer_prep (runs in the background)
+    return out(_get(_load(), pid)[0])
 
 
 @app.get("/sessions/{pid}")
@@ -347,6 +353,8 @@ def edit_plan(pid: str, body: Edit):
                                         "before": before, "after": d["price"]["total_eur"]})
         plan["history"].append({"at": now(), "trigger": "installer edit", "total_eur": d["price"]["total_eur"]})
         attach_evidence(plan)
+        for v in (plan.get("offer_pack") or {}).get("variants", []):
+            v["stale"] = True  # trigger: installer edit -> variants no longer match the facts / locks / prices
         plan["updated_at"] = now()
         _save(db)
         return out(plan, installer=True)
@@ -368,14 +376,18 @@ def finalize(pid: str, body: Finalize):
     with _lock:
         db = _load()
         plan, _ = _get(db, pid)
-        plan["status"] = "quoted"
-        total = scripted.eur(plan["design"]["price"]["total_eur"])
-        design = scripted.headline(plan["design"]).split(". That would")[0].removeprefix("I'd suggest ")
-        reo_msg(plan, f"Your planner has confirmed your plan: {design}, total {total} (confirmed by SolarHaus Müller)."
-                      + (f" {body.note}" if body.note else ""))
-        plan["updated_at"] = now()
+        _finalize(plan, body.note)
         _save(db)
         return out(plan, installer=True)
+
+
+def _finalize(plan: dict, note: str | None) -> None:
+    plan["status"] = "quoted"
+    total = scripted.eur(plan["design"]["price"]["total_eur"])
+    design = scripted.headline(plan["design"]).split(". That would")[0].removeprefix("I'd suggest ")
+    reo_msg(plan, f"Your planner has confirmed your plan: {design}, total {total} (confirmed by SolarHaus Müller)."
+                  + (f" {note}" if note else ""))
+    plan["updated_at"] = now()
 
 
 @app.get("/prices")
@@ -394,3 +406,190 @@ def validation(split: str = "test"):
         if files:
             return {"available": True, "file": files[-1].name, **json.loads(files[-1].read_text(encoding="utf-8"))}
     return {"available": False, "note": "validation numbers arrive from data/score.py"}
+
+
+# ---------- agent harness: offer pack, runs, approvals ----------
+
+PREPARING = {"status": "preparing", "variants": [], "recommended": "Recommended", "flags": [], "site_visit_checklist": [],
+             "open_questions": [], "customer_message_draft": "", "actions": [], "trace": [], "duration_s": 0, "model": "",
+             "prepared_at": None, "run_id": None}
+
+
+def start_offer_prep(pid: str, trigger: str) -> str:
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
+        runner = Runner(SKILLS["offer_prep"], ctx, trigger)
+        plan["offer_pack"] = {**PREPARING, "run_id": runner.run["id"]}
+        _save(db)
+    threading.Thread(target=_finish_offer, args=(pid, runner, STORE), daemon=True).start()
+    return runner.run["id"]
+
+
+def _finish_offer(pid: str, runner: Runner, store: Path) -> None:
+    run = runner.go()
+    with _lock:
+        db = _load(store)  # the store the run started on, even if STORE changed meanwhile
+        plan = db["plans"].get(pid)
+        if plan is None:
+            return
+        pack = run["output"] or {**PREPARING, "status": "failed", "run_id": run["id"]}
+        if pack.get("status") == "preparing":
+            pack["status"] = "failed"
+        plan["offer_pack"] = {**pack, "duration_s": run["duration_s"], "prepared_at": now()}
+        db.setdefault("runs", {})[run["id"]] = run
+        _save(db, store)
+
+
+def _run(rid: str) -> dict:
+    run = RUNS.get(rid) or _load().get("runs", {}).get(rid)
+    if run is None:
+        raise HTTPException(404, f"no run {rid}")
+    return run
+
+
+class Payload(BaseModel):
+    payload: dict | None = None
+
+
+class Reason(BaseModel):
+    reason: str | None = None
+
+
+class VariantName(BaseModel):
+    name: str
+
+
+@app.post("/plans/{pid}/prepare")
+def prepare(pid: str, _: dict | None = None):
+    _get(_load(), pid)
+    start_offer_prep(pid, "prepare")
+    return out(_get(_load(), pid)[0], installer=True)
+
+
+@app.post("/plans/{pid}/variant")
+def choose_variant(pid: str, body: VariantName):
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        pack = plan.get("offer_pack") or {}
+        v = next((x for x in pack.get("variants", []) if x["name"] == body.name), None)
+        if v is None:
+            raise HTTPException(404, f"no variant {body.name}")
+        d = engine.design(plan["facts"], v["locks"], st["prices"])
+        if d is None:
+            raise HTTPException(503, "engine not reachable, variant not applied")
+        before = plan["design"]["price"]["total_eur"]
+        st["locks"] = dict(v["locks"])
+        plan["design"] = d
+        pack["chosen"] = body.name
+        plan["installer_edits"].append({"at": now(), "change": f"variant {body.name} chosen", "before": before,
+                                        "after": d["price"]["total_eur"]})
+        plan["history"].append({"at": now(), "trigger": f"variant {body.name}", "total_eur": d["price"]["total_eur"]})
+        attach_evidence(plan)
+        plan["updated_at"] = now()
+        _save(db)
+        return out(plan, installer=True)
+
+
+def _action(plan: dict, aid: str) -> dict:
+    a = next((x for x in (plan.get("offer_pack") or {}).get("actions", []) if x["id"] == aid), None)
+    if a is None:
+        raise HTTPException(404, f"no action {aid}")
+    if a["status"] != "proposed":
+        raise HTTPException(409, f"action {aid} is already {a['status']}")
+    return a
+
+
+def _log_step(db: dict, plan: dict, step: dict) -> None:
+    run = db.get("runs", {}).get((plan.get("offer_pack") or {}).get("run_id"))
+    if run:
+        run["steps"].append({"n": len(run["steps"]) + 1, "ms": 0, **step})
+        if not any(a["status"] == "proposed" for a in plan["offer_pack"]["actions"]):
+            run["status"] = "done"
+        RUNS.pop(run["id"], None)  # the stored copy is now the truth
+
+
+@app.post("/plans/{pid}/actions/{aid}/approve")
+def approve(pid: str, aid: str, body: Payload | None = None):
+    """The only way an execute tool runs: a planner's click."""
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        a = _action(plan, aid)
+        payload = {**a["payload"], **((body.payload if body else None) or {})}
+        if a["kind"] == "book_visit" and payload.get("slot") in db.get("calendar", []):
+            raise HTTPException(409, f"slot {payload['slot']} is already booked")
+        result = htools.execute(a["kind"], payload, db)
+        if a["kind"] == "send_quote":
+            pack = plan["offer_pack"]
+            v = next((x for x in pack["variants"] if x["name"] == payload.get("variant")), None)
+            if v and pack.get("chosen") != v["name"]:
+                d = engine.design(plan["facts"], v["locks"], st["prices"])
+                if d:
+                    st["locks"], plan["design"], pack["chosen"] = dict(v["locks"]), d, v["name"]
+            _finalize(plan, payload.get("message"))
+        elif a["kind"] == "book_visit":
+            reo_msg(plan, f"Your site visit with SolarHaus Müller is booked for {payload['slot']}.")
+        elif a["kind"] == "request_document":
+            reo_msg(plan, f"Your planner would like a few documents: {', '.join(payload.get('documents', []))}. "
+                          "You can send them by email or bring them to the site visit.")
+        a.update(status="done", payload=payload, result=result, at=now())
+        _log_step(db, plan, {"kind": "tool", "tool": htools.EXECUTE_TOOL[a["kind"]], "effect": "execute",
+                             "args_summary": f"approved by planner: {a['label']}", "result_summary": result})
+        plan["updated_at"] = now()
+        _save(db)
+        return out(plan, installer=True)
+
+
+@app.post("/plans/{pid}/actions/{aid}/reject")
+def reject(pid: str, aid: str, body: Reason | None = None):
+    with _lock:
+        db = _load()
+        plan, _ = _get(db, pid)
+        a = _action(plan, aid)
+        a.update(status="rejected", result=(body.reason if body else None) or "rejected by planner", at=now())
+        _log_step(db, plan, {"kind": "guard", "tool": "approval", "ok": True,
+                             "args_summary": a["label"], "result_summary": "rejected by planner, nothing executed"})
+        plan["updated_at"] = now()
+        _save(db)
+        return out(plan, installer=True)
+
+
+@app.get("/calendar/slots")
+def calendar_slots():
+    return {"slots": htools.free_slots(_load().get("calendar", []))}
+
+
+@app.get("/runs/{rid}")
+def get_run(rid: str):
+    return _run(rid)
+
+
+@app.get("/plans/{pid}/runs")
+def plan_runs(pid: str):
+    stored = _load().get("runs", {})
+    runs = {**stored, **{k: v for k, v in RUNS.items() if k not in stored}}
+    mine = [{k: v for k, v in r.items() if k != "output"} for r in runs.values() if r["plan_id"] == pid]
+    return sorted(mine, key=lambda r: r["started_at"], reverse=True)
+
+
+@app.get("/runs/{rid}/events")
+def run_events(rid: str):
+    """Server-Sent Events: past steps first, then live ones, then 'done'."""
+    _run(rid)
+
+    def stream():
+        sent = 0
+        while True:
+            run = _run(rid)
+            for st in run["steps"][sent:]:
+                yield f"event: step\ndata: {json.dumps(st, ensure_ascii=False)}\n\n"
+            sent = len(run["steps"])
+            if run["status"] != "running":
+                yield f"event: done\ndata: {json.dumps({'status': run['status'], 'duration_s': run['duration_s']})}\n\n"
+                return
+            time.sleep(0.25)
+
+    return StreamingResponse(stream(), media_type="text/event-stream")

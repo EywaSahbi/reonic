@@ -2,6 +2,10 @@
 
 ## Backlog (top = next)
 
+- [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
+- [ ] bill_reader skill (`/sessions/{id}/bill`, vision) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
+- [ ] chat_turn and installer_qa onto the harness; follow_up (stretch)
+
 - [x] `CONTRACT.md` v1; API (`api.py`) with plan store, all customer + installer endpoints, Claude loop, scripted fallback, engine-offline mode (M0/M1)
 - [x] Verified live against engine stub 3c0b18b: full demo (kWh, Gas, EV, why battery, Bavaria, handoff, installer edit + ask, finalise) works
 - [ ] LLM turns take ~6 s (Opus 5.5, effort low); consider a faster model if the demo feels slow (human call)
@@ -11,6 +15,8 @@
 - [ ] Mocked address lookup for the demo addresses (M2)
 
 ## Published
+
+- Agent harness (`harness/`: tools with effect classes, runner, guards, skills) with `offer_prep` (Opus 5.5 / scripted): offer pack on handoff, runs + SSE, variant choice, approve / reject (only path to execute tools). Live Opus run: 30 s, grounding ok.
 
 - API on :8001 (`uv run uvicorn api:app --port 8001`), CONTRACT v1, tests `test_api.py` (demo flow with fake engine, engine-down mode).
 
@@ -27,5 +33,6 @@
 - Customer-stated yearly kWh -> `total_demand_kwh` (engine 336060e), not `annual_demand_kwh`.
 - Engine down -> contract-shaped design with no numbers (`params_version: engine-offline`), reo says it can't calculate; installer edits return 503.
 - Existing solar is asked after EV (choice 'Yes, I have solar' / 'No solar yet'): data's test report 7fd5ecb shows 49 of 52 PV yes/no misses are homes that already have solar.
+- Harness: models get `read`/`propose` tools only; `evidence.similar` (individual homes) is NOT a model tool (hard rule 5), the model sees aggregate percentiles only. Grounding guard: every number in output text within persona rounding of a tool-result number of the same run; small counts <= 12 allowed.
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.
