@@ -1,16 +1,26 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
 import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
 import { mockApi } from "./mock";
+import { getInstallerToken, installerUnauthorized, isInstallerPath } from "./auth";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "";
 export const USING_MOCK = BASE === "" || BASE === "mock";
 
+function requestHeaders(path: string, json = false): Record<string, string> {
+  const headers: Record<string, string> = json ? { "Content-Type": "application/json" } : {};
+  const token = getInstallerToken();
+  if (isInstallerPath(path) && token) headers.Authorization = `Bearer ${token}`;
+  if (/\.ngrok(-free)?\.(app|dev)$/.test(new URL(BASE || "http://localhost").hostname)) headers["ngrok-skip-browser-warning"] = "1";
+  return headers;
+}
+
 async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
   const res = await fetch(BASE.replace(/\/$/, "") + path, {
     method,
-    headers: body === undefined ? undefined : { "Content-Type": "application/json" },
+    headers: requestHeaders(path, body !== undefined),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 401 && isInstallerPath(path)) installerUnauthorized();
   if (!res.ok) throw new Error(`${method} ${path} → ${res.status} ${await res.text()}`);
   return res.json() as Promise<T>;
 }
@@ -45,7 +55,7 @@ const httpApi: Api = {
   async sendVoice(id, audio) {
     const form = new FormData();
     form.append("audio", audio, audio.type.includes("mp4") ? "speech.mp4" : "speech.webm");
-    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/voice`, { method: "POST", body: form });
+    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/voice`, { method: "POST", headers: requestHeaders(`/sessions/${id}`), body: form });
     if (!res.ok) throw new Error(`POST /sessions/${id}/voice → ${res.status} ${await res.text()}`);
     return res.json() as Promise<VoiceTurn>;
   },
@@ -55,7 +65,7 @@ const httpApi: Api = {
   async sendBill(id, image) {
     const form = new FormData();
     form.append("image", image);
-    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/bill`, { method: "POST", body: form });
+    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/bill`, { method: "POST", headers: requestHeaders(`/sessions/${id}`), body: form });
     if (!res.ok) throw new Error(`POST /sessions/${id}/bill → ${res.status} ${await res.text()}`);
     return res.json() as Promise<Turn>;
   },
@@ -73,11 +83,36 @@ const httpApi: Api = {
   rejectAction: (id, actionId, reason) => call("POST", `/plans/${id}/actions/${actionId}/reject`, reason ? { reason } : {}),
   getRun: (runId) => call("GET", `/runs/${runId}`),
   watchRun(runId, onStep, onDone) {
-    const es = new EventSource(BASE.replace(/\/$/, "") + `/runs/${runId}/events`);
-    es.addEventListener("step", (e) => onStep(JSON.parse((e as MessageEvent).data)));
-    es.addEventListener("done", (e) => { onDone(JSON.parse((e as MessageEvent).data)); es.close(); });
-    es.onerror = () => es.close(); // the timeline keeps what it has; the pack itself still polls
-    return () => es.close();
+    const controller = new AbortController();
+    const path = `/runs/${runId}/events`;
+    // fetch supports Bearer authentication without placing the planner secret in a URL or access log.
+    void (async () => {
+      const res = await fetch(BASE.replace(/\/$/, "") + path, { headers: requestHeaders(path), signal: controller.signal });
+      if (res.status === 401) { installerUnauthorized(); return; }
+      if (!res.ok || !res.body) return;
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let pending = "";
+      try {
+        while (!controller.signal.aborted) {
+          const { value, done } = await reader.read();
+          if (done) break;
+          pending += decoder.decode(value, { stream: true });
+          pending = pending.replace(/\r\n/g, "\n");
+          let end: number;
+          while ((end = pending.indexOf("\n\n")) >= 0) {
+            const frame = pending.slice(0, end); pending = pending.slice(end + 2);
+            const lines = frame.split("\n");
+            const event = lines.find((line) => line.startsWith("event:"))?.slice(6).trim();
+            const data = lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trimStart()).join("\n");
+            if (!data) continue;
+            if (event === "step") onStep(JSON.parse(data));
+            if (event === "done") { onDone(JSON.parse(data)); return; }
+          }
+        }
+      } finally { await reader.cancel().catch(() => {}); }
+    })().catch(() => { /* Pack polling remains available if the stream disconnects. */ });
+    return () => controller.abort();
   },
   calendarSlots: () => call("GET", "/calendar/slots"),
 };

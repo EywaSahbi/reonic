@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { api } from "./api";
+import { api, USING_MOCK } from "./api";
+import { getInstallerToken, setInstallerToken } from "./auth";
 import { OfferPackPanel, RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
@@ -12,6 +13,29 @@ const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "2-di
 
 // Installer view: inbox of handed-over plans -> plan detail with edits, "ask reo why", finalise.
 export function Installer() {
+  const remote = !USING_MOCK && !["localhost", "127.0.0.1", "[::1]"].includes(new URL(import.meta.env.VITE_API_URL).hostname);
+  const [unlocked, setUnlocked] = useState(() => !remote || !!getInstallerToken());
+  const [token, setToken] = useState("");
+  const [error, setError] = useState("");
+  const [checking, setChecking] = useState(false);
+  useEffect(() => {
+    const denied = () => { setUnlocked(false); setError("Your planner access token is missing or invalid."); };
+    window.addEventListener("reo-installer-unauthorized", denied);
+    return () => window.removeEventListener("reo-installer-unauthorized", denied);
+  }, []);
+  if (unlocked) return <InstallerWorkspace onLock={!USING_MOCK ? () => { setInstallerToken(""); setToken(""); setUnlocked(false); } : undefined} />;
+  return <main className="planner-access card"><SonnfeldMark /><h1>Planner access</h1>
+    <p>Enter the access token provided by your team. It stays in this browser tab for the current session.</p>
+    <form onSubmit={async (e) => { e.preventDefault(); setChecking(true); setError(""); setInstallerToken(token);
+      try { await api.listPlans(); setToken(""); setUnlocked(true); }
+      catch { setInstallerToken(""); setError("Could not unlock the planner. Check the token and backend connection."); }
+      finally { setChecking(false); }
+    }}><label>Access token<input type="password" autoComplete="off" value={token} onChange={(e) => setToken(e.target.value)} required disabled={checking} /></label>
+      {error && <p role="alert">{error}</p>}<button className="btn-primary" disabled={checking || !token.trim()}>{checking ? "Checking…" : "Unlock planner"}</button>
+    </form><a href="#/">Back to customer site</a></main>;
+}
+
+function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
 
@@ -34,6 +58,7 @@ export function Installer() {
       <header className="inst-nav">
         <div className="brand"><SonnfeldMark /> Sonnfeld</div>
         <span className="inst-tag">reo · powered by Reonic</span>
+        {onLock && <button className="btn-ghost small" onClick={onLock}>Lock planner</button>}
         <a className="inst-link" href="#/">Customer site →</a>
       </header>
       <div className="inst-body">

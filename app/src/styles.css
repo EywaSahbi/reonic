@@ -395,3 +395,10 @@ h1, h2, h3 { color: var(--ink); }
 .heating-comparison dt, .heating-comparison small { font-size: 11px; color: var(--ink-500); }
 .heating-comparison dd { margin: 4px 0 0; font-size: 18px; font-weight: 600; }
 .heating-comparison small { display: block; line-height: 1.5; }
+
+.planner-access { max-width: 440px; margin: 12vh auto; padding: 28px; }
+.planner-access h1 { font-size: 28px; margin: 20px 0 12px; }
+.planner-access p { color: var(--ink-500); font-size: 14px; }
+.planner-access form, .planner-access label { display: flex; flex-direction: column; gap: 12px; }
+.planner-access input { font: inherit; padding: 12px; border: 1px solid var(--line); border-radius: 10px; }
+.planner-access > a { display: inline-block; margin-top: 20px; font-size: 14px; }

@@ -88,3 +88,5 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Engine 717be1f heating comparison typed/displayed: cost benefit gated by heatpump_cheaper, null CO2 remains unknown. Household choices already render. Approved flow and heating wording updated in experience/.
 
 - Checks: production build, heating benefit/null-CO2 regression check, deployment URL guard rejection/acceptance, and laptop starter reusing healthy services passed. Windows blocked standalone ngrok; user installing official Store version. Vercel sign-in complete.
+
+- Planner authentication client implemented against reo's proposed access contract: sessionStorage token entry/lock, Bearer only on installer paths, 401 relock. SSE uses authenticated fetch streaming rather than URL query tokens. ngrok warning header applies only to ngrok hosts, including uploads/streams. check-auth.mjs verifies scoping, split CRLF frames, no URL secret, 401 clearing. Backend middleware delivery still pending as of board ACK 23:45 UTC; agent remains active on board while deploying.
