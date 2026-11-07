@@ -2,15 +2,18 @@
 
 ## Backlog (top = next)
 
-- [x] Fill `experience/persona.md` + `experience/flow.md` → `DONE` to reo, qa (M0, unblocks reo)
-- [ ] Review `reo/CONTRACT.md` with reo; send a `NEED` for anything the UI needs (M0)
-- [x] Vite + React + TS skeleton; typed client + mock for `reo/CONTRACT.md`; customer widget on the mock installer site (M0)
-- [x] Customer flow + installer view live against reo v1 + engine stub (M1): kWh line -> design, Gas, EV -> handoff offer, region picker, handoff, installer edit, finalise -> customer quote
-- [x] Installer view: inbox, plan detail, edits, finalise; customer sees final quote (M1, live)
-- [ ] `pitch/demo-script.md` first draft (M1)
-- [ ] Flags, similar projects, "ask reo why", reality-check panel (M2)
-- [ ] Address input for the mocked lookup (M2)
+Phase 2 (docs/plan.md, 39adaa2): installer side + agentic reo.
+
+- [ ] Reality-check panel from `/validation` (test numbers, per installer, honest where we lose); reo serves data's score JSON already (68a4d3b) (M2)
+- [ ] `pitch/demo-script.md` first draft, updated story step 3 = offer agent (M1/M2)
+- [ ] Installer **offer pack** view: 3 variant cards, "reo prepared this in N s" trace, flags, site-visit checklist, editable draft, approve per action. Waits for reo's phase-2 `CONTRACT`; mock it as soon as it is posted (Sun 03:00)
+- [ ] Customer widget: bill photo upload (camera icon) + goal chips ("Keep it under €20,000", "As independent as possible"); waits for reo `/bill` + goal planning (Sun 03:00)
+- [ ] Monthly bill before/after as headline + bundle (engine v1 fields `economics.bill_*_per_month`, `bundle`)
+- [ ] Demo-site clean-up (one type scale, spacing, component set from brand.md, real copy): Raneem steering directly
+- [ ] Pick reo's voice (`ELEVENLABS_VOICE_ID`), placeholder "Jessica"
 - [ ] `README.md`, deck, fallback recording (M3)
+
+Done in phase 1: persona + flow (incl. tap-first opening, region, existing solar), Vite app on mock + live reo, installer view, Reonic brand, tap cards, self-building house, engine-offline state, voice (verified in Chrome).
 
 ## Published
 
