@@ -6,6 +6,7 @@
 - [ ] Verify against the real engine `/design` as soon as engine serves it; tune templates/LLM replies on real numbers (M1)
 - [ ] Offline/scripted replies in German when the customer writes German (now English only)
 - [ ] Flags + similar projects from data's benchmarks; `/plans/{id}/ask`; `/validation` (M2)
+- [x] Voice via ElevenLabs (`voice.py`, `/sessions/{id}/voice`, `/tts`, `/health.voice`)
 - [ ] Mocked address lookup for the demo addresses (M2)
 
 ## Published

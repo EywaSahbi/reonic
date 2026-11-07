@@ -6,6 +6,7 @@ every turn, so every number shown is from this turn (hard rule 2).
 
 Run:  uv run uvicorn api:app --reload --port 8001
 """
+import base64
 import json
 import os
 import threading
@@ -13,15 +14,16 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import engine
 import flow
 import llm
 import scripted
+import voice
 
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
@@ -176,7 +178,7 @@ class Handoff(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "llm": bool(os.getenv("ANTHROPIC_API_KEY")), "voice": False, "engine": engine.healthy()}
+    return {"ok": True, "llm": bool(os.getenv("ANTHROPIC_API_KEY")), "voice": voice.enabled(), "engine": engine.healthy()}
 
 
 @app.post("/sessions")
@@ -199,16 +201,48 @@ def start_session(_: dict | None = None):
 def send_message(pid: str, body: Text):
     with _lock:
         db = _load()
-        plan, st = _get(db, pid)
-        plan["transcript"].append({"role": "customer", "text": body.text, "at": now()})
-        parsed = scripted.chip(body.text)  # chip taps answer instantly, no LLM (flow.md)
-        free = parsed is None
-        if free:
-            q = next((a["prompt"] for _, a in flow.QUESTIONS if a["field"] == st.get("last_ask")), st.get("last_ask"))
-            parsed = llm.extract(body.text, plan["facts"], q) or scripted.extract(body.text, st.get("last_ask"))
-        turn = customer_turn(db, pid, parsed, body.text, free)
+        turn = message_turn(db, pid, body.text)
         _save(db)
         return turn
+
+
+def message_turn(db: dict, pid: str, text: str) -> dict:
+    plan, st = _get(db, pid)
+    plan["transcript"].append({"role": "customer", "text": text, "at": now()})
+    parsed = scripted.chip(text)  # chip taps answer instantly, no LLM (flow.md)
+    free = parsed is None
+    if free:
+        q = next((a["prompt"] for _, a in flow.QUESTIONS if a["field"] == st.get("last_ask")), st.get("last_ask"))
+        parsed = llm.extract(text, plan["facts"], q) or scripted.extract(text, st.get("last_ask"))
+    return customer_turn(db, pid, parsed, text, free)
+
+
+@app.post("/sessions/{pid}/voice")
+def send_voice(pid: str, audio: UploadFile = File(...)):
+    """Spoken turn (VOICE.md): speech-to-text -> the normal message turn -> text-to-speech of reo's reply."""
+    data = audio.file.read()
+    heard = voice.transcribe(data, audio.filename or "audio.webm", audio.content_type or "audio/webm")
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        if heard is None:
+            m = reo_msg(plan, "Sorry, I didn't catch that. Could you say it again, or type it?")
+            _save(db)
+            turn = {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS.get(st.get("last_ask") or "", [])}
+            return {**turn, "heard": "", "audio": None}
+        turn = message_turn(db, pid, heard)
+        _save(db)
+    mp3 = voice.speak(" ".join(m["text"] for m in turn["messages"]))
+    return {**turn, "heard": heard, "audio": base64.b64encode(mp3).decode() if mp3 else None}
+
+
+@app.post("/tts")
+def tts(body: Text):
+    """Read any reo message aloud (greeting, chip turns)."""
+    mp3 = voice.speak(body.text)
+    if mp3 is None:
+        return JSONResponse({"error": "voice not available"}, status_code=503)
+    return Response(mp3, media_type="audio/mpeg")
 
 
 @app.post("/sessions/{pid}/facts")

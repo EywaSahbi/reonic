@@ -74,3 +74,15 @@ def test_engine_down_never_invents_numbers(tmp_path, monkeypatch):
     assert "can't give you numbers" in t["messages"][0]["text"]
     assert t["plan"]["design"]["params_version"] == engine.OFFLINE
     assert c.post(f"/plans/{pid}/edit", json={"facts": {"roof_area_sqm": 50}}).status_code == 503
+
+
+def test_voice_turn(tmp_path, monkeypatch):
+    import voice
+    c = client(tmp_path, monkeypatch)
+    monkeypatch.setattr(voice, "transcribe", lambda audio, *a: "we use about 4,500 kWh a year" if audio else None)
+    monkeypatch.setattr(voice, "speak", lambda text: b"mp3")
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/voice", files={"audio": ("a.webm", b"xx", "audio/webm")}).json()
+    assert t["heard"].startswith("we use") and t["plan"]["facts"]["total_demand_kwh"] == 4500 and t["audio"] == "bXAz"
+    t = c.post(f"/sessions/{pid}/voice", files={"audio": ("a.webm", b"", "audio/webm")}).json()
+    assert t["heard"] == "" and "didn't catch" in t["messages"][0]["text"]

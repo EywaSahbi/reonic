@@ -62,10 +62,10 @@ Behaviour notes (v1):
 | GET | `/prices` | → engine `PriceList` passthrough (503 if engine down) | done |
 | GET | `/validation` | → data's latest score JSON (for the reality-check panel) | M2 |
 
-## Voice (planned, additive, waiting for a human `DECISION`; details in [VOICE.md](VOICE.md))
+## Voice (additive, built; details in [VOICE.md](VOICE.md))
 
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
-| GET | `/health` | → `{ok: true, llm: boolean, voice: boolean}` (app shows the mic only when `voice`) | M2 |
-| POST | `/sessions/{id}/voice` | multipart `audio` (webm/opus, mp3 or wav, ≤ ~30 s) → `Turn & {heard: string, audio: string \| null}` (`heard` = transcript, `audio` = base64 mp3 of reo's reply) | M2 |
-| POST | `/tts` | `{text}` → `audio/mpeg` (read any reo message aloud) | M2 |
+| GET | `/health` | → `{ok: true, llm: boolean, voice: boolean}` (app shows the mic only when `voice`) | done |
+| POST | `/sessions/{id}/voice` | multipart `audio` (webm/opus, mp3 or wav, ≤ ~30 s) → `Turn & {heard: string, audio: string \| null}` (`heard` = transcript, `audio` = base64 mp3 of reo's reply) | done |
+| POST | `/tts` | `{text}` → `audio/mpeg` (read any reo message aloud; 503 if voice off) | done |

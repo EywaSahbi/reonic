@@ -1,6 +1,6 @@
 # Voice: talking to reo through ElevenLabs (plan)
 
-> Owner: `EywaSahbi` (reo). Status: **plan, waiting for a human `DECISION`** (paid service beyond `docs/plan.md` budget, and customer audio goes to a third party). Earliest slot: after our M1 items are done (M2 window).
+> Owner: `EywaSahbi` (reo). Status: **built in reo** (`voice.py`, endpoints in `api.py`, test in `test_api.py`), tested live end to end (~5 s per spoken turn with the engine offline). Proceeded under the 30-minute rule; the `DECISION` on cost and privacy is still open for the other humans. Default voice until app picks one: "Jessica" (`cgSgspJ2msm6clMCkdW9`).
 
 ## Goal
 
