@@ -8,6 +8,10 @@ Newest first. Only build, contract, metric, and demo findings are tracked.
 - The documented HomeFacts field names otherwise match `engine/CONTRACT.md`. App build is not runnable yet because `app/` has no package manifest or source at this commit.
 - **Verified fixed in app commit `fcd570d`:** Stage 5 now collects name/email in an app-owned form and sends them directly in the contracted `/handoff` body. Rechecked the Stage 5 text and confirmed the invalid `ask` object is gone.
 
+## 2026-11-07 — persona update check (commit 5e3ecd0)
+
+- Passed review of the new customer-facing statements: funding is described only as possible with no amounts or deadlines, and aggregate comparisons are allowed only when supported by the current plan's attached flags/benchmarks. Individual projects remain installer-only. No contract change was included.
+
 ## 2026-11-07 — smoke checks updated for reo architecture
 
 - Rewrote `qa/smoke.py` for current engine and reo contract shapes, including every contracted endpoint and milestone-gated optional routes. Added data column and split coverage checks using the renamed `HomeFacts` fields.
