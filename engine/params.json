@@ -1,8 +1,141 @@
 {
   "version": "v0-handset",
   "defaults": {
-    "annual_demand_kwh": 4500,
+    "total_demand_kwh": 4500,
     "ev_km_per_year": 13000,
     "electricity_price_eur_per_kwh": 0.32
+  },
+  "_placeholders": "k_ev and cop are hand-set until taken from published measurements",
+  "c_coverage": 1.93,
+  "k_ev_kwh_per_km": 0.18,
+  "cop": 3.0,
+  "module_w": 430,
+  "module_area_sqm": 1.95,
+  "pv_yield": {
+    "y_kwh_per_kwp": 1081.9,
+    "sd_kwh_per_kwp": 59.1,
+    "reference": "south (aspect 0), tilt 35°, losses 14%",
+    "orientation_factors": {
+      "_key": "aspect/tilt, aspect 0 = south, -90 = east, 90 = west",
+      "-90/15": 0.833,
+      "-90/25": 0.818,
+      "-90/35": 0.796,
+      "-90/45": 0.765,
+      "-45/15": 0.911,
+      "-45/25": 0.936,
+      "-45/35": 0.943,
+      "-45/45": 0.932,
+      "0/15": 0.943,
+      "0/25": 0.982,
+      "0/35": 1.0,
+      "0/45": 0.996,
+      "45/15": 0.911,
+      "45/25": 0.934,
+      "45/35": 0.94,
+      "45/45": 0.928,
+      "90/15": 0.833,
+      "90/25": 0.816,
+      "90/35": 0.793,
+      "90/45": 0.76
+    },
+    "per_state": {
+      "Baden-Württemberg": {
+        "e_y": 1130.19,
+        "sd_y": 62.48,
+        "small_pv_count": 757677
+      },
+      "Bayern": {
+        "e_y": 1138.56,
+        "sd_y": 61.6,
+        "small_pv_count": 1103953
+      },
+      "Berlin": {
+        "e_y": 1057.54,
+        "sd_y": 60.18,
+        "small_pv_count": 34053
+      },
+      "Brandenburg": {
+        "e_y": 1038.86,
+        "sd_y": 59.38,
+        "small_pv_count": 127754
+      },
+      "Bremen": {
+        "e_y": 995.87,
+        "sd_y": 52.59,
+        "small_pv_count": 9919
+      },
+      "Hamburg": {
+        "e_y": 989.88,
+        "sd_y": 49.27,
+        "small_pv_count": 20012
+      },
+      "Hessen": {
+        "e_y": 1091.13,
+        "sd_y": 52.09,
+        "small_pv_count": 298714
+      },
+      "Mecklenburg-Vorpommern": {
+        "e_y": 991.59,
+        "sd_y": 49.73,
+        "small_pv_count": 56085
+      },
+      "Niedersachsen": {
+        "e_y": 1010.87,
+        "sd_y": 57.78,
+        "small_pv_count": 491138
+      },
+      "Nordrhein-Westfalen": {
+        "e_y": 1032.75,
+        "sd_y": 58.98,
+        "small_pv_count": 824709
+      },
+      "Rheinland-Pfalz": {
+        "e_y": 1108.05,
+        "sd_y": 54.52,
+        "small_pv_count": 269324
+      },
+      "Saarland": {
+        "e_y": 1083.69,
+        "sd_y": 58.92,
+        "small_pv_count": 53959
+      },
+      "Sachsen": {
+        "e_y": 1067.4,
+        "sd_y": 63.97,
+        "small_pv_count": 136692
+      },
+      "Sachsen-Anhalt": {
+        "e_y": 1066.5,
+        "sd_y": 64.24,
+        "small_pv_count": 92878
+      },
+      "Schleswig-Holstein": {
+        "e_y": 987.6,
+        "sd_y": 40.21,
+        "small_pv_count": 139017
+      },
+      "Thüringen": {
+        "e_y": 1048.73,
+        "sd_y": 69.05,
+        "small_pv_count": 88852
+      }
+    },
+    "source": "PVGIS v5.3 PVcalc (SARAH-3, 2005-2023) at state capitals, weighted by MaStR solar units in operation, 2-30 kWp",
+    "derived_on": "2026-11-07",
+    "script": "engine/tools/derive_y.py"
+  },
+  "c_derivation": {
+    "projects": 1243,
+    "iqr": [
+      1.413,
+      2.672
+    ],
+    "per_installer": {
+      "23c108b7": 2.093,
+      "2a8ba8e2": 1.899
+    },
+    "source": "median of expert kWp × Y / D over all projects in Project Data/",
+    "derived_on": "2026-11-07",
+    "script": "engine/tools/derive_c.py"
   }
 }

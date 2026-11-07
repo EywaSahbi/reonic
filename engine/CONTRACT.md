@@ -18,6 +18,7 @@ type HomeFacts = {
   has_ev?: boolean; ev_planned?: boolean; ev_km_per_year?: number;
   ev_km_per_week?: number; ev_km_per_day?: number;   // customer's estimate; used when ev_km_per_year is absent (×52, ×365)
   roof_area_sqm?: number; roof_orientation_deg?: number; roof_tilt_deg?: number;   // 180 = south
+  region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";   // federal state (ISO 3166-2 code); sets the PV yield, else the national value
   electricity_price_eur_per_kwh?: number;
   has_existing_pv?: boolean; existing_pv_kwp?: number; has_existing_battery?: boolean;
   budget_eur?: number;

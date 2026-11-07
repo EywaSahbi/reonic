@@ -63,6 +63,7 @@ Field names are the `HomeFacts` names from [CONTRACT.md](CONTRACT.md) (the contr
 |---|---|---|
 | D | `total_demand_kwh` (incl. EV and electric heating; `annual_demand_kwh` stays the household-only figure) | 4,500 (dataset's most common value) |
 | A_roof | `roof_area_sqm` | unknown → open question |
+| region | `region`: federal state code (BW, BY, …) | national PV yield |
 | has_EV | `has_ev` | false |
 | km_EV | `ev_km_per_year`, else `ev_km_per_week` × 52, else `ev_km_per_day` × 365 (only used with an EV) | 13,000 km/yr (average, *placeholder*) |
 | existing PV / battery | `has_existing_pv`, `has_existing_battery` | false |
@@ -127,21 +128,29 @@ The PV size only depends on the ratio **r_PV = c / Y** (kWp per kWh of demand). 
 4. The same queries for east, west and other tilts give the correction factor for known roof orientation and tilt.
 5. Only generic coordinates are sent to PVGIS, never customer data.
 
+Implemented in `tools/derive_y.py` (run once, writes `pv_yield` into `params.json`; the engine never calls PVGIS at runtime). One point per federal state (its capital), weighted by MaStR solar units in operation with 2–30 kWp (4.5 M systems). Result (2026-11-07): **Y = 1,082 kWh/kWp/yr**, ± 59 year to year, south 35°. States range from 988 (Schleswig-Holstein) to 1,139 (Bayern). East or west roofs at 35° get ≈ 0.80 × Y.
+
+reo asks the customer's federal state (`region`). Given → that state's Y; not given → the national Y (listed in `assumptions`). With c fixed, a northern home needs more kWp than a southern one for the same D.
+
 **Y sanity check from measured generation**
 Y_real = Germany's yearly PV generation (Fraunhofer ISE Energy-Charts) ÷ average installed PV capacity over the same year (Marktstammdatenregister), averaged over several years. This is what real roofs deliver, incl. poor orientation, shading and ageing, so it should come out somewhat below the PVGIS value.
 
-**c from the expert designs (our dataset, `split == train` only)**
+**c from the expert designs (all projects in `Project Data/`)**
 
 ```
 D_h  = energy_demand_wh / 1,000 + km_EV × k_EV + E_HP,existing      per project h, as in Step 1
 c_h  = PV_expert,h × Y / D_h
-c    = median over train projects with PV > 0
+c    = median over projects with PV > 0
 ```
 
-- Median, because a few odd projects must not move it.
-- Check that c is the same across demand levels (if small homes get relatively more PV, use kWp = a + b × D instead), per installer, and with / without EV and battery. Pick the variant that scores best on `val`.
-- k_EV (kWh per km, incl. charging losses) and COP are taken from published measurements (ADAC Ecotest averages, Fraunhofer ISE heat-pump field tests), the same way as Y.
-- Fitting c on train needs a human `DECISION` first ([AGENTS.md](AGENTS.md), deliverable 3).
+Implemented in `tools/derive_c.py` (writes `c_coverage` into `params.json`). Expert kWp is rebuilt per offer option from `Module` rows (count × W), else the kWp in "Complete Package … kWp" names, else the mounting / DC-install quantity (= module count) × the installer's module W; the median over a project's options is used (no flag says which was delivered). Left out: existing PV, heat pump in the offer, demand outside 1–20 MWh.
+
+Result (2026-11-07, 1,243 projects): **c = 1.93** (IQR 1.41–2.67; installer 23c108b7 2.09, 2a8ba8e2 1.90), i.e. 1.78 kWp per MWh at the national Y. Experts install PV producing about twice the yearly demand.
+
+c is **not constant**: it falls from ~3.1 below 3 MWh to ~1.0 above 12 MWh, because small homes get relatively large systems. A fixed c misses expert kWp by 2.9 kWp (median absolute error); `kWp = 6.7 + 0.58 × D_MWh` by 2.1. [PLAN.md](PLAN.md) item 1 replaces the fixed c with that line.
+
+- k_EV (kWh per km, incl. charging losses) and COP are still hand-set; to be taken from published measurements (ADAC Ecotest, Fraunhofer ISE heat-pump field tests).
+- The whole dataset is used for c and for evaluation (owner's decision); PV evaluation is in-sample for this one parameter.
 
 ### Which inputs come from the customer
 
