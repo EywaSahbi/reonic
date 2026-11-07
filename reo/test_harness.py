@@ -16,7 +16,9 @@ def setup(tmp_path, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(api, "STORE", tmp_path / "plans.json")
     monkeypatch.setattr(engine, "design", fake_design)
-    monkeypatch.setattr(engine, "explain", lambda *a, **k: {"reasons": ["r"], "what_if": []})
+    steps = [{"change": "battery 5 kWh", "delta": {"price_eur": -4500, "autarky_pct": -5}, "locks": {"battery": {"recommended": True, "size": 5}}},
+             {"change": "battery 15 kWh", "delta": {"price_eur": 4500, "autarky_pct": 4}, "locks": {"battery": {"recommended": True, "size": 15}}}]
+    monkeypatch.setattr(engine, "explain", lambda *a, **k: {"reasons": ["r"], "what_if": steps})
     c = TestClient(api.app)
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     for m in ["we use about 4,500 kWh a year", "Gas", "No", "No solar yet"]:
