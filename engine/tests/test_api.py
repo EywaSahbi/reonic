@@ -112,3 +112,16 @@ def test_budget_shrinks_battery_then_pv():
     assert d["price"]["total_eur"] <= budget
     assert not d["components"]["battery"]["locked"]
     assert any("budget" in r for c in d["components"].values() for r in c["reasons"])
+
+
+def test_more_facts_do_not_widen_price_range():
+    a = post({"num_inhabitants": 4})["price"]["range_eur"]
+    b = post({"num_inhabitants": 4, "ev_planned": True, "heating_type": "gas"})["price"]["range_eur"]
+    assert b[1] / b[0] <= a[1] / a[0] * 1.1        # a wallbox adds a little, a possible heat pump adds nothing
+
+
+def test_pv_reason_separates_existing_pv():
+    d = post({"total_demand_kwh": 6000, "has_existing_pv": True, "existing_pv_kwp": 5})
+    pv = d["components"]["pv"]
+    assert f"{pv['quantity']} new modules produce ~{pv['size'] * 1082:,.0f}"[:20] in pv["reasons"][1]
+    assert "existing 5 kWp" in pv["reasons"][1]

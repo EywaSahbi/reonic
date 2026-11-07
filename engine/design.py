@@ -88,28 +88,30 @@ def core(facts: dict, locks: dict, overrides: dict) -> dict:
     sizes = {"pv": pv_kwp if pv_rec else None, "battery": bat_kwh if bat_rec else None,
              "heatpump": hp_kw if hp_rec else None, "wallbox": wb_kw if wb_rec else None}
 
-    # price: line items at mid prices, plus the low / high total
-    items, low, high = [], 0.0, 0.0
+    # price: line items at mid prices, plus low / high per component (the range only sums recommended ones)
+    items, cost = [], {k: [0.0, 0.0] for k in COMPONENTS}
+    hp_pv = sizing.heatpump_extra_kwp if hp_rec and pv_locked is None else 0.0   # PV that exists for the heat pump
 
-    def item(label, qty, unit, key):
-        nonlocal low, high
+    def item(label, qty, unit, key, comp, split=None):
         mid, lo, hi = price_of(key, overrides)
         items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": mid,
                       "total_eur": round(qty * mid, 2)})
-        low += qty * lo
-        high += qty * hi
+        for c, q in (split or {comp: qty}).items():
+            cost[c][0] += q * lo
+            cost[c][1] += q * hi
 
     if pv_rec and pv_kwp:
-        item(f"PV system, {pv_modules} modules × {p['module_w']} W, inverter", pv_kwp, "kWp", "pv_eur_per_kwp")
-        item("PV installation, scaffolding, grid registration", 1, "flat", "pv_base_eur")
+        item(f"PV system, {pv_modules} modules × {p['module_w']} W, inverter", pv_kwp, "kWp", "pv_eur_per_kwp", "pv",
+             {"pv": pv_kwp - hp_pv, "heatpump": hp_pv})
+        item("PV installation, scaffolding, grid registration", 1, "flat", "pv_base_eur", "pv")
     if bat_rec:
-        item(f"Battery storage {bat_kwh:g} kWh", bat_kwh, "kWh", "battery_eur_per_kwh")
-        item("Battery installation", 1, "flat", "battery_base_eur")
+        item(f"Battery storage {bat_kwh:g} kWh", bat_kwh, "kWh", "battery_eur_per_kwh", "battery")
+        item("Battery installation", 1, "flat", "battery_base_eur", "battery")
     if wb_rec:
-        item(f"Wallbox {wb_kw:g} kW incl. installation", 1, "piece", "wallbox_eur")
+        item(f"Wallbox {wb_kw:g} kW incl. installation", 1, "piece", "wallbox_eur", "wallbox")
     if hp_rec and hp_kw:
-        item(f"Air-water heat pump {hp_kw:g} kW", hp_kw, "kW", "heatpump_eur_per_kw")
-        item("Heat pump installation, hydraulics", 1, "flat", "heatpump_base_eur")
+        item(f"Air-water heat pump {hp_kw:g} kW", hp_kw, "kW", "heatpump_eur_per_kw", "heatpump")
+        item("Heat pump installation, hydraulics", 1, "flat", "heatpump_base_eur", "heatpump")
     total = round(sum(i["total_eur"] for i in items), 2)
 
     # economics: one year before and after
@@ -141,7 +143,7 @@ def core(facts: dict, locks: dict, overrides: dict) -> dict:
     }
     assumptions = list(home.assumptions) + ([hp_note] if hp_rec and hp_note else [])
     return {"home": home, "sizing": sizing, "sizes": sizes, "modules": pv_modules, "locks": lock,
-            "price": {"items": items, "total_eur": total, "low": low, "high": high},
+            "price": {"items": items, "total_eur": total, "cost": cost}, "pv_core": (pv_kwp - hp_pv) if pv_rec else None,
             "economics": economics, "after": after, "assumptions": assumptions,
             "pv_total": pv_total, "hp_el": hp_el, "heat": heat}
 
@@ -177,9 +179,11 @@ def reasons_for(key, r, no_battery_autarky):
             return [f"your existing {h.existing_pv_kwp:g} kWp already covers what experts install for this demand"]
         out = [f"{h.total_demand_kwh:,.0f} kWh/yr: comparable expert designs install {line['a_kwp']:.1f} kWp "
                f"+ {line['b_kwp_per_mwh']:.2f} kWp per MWh"]
-        gen = r["pv_total"] * h.y_kwh_per_kwp
-        out.append(f"{r['modules']} modules produce ~{gen:,.0f} kWh/yr ({h.y_kwh_per_kwp:,.0f} kWh per kWp"
-                   + (f" in {h.region}" if h.region else ", German average") + ")")
+        gen = size * h.y_kwh_per_kwp
+        out.append(f"{r['modules']} new modules produce ~{gen:,.0f} kWh/yr ({h.y_kwh_per_kwp:,.0f} kWh per kWp"
+                   + (f" in {h.region}" if h.region else ", German average") + ")"
+                   + (f", plus ~{h.existing_pv_kwp * h.y_kwh_per_kwp:,.0f} from your existing {h.existing_pv_kwp:g} kWp"
+                      if h.existing_pv_kwp else ""))
         if s.roof == "too_small":
             out.append(f"your usable roof holds only {s.modules_fitting} modules")
         elif h.existing_pv_kwp:
@@ -282,7 +286,10 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
     for k in COMPONENTS:
         size = base["sizes"][k]
         locked = bool(base["locks"][k])
-        seen = [r["sizes"][k] for r in every if r["sizes"][k]]
+        if k == "pv" and not base["sizes"]["heatpump"]:
+            seen = [r["pv_core"] for r in every if r["pv_core"]]   # heat-pump PV only counts once a heat pump is in
+        else:
+            seen = [r["sizes"][k] for r in every if r["sizes"][k]]
         rng = [round(size, 2)] * 2 if locked and size else ([round(min(seen), 2), round(max(seen), 2)] if size else None)
         spread = (rng[1] - rng[0]) / size if size and rng else 1
         conf = "high" if locked or spread < 0.1 else "medium" if spread < 0.3 else "low"
@@ -300,8 +307,9 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
     pv_new = base["sizes"]["pv"] or 0
     bundle = next((name for bound, name in BUNDLES if pv_new < bound), "XL") if pv_new else None
     pr = base["price"]
-    lo = min(r["price"]["low"] for r in every)
-    hi = max(r["price"]["high"] for r in every)
+    rec = [k for k in COMPONENTS if base["sizes"][k]]          # range covers only what is recommended
+    lo = min(sum(r["price"]["cost"][k][0] for k in rec) for r in every)
+    hi = max(sum(r["price"]["cost"][k][1] for k in rec) for r in every)
     return {"components": comps,
             "price": {"items": pr["items"], "total_eur": pr["total_eur"], "range_eur": [round(lo, -1), round(hi, -1)]},
             "economics": base["economics"], "bundle": bundle, "assumptions": base["assumptions"],
