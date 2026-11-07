@@ -15,7 +15,10 @@ DATA = ROOT / "data"
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--split", choices=("val", "test", "both"), default="both")
+    parser.add_argument("--profiles", action="store_true", help="use installer-specific params (val only before M3)")
     args = parser.parse_args()
+    if args.profiles and args.split not in ("val",):
+        parser.error("installer-profile scoring is val-only before the final M3 test run")
     splits = ("val", "test") if args.split == "both" else (args.split,)
 
     sys.path.insert(0, str(ENGINE))
@@ -46,8 +49,11 @@ def main() -> int:
         try:
             for split in splits:
                 sys.argv = [str(ENGINE / "predict.py"), "--split", split]
+                if args.profiles:
+                    sys.argv.append("--profiles")
                 predict.main()
-                report = scorer.run(output_dir / f"predictions_{split}.csv", split)
+                prediction_name = f"predictions_{split}{'_profiles' if args.profiles else ''}.csv"
+                report = scorer.run(output_dir / prediction_name, split)
                 scorer.show(report)
                 expected_n = {"val": 238, "test": 235}[split]
                 if report["n"] != expected_n or report["missing_predictions"]:

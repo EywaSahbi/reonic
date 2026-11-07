@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -49,6 +50,16 @@ def call(base: str, path: str, body: dict | None = None):
         raise AssertionError(f"{request.method} {path}: HTTP {exc.code}: {detail}") from exc
 
 
+def call_text(base: str, path: str) -> str:
+    request = urllib.request.Request(base + path, method="GET")
+    try:
+        with urllib.request.urlopen(request, timeout=12) as response:
+            return response.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", errors="replace")
+        raise AssertionError(f"GET {path}: HTTP {exc.code}: {detail}") from exc
+
+
 def expect_status(base: str, path: str, status: int, body: dict | None = None) -> None:
     try:
         call(base, path, body)
@@ -69,7 +80,7 @@ def check_range(value: object, label: str, nullable: bool = True) -> None:
 
 def check_design(value: object, label: str) -> None:
     assert isinstance(value, dict), f"{label}: expected object"
-    for key in ("components", "price", "economics", "assumptions", "missing_inputs", "params_version"):
+    for key in ("components", "price", "economics", "bundle", "installer_profile", "assumptions", "missing_inputs", "params_version"):
         assert key in value, f"{label}: missing {key}"
     components = value["components"]
     assert isinstance(components, dict), f"{label}.components must be object"
@@ -136,6 +147,19 @@ def engine_checks(results: list[str]) -> None:
     health = call(ENGINE, "/health")
     assert isinstance(health, dict) and health.get("ok") is True and isinstance(health.get("params_version"), str), "GET /health shape invalid"
     results.append("PASS engine GET /health")
+    installers = call(ENGINE, "/installers")
+    assert isinstance(installers, dict) and installers, "GET /installers must return at least one profile"
+    for profile in installers.values():
+        assert isinstance(profile, dict) and isinstance(profile.get("projects"), int), "GET /installers profile shape invalid"
+        line = profile.get("pv_line")
+        assert isinstance(line, dict) and all(isinstance(line.get(k), (int, float)) for k in ("a_kwp", "b_kwp_per_mwh")), \
+            "installer pv_line must include numeric a_kwp and b_kwp_per_mwh"
+        assert isinstance(profile.get("battery_by_pv_band"), list), "installer battery_by_pv_band must be array"
+    profile_id = next(iter(installers))
+    profiled = call(ENGINE, "/design", {"facts": FACTS, "installer": profile_id})
+    check_design(profiled, "engine POST /design with installer profile")
+    assert profiled.get("installer_profile") == profile_id, "design must report the selected installer profile"
+    results.append("PASS engine GET /installers and installer-profile design")
     prices = call(ENGINE, "/prices")
     assert isinstance(prices, dict), "GET /prices must return a price-list object"
     assert prices and all(isinstance(v, (int, float)) for v in prices.values()), "GET /prices values must be numeric"
@@ -166,6 +190,10 @@ def engine_checks(results: list[str]) -> None:
     assert not any(item.get("field") == "region" for item in regional_designs[1]["missing_inputs"]), \
         "known region should not remain a missing input"
     results.append("PASS engine /design uses region for PV yield and sizing")
+    retrofit = call(ENGINE, "/design", {"facts": {"total_demand_kwh": 4500, "has_existing_pv": True, "existing_pv_kwp": 5}})
+    check_design(retrofit, "engine retrofit design")
+    assert not retrofit["components"]["pv"]["recommended"], "existing PV retrofit must not recommend new PV by default"
+    results.append("PASS engine retrofit design avoids recommending new PV")
     fact_consistent = call(ENGINE, "/design", {"facts": {
         "total_demand_kwh": 4500, "heating_type": "gas", "ev_planned": True, "region": "BY"
     }})
@@ -179,7 +207,12 @@ def engine_checks(results: list[str]) -> None:
     results.append("PASS engine explanations and assumptions match gas heating and planned EV facts")
     explanation = call(ENGINE, "/explain", {"facts": FACTS, "component": "pv"})
     assert isinstance(explanation, dict) and isinstance(explanation.get("reasons"), list) and isinstance(explanation.get("what_if"), list), "POST /explain response shape invalid"
-    results.append("PASS engine POST /explain")
+    assert explanation["what_if"], "POST /explain must return at least one what-if"
+    for item in explanation["what_if"]:
+        assert isinstance(item.get("locks"), dict) and isinstance(item.get("delta"), dict), "what-if must include locks and deltas"
+        for key in ("price_eur", "annual_savings_eur", "payback_years", "autarky_pct", "bill_after_eur_per_month"):
+            assert key in item["delta"], f"what-if delta missing {key}"
+    results.append("PASS engine POST /explain what-if deltas and locks")
 
 
 def reo_checks(results: list[str]) -> None:
@@ -226,6 +259,38 @@ def reo_checks(results: list[str]) -> None:
         results.append("PASS reo handoff")
     except NotPublished:
         results.append("SKIP handoff: M1 endpoint")
+    # Auto-triggered scripted offer preparation must leave a grounded trace and proposed actions only.
+    try:
+        offer_plan = None
+        pack = None
+        for _ in range(40):
+            offer_plan = check_plan(call(REO, f"/plans/{encoded_id}"), "reo GET /plans/{id} for offer pack")
+            pack = offer_plan.get("offer_pack")
+            if not isinstance(pack, dict) or pack.get("status") != "preparing":
+                break
+            time.sleep(0.25)
+        if not isinstance(pack, dict) or pack.get("status") != "ready":
+            raise AssertionError("handoff offer pack did not reach ready")
+        variants = pack.get("variants", [])
+        assert [v.get("name") for v in variants] == ["Basic", "Recommended", "Independence"], "offer pack must expose three named variants"
+        assert len({v["design"]["price"]["total_eur"] for v in variants}) == 3, "offer variants must have distinct prices"
+        assert isinstance(pack.get("run_id"), str) and pack["run_id"], "offer pack must include its run id"
+        actions = pack.get("actions", [])
+        assert actions and all(a.get("status") == "proposed" for a in actions), "agent actions must remain proposed before approval"
+        run = call(REO, f"/runs/{urllib.parse.quote(pack['run_id'], safe='')}")
+        assert run.get("status") == "needs_approval", "offer run must wait for planner approval"
+        assert any(s.get("tool") == "grounding" and s.get("ok") for s in run.get("steps", [])), "offer pack needs a passed grounding guard"
+        assert not any(s.get("effect") == "execute" for s in run.get("steps", [])), "offer agent must not execute actions"
+        event_stream = call_text(REO, f"/runs/{urllib.parse.quote(pack['run_id'], safe='')}/events")
+        assert event_stream.count("event: step") == len(run.get("steps", [])) and "event: done" in event_stream, \
+            "run SSE must replay every step and its done event"
+        plan_runs = call(REO, f"/plans/{encoded_id}/runs")
+        assert any(r.get("id") == pack["run_id"] for r in plan_runs), "plan run list must contain offer run"
+        slots = call(REO, "/calendar/slots")
+        assert isinstance(slots.get("slots"), list) and slots["slots"], "calendar slots must be available"
+        results.append("PASS reo offer pack, run log/SSE, approval gate, and calendar slots")
+    except NotPublished:
+        results.append("SKIP offer pack and run trace: phase 2 endpoint not published")
     try:
         check_plan(call(REO, f"/sessions/{encoded_id}"), "reo GET /sessions/{id}")
         results.append("PASS reo customer plan retrieval")
@@ -272,7 +337,13 @@ def reo_checks(results: list[str]) -> None:
         results.append("SKIP reo GET /validation: no score report available")
     else:
         assert "split" in validation and "components" in validation, "GET /validation score shape invalid"
-        results.append("PASS reo GET /validation")
+        assert validation.get("file") == "score_test_test.json" and validation.get("split") == "test", \
+            "GET /validation default must serve the fixed test report"
+        val = call(REO, "/validation?split=val")
+        profile_view = call(REO, "/validation?view=profiles")
+        assert val.get("file") == "score_val_val.json" and val.get("split") == "val", "GET /validation?split=val must serve the fixed val report"
+        assert profile_view.get("file") == "score_val_profiles_val.json", "GET /validation?view=profiles must serve installer-profile results"
+        results.append("PASS reo GET /validation fixed test, val, and profile reports")
 
 
 def data_check() -> str:
@@ -316,6 +387,19 @@ def data_check() -> str:
     assert benchmark_data.get("n_train") == counts["train"], "benchmark n_train differs from fixed train split"
     assert isinstance(benchmark_data.get("segments"), list) and benchmark_data["segments"], \
         "benchmarks must include segments"
+    scenario_path = ROOT / "data" / "processed" / "scenarios.json"
+    if scenario_path.exists():
+        with scenario_path.open(encoding="utf-8") as f:
+            scenario_data = json.load(f)
+        scenarios = scenario_data.get("scenarios")
+        built_from = scenario_data.get("built_from", "").lower()
+        assert "val" in built_from and "train" in built_from \
+            and ("test" not in built_from or "never test" in built_from) \
+            and isinstance(scenarios, list) and len(scenarios) == 9, \
+            "scenario set must have nine held-out evaluation cases"
+        assert all(item.get("split") != "test" for item in scenarios), "reo scenarios must not include test projects"
+    else:
+        return f"PASS data artifacts: {len(frame)} projects; fixed split is leak-free; benchmarks built from train; SKIP scenarios"
     return f"PASS data artifacts: {len(frame)} projects; fixed split is leak-free; benchmarks built from train"
 
 

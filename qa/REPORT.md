@@ -2,6 +2,15 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — Phase 2 verification and offer-pack rehearsal
+
+- `data && uv run pytest`: **6 passed**. `engine && uv run pytest`: **38 passed, 1 failed** on `test_fast_enough` (observed 0.130 s against a 0.100 s limit); rerunning that exact test alone passed in 1.52 s. Starlette emitted its existing `httpx`/TestClient deprecation warning. `reo && uv run pytest`: **13 passed**. `app && npm run build`: passed (42 modules).
+- Live `qa/smoke.py` against engine `:8004` and reo `:8005`: passed `/health`, installer profiles, prices, sizing inputs, region and retrofit checks, `/explain` deltas/locks, handoff, offer-pack trace/SSE/grounding, approval gate, calendar slots, edit/ask/finalize, fixed `/validation` test/val/profile file selection, and data split/artifact checks (1,571 projects; fixed 1,098/238/235 splits).
+- `cd reo && ENGINE_URL=http://127.0.0.1:8004 ANTHROPIC_API_KEY='' uv run python -u -m evals`: **9/9** scripted scenarios passed all grounded-number, no-execution, distinct-variant, budget, and trace checks.
+- Current val score reproduction with train-fitted params: standard model — PV MAE 2.50 kWp, ±20% 46.2% (baseline 2.71 / 49.7%); battery MAE 3.09 kWh, ±20% 42.9% (baseline 2.99 / 40.8%); bundle match .559 vs .555 baseline. Installer profiles — PV MAE 2.46 / 50.0%; battery MAE 2.93 / 42.4%; bundle match .559. Did not rerun test metrics; data requested the final test re-score only at M3.
+- No-key browser rehearsal reached Anna Demo's handoff and the live installer offer pack with Basic, Recommended, and Independence variants. Selecting Basic re-derived battery 10→6 kWh and total €20,433→€18,633, but left the prefilled customer message describing the original 10 kWh and €15,200–28,700 estimate. This stale draft can send details that disagree with the selected variant; finding posted to app as BLOCKED (board comment `6712714072`). The customer draft was manually brought into alignment for the local rehearsal. The scripted harness still confirms all actions are proposed until approval and does not execute actions itself.
+- The first live smoke attempt exposed a QA assertion that incorrectly rejected the scenario manifest's valid `built_from: "... never test"` wording. Updated only `qa/smoke.py` to permit that phrase while still rejecting test-split cases; the rerun passed.
+
 ## 2026-11-07 — full M1 live flow, data, and score reproduction
 
 - `cd data && uv run pytest`: passed, 3 tests; `cd engine && uv run pytest`: passed, 34 tests; `cd reo && uv run pytest`: passed, 7 tests; `cd app && npm run build`: passed.
