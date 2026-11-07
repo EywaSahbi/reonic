@@ -12,7 +12,7 @@
 | app on :5173, live | `cd app && VITE_API_URL=http://localhost:8001 npm run dev` (PowerShell: `$env:VITE_API_URL='http://localhost:8001'; npm run dev`) |
 | Two browser windows | **A** customer: `http://localhost:5173/` · **B** planner: `http://localhost:5173/#/installer` |
 | Clean state | In window A: reo → "Start over". Old plans in B's inbox are fine; the new one appears on top. |
-| Fallbacks ready | Recording of this exact run (see bottom); planner Reality check panel available; report PNGs as backup |
+| Fallbacks ready | Recording of this exact run (see bottom); deck open on the validation slide; report PNGs from `data/reports/` as backup |
 
 Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), offer agent on Sonnet 5.5 (~15 s). Without a key everything runs scripted with the same screens.
 
@@ -31,12 +31,18 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 
 | Do | Expect on screen | Say |
 |---|---|---|
-| Type: **we use about 4,500 kWh a year** | First design in the plan card: ~8.5 kWp (≈20 panels), battery, price range marked *estimate*; the house fills with panels | "One sentence, and it already has a design and a price range, from a deterministic engine, not the LLM." |
-| Tap **Gas** | Heat pump question answered; range updates | "Taps answer instantly; every tap re-runs the engine." |
-| Tap **Planned** (electric car) | Wallbox + car appear on the house; reo says what changed and why | "Buying an EV next year: the design adapts and reo explains why." |
-| Tap **No solar yet** | Next question or the handoff offer | "This question exists because our validation showed it was missing (step 5)." |
-| If asked for the roof: type **Musterstraße 12, 80331 München** in the roof/address box | "I looked up your address: …" 48 m², south, 35°, Bavaria; PV re-derived to fit the roof (mocked lookup, reo 9979655) | "An address is enough; reo reads roof size and orientation." |
+Question order (reo `c53ba6c`): yearly kWh → address → EV → heating → existing solar → handoff offer. Skipping kWh asks for household size; skipping the address asks for the federal state, then roof width × length.
+
+| Do | Expect on screen | Say |
+|---|---|---|
+| Type: **we use about 4,500 kWh a year** | First design in the plan card: PV, battery, price range marked *estimate*; the house fills with panels | "One sentence, and it already has a design and a price range, from a deterministic engine, not the LLM." |
+| Address ask: type **Musterstraße 12, 80331 München** | "I looked up your address: …" 48 m², south, 35°, Bavaria; PV re-derived to fit the roof (mocked lookup, reo 9979655) | "An address is enough; reo reads roof size and orientation." |
+| Tap **Planned** (electric car) | Wallbox + car appear on the house; PV grows because the planned EV adds charging demand (engine 11f5a6a) | "Buying an EV next year: the design adapts and reo explains why." |
+| Tap **Gas** | reo's heat-pump advice and the heating comparison card: today's running cost vs a heat pump on grid power, CO₂ change (engine `heating_comparison`) | "Every figure here is the engine's estimate from public rates. It only says 'cheaper' when the engine finds it cheaper." |
+| Tap **No solar yet** | The handoff offer | "This question exists because our validation showed it was missing (step 4)." |
 | Optional: type **why a battery?** | reo answers from the engine's reasons | "It explains, it doesn't invent numbers." |
+
+Before rehearsal: run the flow once and write the actual kWp, price range and heating-card figures into this table (they depend on the engine version at freeze).
 
 ### 1:50 — Handoff
 
@@ -59,14 +65,19 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 - Within ~4 s the chat shows the visit booking and **"Your planner has confirmed your plan … (confirmed by Sonnfeld)"** with the edited message; the plan card says *Confirmed quote*.
 - "Estimate became a confirmed quote, with the installer's own words."
 
-### 4:00 — Reality check (honest numbers, 45 s)
+### 4:00 — Reality check (deck slide, honest numbers, 45 s)
 
-From `data/reports/reality_check_test.md` (235 homes the engine never saw, parameters from train only, baseline = train medians):
+The in-app Reality check panel and reo's `/validation` were removed (`0af678a`), so this step is a **deck slide**: a headline table plus `data/reports/vs_baseline_test.png` and `no_pv_test.png`. Setting: 235 homes the engine never saw, parameters from train only, baseline = train medians.
 
 - "On unseen homes the engine sizes PV within about 2 kWp of the experts (median miss 1.9 kWp) and beats the naive baseline on PV size: 49 % vs 42 % within ±20 %."
-- "Battery sizing is still difficult: 46 % vs 42 % within ±20 %. Full-bundle decisions remain close to the baseline (52.8 % vs 52.3 %)."
+- "Battery sizing is still difficult: [battery %] vs [baseline %] within ±20 %. Full-bundle decisions are no better than the baseline (about 52 % both)."
 - "The biggest miss was data, not sizing: 49 of 52 'no PV' homes were retrofits with existing solar nobody recorded. So reo now asks 'do you already have solar?'. The data told us which question was missing."
-- Show the planner **Reality check** panel with **Test set** selected. Latest engine report: `a56e3f9`, 235 homes; PV 49.2 % vs 41.5 %, battery 45.6 % vs 41.9 %. Check that `/validation` has the matching published score before quoting it; retain report PNGs as backup.
+
+**Number check before the slide is final.** Two test results exist and disagree on the battery:
+- data's published report (`data/reports/reality_check_test.md`, `score_test_test.json`, data `7fd5ecb`, Sat 20:39): PV 49 % vs 42 %, battery **39 % vs 42 %** (worse than the baseline), bundle 52 % vs 52 %.
+- engine's official re-score of the current engine (`engine/STATUS.md`, `a56e3f9`): PV 49.2 % vs 41.5 %, battery **45.6 % vs 41.9 %**, bundle 52.8 % vs 52.3 %.
+
+The slide uses only data's frozen M3 numbers (hard rule 3). Until data republishes, the battery line stays as a placeholder; if the freeze still shows the battery below the baseline, say so.
 
 ### 4:45 — Close (15 s)
 
@@ -92,6 +103,7 @@ Record one clean run of steps 0:20–3:40 with two windows side by side (screen 
 
 ## Open before M3
 
-- Rehearse the new reality-check panel and confirm the published score version.
+- Build the validation slide from data's frozen M3 test numbers (battery figure currently disputed, see step 4).
+- Rehearse the new question order and heating card; fill in the on-screen figures.
 - Bill photo + goal chips are available; test the reader on a real bill before including it.
 - Brand search found no exact installer match in the initial search, but related names exist; retain Sonnfeld as a fictional demo brand pending Raneem review.

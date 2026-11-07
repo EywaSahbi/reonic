@@ -33,21 +33,22 @@ $env:VITE_API_URL = 'http://localhost:8001'
 npm run dev
 ```
 
-Open the [customer site](http://localhost:5173/) and [planner workspace](http://localhost:5173/#/installer). Start with “we use about 4,500 kWh a year”, answer the heating, EV and existing-solar questions, and send the plan to the installer. Open the new plan in the planner workspace to review variants, edit the design and approve or reject proposed actions.
+Open the [customer site](http://localhost:5173/) and [planner workspace](http://localhost:5173/#/installer). Start with “we use about 4,500 kWh a year”, enter the demo address “Musterstraße 12, 80331 München”, answer the EV, heating and existing-solar questions, and send the plan to the installer. Open the new plan in the planner workspace to review variants, edit the design and approve or reject proposed actions.
 
 Copy `reo/.env.example` to `reo/.env` for optional Anthropic and ElevenLabs credentials. Without an Anthropic key, reo uses a scripted planner with the same tool and approval workflow. Voice needs ElevenLabs credentials. Never commit keys.
 
 ## What the planner gets
 
 - Three offer variants with engine designs and estimated prices.
-- Reasons, confidence, similar-project flags, site-visit checklist and editable customer message.
+- Reasons, confidence, flags against similar homes, site-visit checklist and editable customer message.
 - Harness traces for offer preparation and “Ask reo why”, including grounding checks.
 - Proposed actions that require a planner click to execute.
-- A reality-check panel showing published held-out validation scores.
+
+For homes heated with gas, oil, district heating or other fuels, the customer also sees the engine's heat-pump comparison: running costs today against a heat pump on grid power, and the CO₂ change where an official factor exists. A cost benefit is shown only when the engine finds the heat pump cheaper to run; sources are in [engine/SOURCES.md](engine/SOURCES.md).
 
 ## Validation and limits
 
-The fixed project split separates training, validation and test homes. Parameters are fitted on training homes; `data/score.py` compares predictions with historical expert designs. The reality-check panel reads the published scores through reo's `/validation` endpoint. See [data reports](data/reports/) for methodology and results.
+The fixed project split separates training, validation and test homes. Parameters are fitted on training homes only; `data/score.py` compares predictions on homes the engine never saw with historical expert designs, against a train-median baseline. The scores are published as files, not served by the app; see [data reports](data/reports/) for methodology, charts and results.
 
 Expert agreement is imperfect: full-bundle agreement remains close to the simple baseline, and battery sizing is difficult. Existing equipment and installer preferences matter. Customer prices are estimates until the installer confirms a quote. Roof outlines are estimates and need site verification. Mock-mode designs and prices are UI placeholders, not engine validation evidence.
 
