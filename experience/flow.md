@@ -19,7 +19,7 @@ Most people don't know their kWh. reo opens with something everyone can answer w
 
 Opening message (`POST /sessions`). If the engine accepts `facts: {}`, include the typical-home design in this turn so the plan card already shows a wide range; otherwise the first design comes after the first tap.
 
-> Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
+> Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?
 
 - `ask`: `{field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"]}` (the app renders `choice` asks as big tap cards; `5+` → `num_inhabitants: 5`)
 - `suggestions`: `["I know my yearly kWh"]`
@@ -78,7 +78,7 @@ Answer from the engine's `reasons`, price `items` and (M2) `/explain` what-ifs, 
 | "How much will I save?" | `economics.annual_savings_eur`, `payback_years` | |
 | "Is there funding?" | general only, no amounts: "Heat pumps can qualify for federal funding; your planner will check what applies to you." | |
 | "Is this normal for a home like mine?" | the plan's `flags` / benchmarks, aggregate only: "Most similar homes went with a battery around this size." | `Why this size?` |
-| Dates, warranties, financing, subsidy amounts | no numbers: "Your planner at SolarHaus Müller will confirm that." | |
+| Dates, warranties, financing, subsidy amounts | no numbers: "Your planner at Sonnfeld will confirm that." | |
 
 Standing chips after every design turn (when nothing more specific fits): `Why this size?`, `What does it cost?`, `Send to installer`.
 
@@ -89,17 +89,17 @@ reo **offers** the handoff (once, then leaves the `Send to installer` chip) when
 - the engine has no `high`-impact `missing_inputs` left, or
 - the customer asks ("send it", "I want an offer", "can someone call me").
 
-> This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it, usually visit to see the roof, and send you a final quote. You're not committing to anything.
+> This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit to see the roof, and send you a final quote. You're not committing to anything.
 
 - Chips: `Yes, send it`, `Not yet`.
 - On yes: reo replies "Great, just add your name (and email if you like) below." with **no `ask`**. The app shows its own small handoff form (name required, email optional) and calls `POST /sessions/{id}/handoff` with `{name, email?}` directly. Name and email are not `HomeFacts`, so they never go through `ask`.
-- Confirmation: "Done. Your plan is with SolarHaus Müller. You'll see the final quote here once your planner has confirmed it." No more questions after this.
+- Confirmation: "Done. Your plan is with Sonnfeld. You'll see the final quote here once your planner has confirmed it." No more questions after this.
 
 ### Stage 6: Final quote
 
 When the plan is `quoted`, the customer view shows the confirmed design and price. reo's message:
 
-> Your planner has confirmed your plan: <one-line design>, total <total_eur> (confirmed by SolarHaus Müller). <installer note if any>
+> Your planner has confirmed your plan: <one-line design>, total <total_eur> (confirmed by Sonnfeld). <installer note if any>
 
 If the installer changed something, say what in one sentence ("Your planner adjusted the battery to 12 kWh after checking your usage"). This is the only point where reo drops the word "estimate".
 

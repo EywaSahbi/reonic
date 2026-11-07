@@ -187,10 +187,10 @@ function nextTurn(plan: Plan, skipped: Set<string>, prefix: string[]): Turn {
     suggestions = q.chips;
     ask = q.ask;
   } else if (q) {
-    texts.push("This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it and send you a final quote. You're not committing to anything. Or tell me your roof size to firm it up.");
+    texts.push("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it and send you a final quote. You're not committing to anything. Or tell me your roof size to firm it up.");
     suggestions = ["Yes, send it", ...q.chips.slice(0, 2), "Why this size?"];
   } else {
-    texts.push("This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it and send you a final quote. You're not committing to anything.");
+    texts.push("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it and send you a final quote. You're not committing to anything.");
     suggestions = ["Yes, send it", "Why this size?", "What does it cost?"];
   }
   const messages = [msg(texts.join(" "))];
@@ -235,7 +235,7 @@ export const mockApi: Api = {
       installer_edits: [], history: [], updated_at: now(),
     };
     skippedBySession[id] = new Set();
-    const messages = [msg("Hi, I'm reo, the energy advisor at SolarHaus Müller. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
+    const messages = [msg("Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
     plan.transcript.push(...messages);
     return delay({ messages, plan: save(plan), suggestions: ["I know my yearly kWh"], ask: { field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"] } });
   },
@@ -305,7 +305,7 @@ export const mockApi: Api = {
       { project_id: "mock-p-0877", facts: { total_demand_kwh: d + 400, heating_type: plan.facts.heating_type }, expert: { pv: 11, battery: 10, heatpump: null, wallbox: 11 } },
       { project_id: "mock-p-1302", facts: { total_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
     ];
-    plan.transcript.push(msg(`Done. Your plan is with SolarHaus Müller, ${name}. You'll see the final quote here once your planner has confirmed it.`));
+    plan.transcript.push(msg(`Done. Your plan is with Sonnfeld, ${name}. You'll see the final quote here once your planner has confirmed it.`));
     startPrep(plan);
     return delay(save(plan));
   },
@@ -347,7 +347,7 @@ export const mockApi: Api = {
   async finalizePlan(id, note) {
     const plan = get(id);
     plan.status = "quoted";
-    plan.transcript.push(msg(`Your planner has confirmed your plan, total ${eur(plan.design.price.total_eur)} (confirmed by SolarHaus Müller).${note ? " " + note : ""}`));
+    plan.transcript.push(msg(`Your planner has confirmed your plan, total ${eur(plan.design.price.total_eur)} (confirmed by Sonnfeld).${note ? " " + note : ""}`));
     return delay(save(plan));
   },
 
@@ -379,7 +379,7 @@ export const mockApi: Api = {
     if (a.kind === "send_quote") {
       plan.status = "quoted";
       const note = typeof a.payload.message === "string" ? a.payload.message : "";
-      plan.transcript.push(msg(`Your planner has confirmed your plan, total ${eur(plan.design.price.total_eur)} (confirmed by SolarHaus Müller).${note ? " " + note : ""}`));
+      plan.transcript.push(msg(`Your planner has confirmed your plan, total ${eur(plan.design.price.total_eur)} (confirmed by Sonnfeld).${note ? " " + note : ""}`));
       a.result = "Quote sent to the customer";
     }
     pack.trace.push({ step: pack.trace.length + 1, tool: a.kind === "book_visit" ? "calendar" : a.kind === "send_quote" ? "quote" : "crm", summary: `approved by planner: ${a.result}` });

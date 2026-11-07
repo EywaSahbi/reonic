@@ -33,7 +33,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
           {quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}
         </span>
         {quoted ? (
-          <div className="plan-price">{eur(d.price.total_eur)}<small>confirmed by SolarHaus Müller</small></div>
+          <div className="plan-price">{eur(d.price.total_eur)}<small>confirmed by Sonnfeld</small></div>
         ) : (
           <div className="plan-price" key={`${lo}-${hi}`}>
             {eur(lo)}–{eur(hi).slice(1)}

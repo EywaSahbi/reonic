@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { OfferPackPanel } from "./OfferPack";
+import { SonnfeldMark } from "./Logo";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -31,7 +32,7 @@ export function Installer() {
   return (
     <div className="inst">
       <header className="inst-nav">
-        <div className="brand"><span className="brand-mark" aria-hidden /> SolarHaus Müller</div>
+        <div className="brand"><SonnfeldMark /> Sonnfeld</div>
         <span className="inst-tag">reo · powered by Reonic</span>
         <a className="inst-link" href="#/">Customer site →</a>
       </header>

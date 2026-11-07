@@ -9,7 +9,7 @@ Phase 2 (docs/plan.md, 39adaa2): installer side + agentic reo.
 - [~] Installer **offer pack** view (`src/OfferPack.tsx`): live run timeline (SSE `/runs/{id}/events`, falls back to `offer_pack.trace`), 3 variant cards + use variant, checklist, open questions, editable draft (sent with the quote), approve/reject per action, visit-slot picker. Verified live against reo 68e40f5 (Opus pack in 26.8 s, SSE timeline, variant, approve/reject, edited draft reached the customer). Quote follows the chosen variant since reo 352e824 (verified).
 - [ ] Customer widget: bill photo upload (camera icon) + goal chips ("Keep it under €20,000", "As independent as possible"); waits for reo `/bill` + goal planning (Sun 03:00)
 - [ ] Monthly bill before/after as headline + bundle (engine v1 fields `economics.bill_*_per_month`, `bundle`)
-- [ ] Demo-site clean-up (one type scale, spacing, component set from brand.md, real copy): Raneem steering directly
+- [~] Demo-site rebuild (Raneem steering): installer brand is now **Sonnfeld** (invented; logo `src/Logo.tsx`), Enpal-style full-bleed photo hero (`src/assets/house-dusk.jpg`, 612x408, needs a higher-res copy), reo is the centre call to action; opening reo pulls the hero copy back and slides reo's sheet down from the top (`src/home.css`, Widget `variant="stage"`). reo's animated avatar goes into the `reo-entry-face` slot (built separately).
 - [ ] Pick reo's voice (`ELEVENLABS_VOICE_ID`), placeholder "Jessica"
 - [ ] `README.md`, deck, fallback recording (M3)
 
@@ -25,7 +25,7 @@ Done in phase 1: persona + flow (incl. tap-first opening, region, existing solar
 ## Decisions
 
 (one line each: what, why)
-- Installer brand in demo is "SolarHaus Müller"; persona and flow use it verbatim.
+- Installer brand in demo is "Sonnfeld" (was SolarHaus Müller, renamed by Raneem 2026-11-07); persona and flow use it verbatim. Site copy in English.
 - Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).
 - Persona: reo may mention heat pump funding in general (never amounts), and aggregate "similar homes" comparisons from attached benchmarks in the customer chat; individual projects stay installer-only. Raneem's call.
 - Installer summary is templated in the UI until reo adds `Plan.summary` (NEED). Price-list editing waits for a reo `GET /prices` passthrough (NEED).

@@ -12,7 +12,7 @@ const writeSaved = (id: string | null) => { try { if (id) localStorage.setItem(S
 const stamp = () => new Date().toISOString();
 
 // The reo chat widget: messages, quick-reply chips, inline input for `ask`, live plan card, handoff.
-export function Widget({ onClose }: { onClose: () => void }) {
+export function Widget({ onClose, variant }: { onClose: () => void; variant?: "stage" }) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [chips, setChips] = useState<string[]>([]);
@@ -141,7 +141,7 @@ export function Widget({ onClose }: { onClose: () => void }) {
       const p = await api.handoff(plan.id, name, email);
       setPlan(p);
       const last = p.transcript.at(-1);
-      setMessages((m) => [...m, last?.role === "reo" ? last : { role: "reo", text: `Done. Your plan is with SolarHaus Müller, ${name}. You'll see the final quote here once your planner has confirmed it.`, at: stamp() }]);
+      setMessages((m) => [...m, last?.role === "reo" ? last : { role: "reo", text: `Done. Your plan is with Sonnfeld, ${name}. You'll see the final quote here once your planner has confirmed it.`, at: stamp() }]);
       setHandoffOpen(false);
     } catch (e) {
       setError(errText(e));
@@ -157,7 +157,7 @@ export function Widget({ onClose }: { onClose: () => void }) {
   const hasDesign = !!plan && (plan.history.length > 0 || Object.keys(plan.facts).length > 0);
 
   return (
-    <div className={`widget ${hasDesign ? "widget-wide" : ""}`} role="dialog" aria-label="reo energy advisor">
+    <div className={`widget ${hasDesign ? "widget-wide" : ""} ${variant === "stage" ? "widget-stage" : ""}`} role="dialog" aria-label="reo energy advisor">
       <div className="widget-head">
         <div className="reo-id">
           <span className="reo-avatar">reo</span>
@@ -309,7 +309,7 @@ function HandoffForm({ onSubmit, onCancel }: { onSubmit: (name: string, email?: 
   const [email, setEmail] = useState("");
   return (
     <form className="handoff" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSubmit(name.trim(), email.trim() || undefined); }}>
-      <strong>Send this plan to SolarHaus Müller</strong>
+      <strong>Send this plan to Sonnfeld</strong>
       <p>A planner checks it, usually visits to see the roof, and sends you a final quote. You're not committing to anything.</p>
       <label>Your name<input value={name} onChange={(e) => setName(e.target.value)} required autoFocus /></label>
       <label>Email <em>(optional)</em><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></label>
