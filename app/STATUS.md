@@ -5,7 +5,7 @@
 Phase 2 (docs/plan.md, 39adaa2): installer side + agentic reo.
 
 - [ ] Reality-check panel from `/validation` (test numbers, per installer, honest where we lose); reo serves data's score JSON already (68a4d3b) (M2)
-- [ ] `pitch/demo-script.md` first draft, updated story step 3 = offer agent (M1/M2)
+- [x] `pitch/demo-script.md` draft v1 (Sonnfeld site, offer pack, honest reality-check numbers, fallbacks); refine after qa rehearsal
 - [~] Installer **offer pack** view (`src/OfferPack.tsx`): live run timeline (SSE `/runs/{id}/events`, falls back to `offer_pack.trace`), 3 variant cards + use variant, checklist, open questions, editable draft (sent with the quote), approve/reject per action, visit-slot picker. Verified live against reo 68e40f5 (Opus pack in 26.8 s, SSE timeline, variant, approve/reject, edited draft reached the customer). Quote follows the chosen variant since reo 352e824 (verified).
 - [ ] Customer widget: bill photo upload (camera icon) + goal chips ("Keep it under €20,000", "As independent as possible"); waits for reo `/bill` + goal planning (Sun 03:00)
 - [ ] Monthly bill before/after as headline + bundle (engine v1 fields `economics.bill_*_per_month`, `bundle`)
