@@ -35,6 +35,9 @@ CHIP_INTENTS = {
     "yes, send it": ("handoff", None), "send to installer": ("handoff", None), "send it": ("handoff", None),
     "not sure": ("skip", None), "no fixed budget": ("skip", None), "not yet": ("continue", None),
     "i know my yearly kwh": ("kwh", None),
+    "yes, that's right": ("bill_yes", None), "not quite": ("bill_no", None),
+    "keep it under €20,000": ("goal", "budget"), "as independent as possible": ("goal", "independence"),
+    "lowest monthly bill": ("goal", "lowest_bill"),
     "why this size?": ("question", "pv"), "what does it cost?": ("question", "price"),
     "what would make it cheaper?": ("question", "price"), "what if i skip it?": ("question", None),
 }
@@ -47,7 +50,8 @@ def chip(text: str) -> dict | None:
         return {"facts": dict(CHIP_FACTS[t]), "intent": "facts", "topic": None}
     if t in CHIP_INTENTS:
         intent, topic = CHIP_INTENTS[t]
-        return {"facts": {}, "intent": intent, "topic": topic}
+        facts = {"budget_eur": _num(re.search(r"(\d{1,3}(?:[.,]\d{3})+)", t).group(1))} if topic == "budget" else {}
+        return {"facts": facts, "intent": intent, "topic": topic}
     return None
 
 
@@ -108,6 +112,14 @@ def extract(text: str, last_field: str | None = None) -> dict:
             if word in t:
                 topic = key
                 break
+    if re.search(r"(under|below|max(imum)?|unter|höchstens|bis) ?€? ?\d[\d.,]* ?(€|eur|euro)?", t) and re.search(r"€|eur|budget|cost|kosten|preis", t):
+        if m := re.search(r"(\d{1,3}(?:[.,]\d{3})+|\d{4,6})", t):
+            facts["budget_eur"] = _num(m.group(1))
+        intent, topic = "goal", "budget"
+    elif re.search(r"independen|autark|unabhängig|self-sufficien", t):
+        intent, topic = "goal", "independence"
+    elif re.search(r"lowest (monthly )?bill|niedrigste.*rechnung|lowest.*cost per month|günstigste monatlich", t):
+        intent, topic = "goal", "lowest_bill"
     if re.search(r"send it|installer|installateur|offer|angebot|call me|anrufen|schick", t):
         intent = "handoff"
     if re.search(r"not sure|don't know|weiß nicht|keine ahnung|skip", t):

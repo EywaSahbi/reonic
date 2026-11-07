@@ -46,8 +46,8 @@ EXTRACT_SCHEMA = {
             "type": "object",
             "properties": {"field": {"type": "string", "enum": list(FACT_TYPES)}, "value": {"type": "string"}},
             "required": ["field", "value"], "additionalProperties": False}},
-        "intent": {"type": "string", "enum": ["facts", "question", "skip", "handoff", "other"]},
-        "topic": {"type": "string", "enum": ["pv", "battery", "heatpump", "wallbox", "price", "savings", "none"]},
+        "intent": {"type": "string", "enum": ["facts", "question", "skip", "handoff", "goal", "other"]},
+        "topic": {"type": "string", "enum": ["pv", "battery", "heatpump", "wallbox", "price", "savings", "budget", "independence", "lowest_bill", "none"]},
     },
     "required": ["facts", "intent", "topic"],
     "additionalProperties": False,
@@ -67,7 +67,9 @@ EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar
   "we already have solar / PV on the roof" -> has_existing_pv true (and existing_pv_kwp if a size is given).
 - intent: facts (gives information), question (asks why / what if / how much), skip (doesn't know or skips),
   handoff (wants to send the plan, get an offer or be contacted), other (anything else).
-- topic: what a question is about, else none."""
+- goal: the customer states what to optimise for -> intent goal, topic budget ("keep it under €20,000", also set
+  budget_eur), independence ("as independent as possible", "max autarky"), or lowest_bill ("lowest monthly bill").
+- topic: what a question or goal is about, else none."""
 
 
 def _typed_facts(pairs: list[dict]) -> dict:
@@ -161,6 +163,46 @@ def reply(*, audience: str, latest_message: str, facts: dict, engine_result: dic
     }
     return _call(system, json.dumps(context, ensure_ascii=False), max_tokens=8000)
 
+
+
+BILL_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "total_demand_kwh": {"type": ["number", "null"], "description": "yearly electricity use in kWh"},
+        "electricity_price_eur_per_kwh": {"type": ["number", "null"], "description": "working price per kWh in EUR, e.g. 0.34"},
+        "provider": {"type": ["string", "null"]},
+        "monthly_payment_eur": {"type": ["number", "null"]},
+    },
+    "required": ["total_demand_kwh", "electricity_price_eur_per_kwh", "provider", "monthly_payment_eur"],
+    "additionalProperties": False,
+}
+
+
+def read_bill(data: bytes, media_type: str) -> dict | None:
+    """Claude vision reads an electricity bill photo or PDF. Returns only what is printed on it, or None."""
+    c = client()
+    if c is None or not data:
+        return None
+    import base64
+    b64 = base64.standard_b64encode(data).decode()
+    block = ({"type": "document", "source": {"type": "base64", "media_type": "application/pdf", "data": b64}}
+             if media_type == "application/pdf" else
+             {"type": "image", "source": {"type": "base64", "media_type": media_type, "data": b64}})
+    try:
+        r = c.messages.create(model=MODEL, max_tokens=4000, output_config={"effort": "low", "format": {"type": "json_schema", "schema": BILL_SCHEMA}},
+                              messages=[{"role": "user", "content": [block, {"type": "text", "text":
+                                  "This is a German electricity bill. Read the yearly consumption (kWh), the price per kWh "
+                                  "(Arbeitspreis, EUR), the provider and the monthly payment (Abschlag). Use null for anything "
+                                  "not printed. Never estimate."}]}])
+    except anthropic.APIError as e:
+        log.warning("bill reading failed: %s", e)
+        return None
+    if r.stop_reason != "end_turn":
+        return None
+    try:
+        return json.loads(next(b.text for b in r.content if b.type == "text"))
+    except (StopIteration, json.JSONDecodeError):
+        return None
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

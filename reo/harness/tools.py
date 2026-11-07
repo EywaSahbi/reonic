@@ -35,6 +35,8 @@ class Ctx:
     flags: list = field(default_factory=list)
     slots: list = field(default_factory=list)
     finish: dict | None = None
+    inputs: dict = field(default_factory=dict)  # per-run inputs: bill image, goal
+    candidates: list = field(default_factory=list)  # goal planner: designs evaluated
 
     def reset(self) -> None:
         """Drop the model's proposals before the scripted planner starts over."""
@@ -94,6 +96,15 @@ def _percentile(ctx: Ctx, a: dict) -> dict:
             "anchors": evidence.variant_locks(ctx.facts, d) if d else {}}
 
 
+def _bill_read(ctx: Ctx, a: dict) -> dict:
+    """Vision: read the uploaded bill (only printed values, nulls dropped)."""
+    import llm
+    got = llm.read_bill(ctx.inputs.get("bill", b""), ctx.inputs.get("media_type", "image/jpeg"))
+    if got is None:
+        return {"error": "could not read the bill"}
+    return {k: v for k, v in got.items() if v is not None}
+
+
 def _plan_read(ctx: Ctx, a: dict) -> dict:
     p = ctx.plan
     return {"facts": p["facts"], "customer_name": p["customer"].get("name"), "status": p["status"],
@@ -149,6 +160,8 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
          {"type": "object", "properties": {"component": _COMP}, "required": ["component"]}, _explain),
     Tool("evidence.percentile", "read", "How the design compares with similar real homes (aggregate percentiles, flags, variant anchors).",
          {"type": "object", "properties": {}}, _percentile),
+    Tool("bill.read", "read", "Read the uploaded electricity bill (vision): yearly kWh, price per kWh, provider.",
+         {"type": "object", "properties": {}}, _bill_read),
     Tool("plan.read", "read", "This plan's facts, customer name and what the customer said.", {"type": "object", "properties": {}}, _plan_read),
     Tool("calendar.slots", "read", "Next free site-visit slots.", {"type": "object", "properties": {}}, _slots),
     Tool("plan.propose_variant", "propose", "Propose an offer variant: the engine designs it from the locks; you add a one-sentence why.",

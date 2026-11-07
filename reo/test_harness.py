@@ -52,8 +52,12 @@ def test_offer_pack_and_approvals(tmp_path, monkeypatch):
     assert c.post(f"/plans/{pid}/actions/{ids['book_visit']}/approve", json={}).status_code == 409  # only once
     p = c.post(f"/plans/{pid}/variant", json={"name": "Basic"}).json()
     assert p["offer_pack"]["chosen"] == "Basic"
+    basic_total = p["design"]["price"]["total_eur"]
+    quote = next(a for a in p["offer_pack"]["actions"] if a["kind"] == "send_quote")
+    assert "Basic" in quote["label"] and quote["payload"]["variant"] == "Basic"
     p = c.post(f"/plans/{pid}/actions/{ids['send_quote']}/approve", json={"payload": {"message": "See you soon."}}).json()
     assert p["status"] == "quoted" and "See you soon." in p["transcript"][-1]["text"]
+    assert p["design"]["price"]["total_eur"] == basic_total  # the chosen variant is quoted, not the proposal
     steps = c.get(f"/runs/{pack['run_id']}").json()["steps"]
     assert [s["tool"] for s in steps if s.get("effect") == "execute"] == ["calendar.book", "quote.send"]
     assert c.get(f"/plans/{pid}/runs").json()[0]["id"] == pack["run_id"]

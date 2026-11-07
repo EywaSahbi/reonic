@@ -26,6 +26,8 @@ class Skill:
     texts: Callable[[Ctx], list[str]]
     missing: Callable[[Ctx], str | None]
     output: Callable[[Ctx, dict], dict]
+    loop: bool = True  # False: always the fixed tool sequence (fast, deterministic); the model only phrases elsewhere
+    label: Callable[[Ctx], str] | None = None  # model name shown on the run when loop is False
 
 
 # ---------- offer_prep ----------
@@ -167,4 +169,107 @@ OFFER_PREP = Skill(
     scripted=offer_scripted, texts=offer_texts, missing=offer_missing, output=offer_output,
 )
 
-SKILLS = {s.name: s for s in [OFFER_PREP]}
+# ---------- goal_planner: deterministic search over engine variants ----------
+
+GOAL_TEXT = {"budget": "within budget", "independence": "most independence", "lowest_bill": "lowest monthly bill"}
+
+
+def _score(goal: str, d: dict, budget: float | None):
+    e, total = d["economics"], d["total_eur"]
+    if goal == "budget":
+        fits = budget is None or total <= budget
+        return (fits, e["autarky_pct"] if fits else -total, -total)
+    if goal == "lowest_bill":
+        bill = e.get("bill_after_eur_per_month")
+        return (-(bill if bill is not None else -e["annual_savings_eur"] / 12), -total)
+    return (e["autarky_pct"], -total)  # independence
+
+
+def _goal_why(label: str, d: dict) -> str:
+    c, e = d["components"], d["economics"]
+    parts = [f"{scripted.kwp(c['pv']['size'])} kWp PV" if c["pv"]["recommended"] and c["pv"]["size"] else None,
+             f"{round(c['battery']['size'])} kWh battery" if c["battery"]["recommended"] and c["battery"]["size"] else "no battery",
+             f"{round(c['heatpump']['size'])} kW heat pump" if c["heatpump"]["recommended"] and c["heatpump"]["size"] else None,
+             f"{round(c['wallbox']['size'])} kW wallbox" if c["wallbox"]["recommended"] and c["wallbox"]["size"] else None]
+    bill = e.get("bill_after_eur_per_month")
+    money = "" if bill is None else (f", monthly bill about €{round(bill)}" if bill >= 0 else f", net feed-in credit about €{round(-bill)} a month")
+    return f"{label}: {', '.join(p for p in parts if p)}; about {scripted.eur(d['total_eur'])}, autarky {round(e['autarky_pct'])}%{money}."
+
+
+def goal_scripted(ctx: Ctx, call) -> None:
+    goal, budget = ctx.inputs.get("goal", "independence"), ctx.facts.get("budget_eur")
+    options = [{}]
+    for comp in ("battery", "pv", "heatpump", "wallbox"):
+        options += [w["locks"] for w in call("engine.explain", {"component": comp}).get("what_if", []) if w.get("locks")]
+    if ctx.facts.get("has_ev") or ctx.facts.get("ev_planned"):  # an EV home keeps its wallbox
+        options = [o for o in options if o.get("wallbox", {}).get("recommended", True)]
+    anchors = call("evidence.percentile", {}).get("anchors") or {}
+    options += [anchors[k] for k in ("Basic", "Independence") if anchors.get(k)]
+    seen, scored = set(), []
+    for locks in options:
+        key = json.dumps(locks, sort_keys=True)
+        if key in seen:
+            continue
+        seen.add(key)
+        d = call("engine.design", {"locks": locks})
+        if "error" not in d:
+            scored.append((locks, d))
+    if not scored:
+        return
+    scored.sort(key=lambda x: _score(goal, x[1], budget), reverse=True)
+    best, picks, totals = scored[0], [scored[0]], {scored[0][1]["total_eur"]}
+    for cand in scored[1:]:
+        if cand[1]["total_eur"] not in totals:
+            picks.append(cand)
+            totals.add(cand[1]["total_eur"])
+        if len(picks) == 3:
+            break
+    ctx.candidates = [d for _, d in scored]
+    for i, (locks, d) in enumerate(picks):
+        name = "Recommended" if i == 0 else ("Basic" if d["total_eur"] < best[1]["total_eur"] else "Independence")
+        if name in ctx.variants:
+            name = "Basic" if name == "Independence" else "Independence"
+        label = f"Best for {GOAL_TEXT[goal]}" if i == 0 else "Alternative"
+        call("plan.propose_variant", {"name": name, "locks": locks, "why": _goal_why(label, d)})
+    fits = budget is None or goal != "budget" or best[1]["total_eur"] <= budget
+    call("finish", {"recommended": "Recommended",
+                    "summary": f"{len(scored)} engine variants compared for {GOAL_TEXT[goal]}" + ("" if fits else "; none fits the budget, cheapest shown")})
+
+
+def goal_output(ctx: Ctx, run: dict) -> dict:
+    rec = ctx.variants.get("Recommended")
+    budget = ctx.facts.get("budget_eur")
+    return {"goal": ctx.inputs.get("goal"), **({"budget_eur": budget} if budget and ctx.inputs.get("goal") == "budget" else {}),
+            "recommendation": rec, "alternatives": [v for n, v in ctx.variants.items() if n != "Recommended"],
+            "fits_budget": bool(rec) and (not budget or rec["design"]["price"]["total_eur"] <= budget),
+            "trace": [{"step": i + 1, "tool": s.get("tool", s["kind"]), "summary": s["result_summary"]}
+                      for i, s in enumerate(x for x in run["steps"] if x["kind"] in ("tool", "guard"))],
+            "run_id": run["id"], "summary": (ctx.finish or {}).get("summary", "")}
+
+
+GOAL_PLANNER = Skill(
+    name="goal_planner", model=lambda: llm.AGENT_MODEL,
+    tools=["engine.design", "engine.explain", "evidence.percentile", "plan.propose_variant", "finish"],
+    max_steps=8, max_seconds=30, effort="low", prompt=lambda: "", context=lambda ctx: "",
+    scripted=goal_scripted, texts=lambda ctx: [v["why"] for v in ctx.variants.values()],
+    missing=lambda ctx: None if "Recommended" in ctx.variants else "no variant found",
+    output=goal_output, loop=False,
+)
+
+
+# ---------- bill_reader: vision reads the bill, facts wait for the customer's confirmation ----------
+
+def bill_scripted(ctx: Ctx, call) -> None:
+    got = call("bill.read", {})
+    ctx.inputs["read"] = {} if "error" in got else got
+    call("finish", {"recommended": "Recommended", "summary": "bill read" if ctx.inputs["read"] else "could not read the bill"})
+
+
+BILL_READER = Skill(
+    name="bill_reader", model=lambda: llm.MODEL, tools=["bill.read", "finish"], max_steps=2, max_seconds=40, effort="low",
+    prompt=lambda: "", context=lambda ctx: "", scripted=bill_scripted, texts=lambda ctx: [],
+    missing=lambda ctx: None, output=lambda ctx, run: {"read": ctx.inputs.get("read", {}), "run_id": run["id"]},
+    loop=False, label=lambda ctx: f"{llm.MODEL} (vision)" if llm.client() else "scripted",
+)
+
+SKILLS = {s.name: s for s in [OFFER_PREP, GOAL_PLANNER, BILL_READER]}

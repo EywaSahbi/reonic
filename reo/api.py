@@ -484,6 +484,9 @@ def choose_variant(pid: str, body: VariantName):
         st["locks"] = dict(v["locks"])
         plan["design"] = d
         pack["chosen"] = body.name
+        for act in pack.get("actions", []):
+            if act["kind"] == "send_quote" and act["status"] == "proposed":
+                act["label"], act["payload"]["variant"] = f"Send quote ({body.name} variant)", body.name
         plan["installer_edits"].append({"at": now(), "change": f"variant {body.name} chosen", "before": before,
                                         "after": d["price"]["total_eur"]})
         plan["history"].append({"at": now(), "trigger": f"variant {body.name}", "total_eur": d["price"]["total_eur"]})
@@ -518,13 +521,17 @@ def approve(pid: str, aid: str, body: Payload | None = None):
         db = _load()
         plan, st = _get(db, pid)
         a = _action(plan, aid)
-        payload = {**a["payload"], **((body.payload if body else None) or {})}
+        override = (body.payload if body else None) or {}
+        payload = {**a["payload"], **override}
         if a["kind"] == "book_visit" and payload.get("slot") in db.get("calendar", []):
             raise HTTPException(409, f"slot {payload['slot']} is already booked")
         result = htools.execute(a["kind"], payload, db)
         if a["kind"] == "send_quote":
+            # the quote is the plan as the planner left it: a chosen variant (plus later edits) wins over the proposal
             pack = plan["offer_pack"]
-            v = next((x for x in pack["variants"] if x["name"] == payload.get("variant")), None)
+            want = override.get("variant") or (None if pack.get("chosen") else payload.get("variant"))
+            payload["variant"] = want or pack.get("chosen") or payload.get("variant")
+            v = next((x for x in pack["variants"] if x["name"] == want), None)
             if v and pack.get("chosen") != v["name"]:
                 d = engine.design(plan["facts"], v["locks"], st["prices"])
                 if d:

@@ -145,10 +145,12 @@ class Runner:
 
     def go(self) -> dict:
         try:
-            if not self.run_llm():
+            if not (self.skill.loop and self.run_llm()):
                 if self.run["model"] != "scripted":
                     self.step("guard", "fallback", self.run["model"], "switching to the scripted planner", ok=False)
                 self.run_scripted()
+            if self.skill.label:
+                self.run["model"] = self.skill.label(self.ctx)
             self.run["output"] = self.skill.output(self.ctx, self.run)
             self.run["status"] = "needs_approval" if any(a["status"] == "proposed" for a in self.ctx.actions) else "done"
         except Exception as e:  # a run must always end with a status the UI can show
