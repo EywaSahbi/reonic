@@ -3,3 +3,8 @@ dist/
 .env
 .env.local
 *.tsbuildinfo
+
+.vercel/
+.runtime/
+.vercel
+.env*

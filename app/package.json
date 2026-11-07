@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:deploy": "node scripts/check-deployment.mjs && npm run build"
   },
   "dependencies": {
     "react": "^18.3.1",

@@ -79,3 +79,12 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Isolated UI refinement: original Plan my home pill raised 16px without moving reo; 104px advisor beside replies (64px on mobile); duplicate header avatar removed. Build passed and desktop preview checked on :5174.
 
 - UI refinement follow-up: only the latest advisor reply mounts the animated avatar; older messages remain plain bubbles. Mobile avatar stays 64px.
+
+## Deployment preparation
+
+- Free Vercel project sonnfeld-reo created/linked; CLI authenticated. GitHub auto-link lacks repo access; CLI deploy is available.
+- Added vercel.json, HTTPS API deployment guard, upload exclusions, laptop backend starter and DEPLOYMENT.md.
+- No public tunnel or deployment yet: ngrok local token setup and reo authentication/CORS contract pending. Storage remains JSON, no SQLite migration implied.
+- Engine 717be1f heating comparison typed/displayed: cost benefit gated by heatpump_cheaper, null CO2 remains unknown. Household choices already render. Approved flow and heating wording updated in experience/.
+
+- Checks: production build, heating benefit/null-CO2 regression check, deployment URL guard rejection/acceptance, and laptop starter reusing healthy services passed. Windows blocked standalone ngrok; user installing official Store version. Vercel sign-in complete.
