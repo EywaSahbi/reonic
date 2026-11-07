@@ -17,6 +17,7 @@
 - Verified reo API v1 (`2d6428f`): dependency sync and 4 tests pass; offline-mode smoke passed all current routes and confirms the API reports unavailability without numeric claims.
 - Verified app integration (`28527ca`): production build passes. Live customer flow against reo with the engine offline keeps the plan paused, displays no sizes/prices, and continues collecting inputs without a handoff action. Full engine-backed journey remains pending the engine service.
 - Reo engine-down behavior (`9b01a6c`): reo pytest suite and live smoke confirm offline fallback; API key was unset for the scripted fallback test.
+- Verified reo voice turn (`2756583`): the mocked ElevenLabs transcription and TTS path passes, including an empty-audio response with no state change.
 
 ## Decisions
 

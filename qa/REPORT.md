@@ -2,6 +2,11 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — reo voice API (`2756583`)
+
+- `cd reo && uv run pytest`: passed, 5 tests. `test_voice_turn` verifies mocked transcription updates `total_demand_kwh`, mocked speech is returned as base64 audio, and empty audio produces a “didn't catch” response without changing state.
+- This covers the mocked API path. Live ElevenLabs credentials/audio are not part of this QA check.
+
 ## 2026-11-07 — app + reo offline integration (`28527ca`, `9b01a6c`)
 
 - `cd app && npm run build`: passed.
