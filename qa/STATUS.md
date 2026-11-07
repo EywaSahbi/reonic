@@ -5,7 +5,7 @@
 - [x] `smoke.py` v0 from the first `engine/CONTRACT.md` and `data/CONTRACT.md`
 - [x] Rewrite `smoke.py` for the restructured `engine/CONTRACT.md` and the new `reo/CONTRACT.md` (v0 targets the retired engine contract)
 - [x] Verify each M0 `DONE` (engine stub, reo stub, data table + split, app skeleton) as it lands
-- [x] M1: engine-backed full flow, no-key fallback, hard-rule-2 customer estimate check, and `val` score reproduced; earlier response/card mismatch was fixed by reo. Variant selection exposed a stale quote draft and was reported to app (new BLOCKED).
+- [x] M1: engine-backed full flow, no-key fallback, hard-rule-2 customer estimate check, and `val` score reproduced; earlier response/card mismatch was fixed by reo. Variant selection exposed a stale quote draft; reo/app delivered a fix in `35f5a3d`/`057048c`, with live regression verification now added to `smoke.py`.
 - [x] Test-leak check on `engine/`: fitted params declare `split: train`; reproduced val/test prediction runs use the fixed held-out splits
 - [x] M2: offer-pack demo rehearsed without API keys; `/validation` serves fixed test, val, and installer-profile report files. Held-out test-set reproduction remains for M3 per data's instruction to rescore test once at final validation.
 - [ ] M3: final full run on a clean clone before submission

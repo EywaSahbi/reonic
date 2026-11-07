@@ -284,11 +284,26 @@ def reo_checks(results: list[str]) -> None:
         event_stream = call_text(REO, f"/runs/{urllib.parse.quote(pack['run_id'], safe='')}/events")
         assert event_stream.count("event: step") == len(run.get("steps", [])) and "event: done" in event_stream, \
             "run SSE must replay every step and its done event"
+        selected = check_plan(call(REO, f"/plans/{encoded_id}/variant", {"name": "Basic"}), "reo POST /plans/{id}/variant")
+        selected_pack = selected.get("offer_pack", {})
+        selected_battery = selected["design"]["components"]["battery"]
+        selected_draft = selected_pack.get("customer_message_draft", "")
+        battery_kwh = round(selected_battery["size"]) if selected_battery.get("recommended") else None
+        price_range = selected["design"]["price"]["range_eur"]
+        expected_range = f"€{int(round(price_range[0] / 100) * 100):,}–{int(round(price_range[1] / 100) * 100):,}"
+        quote_action = next((a for a in selected_pack.get("actions", []) if a.get("kind") == "send_quote"), None)
+        assert selected_pack.get("chosen") == "Basic" and selected_pack.get("draft_for") == "Basic", \
+            "selecting a variant must mark its refreshed draft for that variant"
+        assert (battery_kwh is None or f"{battery_kwh} kWh battery" in selected_draft) and expected_range in selected_draft, \
+            "variant draft sizes and price range must match its engine design"
+        assert quote_action and quote_action.get("payload", {}).get("message") == selected_draft \
+            and quote_action.get("payload", {}).get("variant") == "Basic", \
+            "proposed send_quote action must carry the chosen variant and matching draft"
         plan_runs = call(REO, f"/plans/{encoded_id}/runs")
         assert any(r.get("id") == pack["run_id"] for r in plan_runs), "plan run list must contain offer run"
         slots = call(REO, "/calendar/slots")
         assert isinstance(slots.get("slots"), list) and slots["slots"], "calendar slots must be available"
-        results.append("PASS reo offer pack, run log/SSE, approval gate, and calendar slots")
+        results.append("PASS reo offer pack, variant-grounded draft, run log/SSE, approval gate, and calendar slots")
     except NotPublished:
         results.append("SKIP offer pack and run trace: phase 2 endpoint not published")
     try:
