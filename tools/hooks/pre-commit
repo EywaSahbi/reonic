@@ -1,0 +1,33 @@
+#!/bin/sh
+# Folder-ownership guard (see AGENTS.md "Team and ownership").
+# Enable once per clone:  git config core.hooksPath tools/hooks && git config hackathon.role <data|engine|app>
+# Humans changing shared files on purpose:  ALLOW_SHARED=1 git commit ...   (agents: only when your human asks)
+
+[ "$ALLOW_SHARED" = "1" ] && exit 0
+
+role=$(git config hackathon.role)
+case "$role" in
+  data)   allowed="data/" ;;
+  engine) allowed="engine/" ;;
+  app)    allowed="app/ pitch/ README.md" ;;
+  *)
+    echo "pre-commit: set your role first: git config hackathon.role <data|engine|app>" >&2
+    exit 1 ;;
+esac
+
+bad=$(git diff --cached --name-only --no-renames | while IFS= read -r f; do
+  ok=0
+  for p in $allowed; do
+    case "$f" in "$p"*) ok=1 ;; esac
+  done
+  [ $ok -eq 0 ] && echo "  $f"
+done)
+
+if [ -n "$bad" ]; then
+  echo "pre-commit: role '$role' may only commit inside: $allowed" >&2
+  echo "These staged files belong to another role or are shared:" >&2
+  echo "$bad" >&2
+  echo "Unstage them (git restore --staged <file>) and post a NEED on the board to the owner." >&2
+  exit 1
+fi
+exit 0

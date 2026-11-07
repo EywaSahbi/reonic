@@ -1,0 +1,4 @@
+# hooks and scripts must keep LF endings or sh breaks on Windows checkouts
+tools/hooks/* text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
