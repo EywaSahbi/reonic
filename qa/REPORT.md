@@ -2,6 +2,11 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — Reonic brand pass (commit e0b56cf)
+
+- `cd app && npm run build`: passed.
+- Browser review passed on both views: the customer site uses the revised black pill CTA and sunset hero card; the widget header reads “reo · powered by Reonic”, and the plan card retains clear estimate labels and status/confidence pills. The installer uses the updated white-panel theme and emerald `quoted` / amber `new` statuses; plan detail and controls remain legible.
+
 ## 2026-11-07 — tap-first customer opening (commit 9ac9490)
 
 - `cd app && npm run build`: passed.
