@@ -214,7 +214,6 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     <div className={`widget ${hasDesign ? "widget-wide" : ""} ${variant === "stage" ? "widget-stage" : ""}`} role="dialog" aria-label="Sonnfeld energy advisor">
       <div className="widget-head">
         <div className="reo-id">
-          <span className="reo-avatar-slot" aria-hidden><ReoAvatar size={36} greet={false} winkKey={messages.length} /></span>
           <div>
             <strong>Energy advisor</strong>
             <span>Sonnfeld</span>
@@ -230,7 +229,12 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
         <div className="chat">
           <div className="chat-log" aria-live="polite">
             {messages.map((m, i) => (
-              <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>
+              m.role === "reo" ? (
+                <div key={i} className="reo-message">
+                  <span className="reo-message-avatar" aria-hidden><ReoAvatar size={104} greet={false} interactive={false} /></span>
+                  <div className="bubble bubble-reo">{m.text}</div>
+                </div>
+              ) : <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>
             ))}
             {busy && <div className="bubble bubble-reo typing"><span /><span /><span /></div>}
             {lookingUpRoof && <div className="address-progress" role="status">Looking up your building and estimating the sunny roof area…</div>}
