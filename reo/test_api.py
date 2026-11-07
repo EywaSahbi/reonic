@@ -51,7 +51,11 @@ def test_demo_flow(tmp_path, monkeypatch):
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we're buying an electric car next year"}).json()
     assert t["plan"]["facts"]["ev_planned"] is True
     assert "added a wallbox" in t["messages"][0]["text"]
-    assert t["suggestions"][0] == "Yes, send it"  # heating + EV known -> offer the handoff once
+    assert t["ask"]["field"] == "has_existing_pv"
+
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "No solar yet"}).json()  # chip
+    assert t["plan"]["facts"]["has_existing_pv"] is False
+    assert t["suggestions"][0] == "Yes, send it"  # heating + EV + existing solar known -> offer the handoff once
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Not yet"}).json()
     assert "only here to help" not in t["messages"][0]["text"]

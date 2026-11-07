@@ -1,7 +1,7 @@
 """Which question reo asks next, and when it offers the handoff. Follows experience/flow.md Stage 3 and 5."""
 
 REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]  # engine HomeFacts.region
-ALWAYS_ASK = {"heating_type", "has_ev"}  # flow.md: the two facts that change the design most; engine only assumes them
+ALWAYS_ASK = {"heating_type", "has_ev", "has_existing_pv"}  # existing PV: data 7fd5ecb, most PV yes/no misses are homes that already have solar  # flow.md: the two facts that change the design most; engine only assumes them
 
 # (fields that count as "known", ask) in the order of flow.md Stage 3.
 QUESTIONS = [
@@ -12,6 +12,8 @@ QUESTIONS = [
                          "prompt": "How do you heat today? That decides whether a heat pump makes sense."}),
     (("has_ev", "ev_planned"), {"field": "has_ev", "input": "choice", "options": ["Yes, already", "Planned", "No"],
                                 "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
+    (("has_existing_pv",), {"field": "has_existing_pv", "input": "choice", "options": ["Yes, I have solar", "No solar yet"],
+                            "prompt": "Do you already have solar panels on the roof? Then I'll plan around them."}),
     (("roof_area_sqm",), {"field": "roof_area_sqm", "input": "address",
                           "prompt": "How big is the roof area that faces the sun? Or give me your address and I'll look it up."}),
     (("roof_type",), {"field": "roof_type", "input": "choice", "options": ["gable", "flat", "mono", "other"],
@@ -34,6 +36,7 @@ CHIPS = {
     "has_ev": ["Yes, already", "Planned", "No"],
     "roof_area_sqm": ["About 40 m²", "About 60 m²", "Not sure"],
     "region": [],
+    "has_existing_pv": ["Yes, I have solar", "No solar yet"],
     "roof_type": [],
     "house_size_sqm": ["About 120 m²", "About 160 m²"],
     "electricity_price_eur_per_kwh": ["About 35 ct", "About 40 ct", "Not sure"],
@@ -47,7 +50,7 @@ KWH_ASK = {"field": "total_demand_kwh", "prompt": "Yearly electricity use (kWh, 
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
     label = {"building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
-             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
+             "roof_area_sqm": "Roof area facing the sun (m²) or your address", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
     out["prompt"] = label.get(ask["field"], ask["prompt"])
@@ -84,6 +87,7 @@ def next_question(facts: dict, design: dict | None, skipped: set[str] = frozense
 
 
 def offer_handoff(facts: dict, design: dict | None, skipped: set[str] = frozenset()) -> bool:
-    """flow.md Stage 5: heating and EV known, or nothing worth asking is left."""
+    """flow.md Stage 5: heating, EV and existing solar known, or nothing worth asking is left."""
     ev_known = facts.get("has_ev") is not None or facts.get("ev_planned") is not None
-    return (facts.get("heating_type") is not None and ev_known) or next_question(facts, design, skipped) is None
+    pv_known = facts.get("has_existing_pv") is not None or "has_existing_pv" in skipped
+    return (facts.get("heating_type") is not None and ev_known and pv_known) or next_question(facts, design, skipped) is None

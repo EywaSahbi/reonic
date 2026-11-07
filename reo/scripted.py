@@ -26,6 +26,7 @@ CHIP_FACTS = {
     "about 35 ct": {"electricity_price_eur_per_kwh": 0.35}, "about 40 ct": {"electricity_price_eur_per_kwh": 0.40},
     "under €15,000": {"budget_eur": 15000}, "€15,000–25,000": {"budget_eur": 25000},
     **{c.lower(): {"region": c} for c in ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]},
+    "yes, i have solar": {"has_existing_pv": True}, "no solar yet": {"has_existing_pv": False},
     "gable": {"roof_type": "gable"}, "flat": {"roof_type": "flat"}, "mono": {"roof_type": "mono"},
     "detached": {"building_type": "detached"}, "semi": {"building_type": "semi"}, "terraced": {"building_type": "terraced"},
 }
@@ -80,6 +81,8 @@ def extract(text: str, last_field: str | None = None) -> dict:
             facts.update(has_ev=False, ev_planned=False)
         else:
             facts["ev_planned" if planned else "has_ev"] = True
+    if re.search(r"already have (solar|pv|panels)|schon (eine )?(pv|solar)|haben (bereits|schon) (pv|solar)|existing (pv|solar)", t):
+        facts["has_existing_pv"] = True
     for pattern, field, value in [(r"reihenhaus|terraced|row house", "building_type", "terraced"),
                                   (r"doppelhaus|semi-detached|semi detached", "building_type", "semi"),
                                   (r"einfamilienhaus|detached house", "building_type", "detached"),

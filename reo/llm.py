@@ -63,6 +63,7 @@ EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar
   "we're buying an electric car" -> ev_planned true; "we have an EV" -> has_ev true; "no car" -> has_ev false and ev_planned false.
   Kilometres: put them in the field matching what was said (per year, per week or per day), no conversion.
   A bare answer like "4" or "yes" answers the question named in last_question.
+  "we already have solar / PV on the roof" -> has_existing_pv true (and existing_pv_kwp if a size is given).
 - intent: facts (gives information), question (asks why / what if / how much), skip (doesn't know or skips),
   handoff (wants to send the plan, get an offer or be contacted), other (anything else).
 - topic: what a question is about, else none."""

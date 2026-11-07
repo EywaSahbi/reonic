@@ -26,5 +26,6 @@
 - `region` (engine 718cd3f) asked after roof as a choice of state codes; extracted from state or city names.
 - Customer-stated yearly kWh -> `total_demand_kwh` (engine 336060e), not `annual_demand_kwh`.
 - Engine down -> contract-shaped design with no numbers (`params_version: engine-offline`), reo says it can't calculate; installer edits return 503.
+- Existing solar is asked after EV (choice 'Yes, I have solar' / 'No solar yet'): data's test report 7fd5ecb shows 49 of 52 PV yes/no misses are homes that already have solar.
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.

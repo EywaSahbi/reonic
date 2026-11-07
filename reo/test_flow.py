@@ -7,8 +7,9 @@ def test_question_order_and_stop():
               "components": {"heatpump": {"recommended": False}}}
     assert flow.next_question({"annual_demand_kwh": 4500}, design)["field"] == "heating_type"
     assert flow.next_question({"heating_type": "gas"}, design)["field"] == "roof_area_sqm"  # high impact jumps the EV question
-    assert flow.next_question({"heating_type": "gas", "ev_planned": True}, {"missing_inputs": [], "components": {}}) is None
-    assert flow.offer_handoff({"heating_type": "gas", "has_ev": False}, design)
+    assert flow.next_question({"heating_type": "gas", "ev_planned": True}, {"missing_inputs": [], "components": {}})["field"] == "has_existing_pv"
+    assert flow.next_question({"heating_type": "gas", "ev_planned": True, "has_existing_pv": False}, {"missing_inputs": [], "components": {}}) is None
+    assert flow.offer_handoff({"heating_type": "gas", "has_ev": False, "has_existing_pv": False}, design)
 
 
 def test_no_key_means_fallback(monkeypatch):
