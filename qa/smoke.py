@@ -24,6 +24,7 @@ EV_DISTANCE_FACTS = (
     {"annual_demand_kwh": 4500, "has_ev": True, "ev_km_per_day": 35},
 )
 DEMAND_FACTS = ({}, {"total_demand_kwh": 4500}, FACTS)
+REGION_FACTS = ("SH", "BY")  # north and south yield should produce different PV sizes
 
 
 class NotPublished(Exception):
@@ -143,6 +144,19 @@ def engine_checks(results: list[str]) -> None:
         distance_design = call(ENGINE, "/design", {"facts": distance_facts})
         check_design(distance_design, "engine POST /design with EV distance")
     results.append("PASS engine /design accepts weekly and daily EV distance facts")
+    regional_designs = [
+        call(ENGINE, "/design", {"facts": {"total_demand_kwh": 4500, "region": region}})
+        for region in REGION_FACTS
+    ]
+    for design in regional_designs:
+        check_design(design, "engine POST /design with region")
+    north_pv = regional_designs[0]["components"]["pv"]["size"]
+    south_pv = regional_designs[1]["components"]["pv"]["size"]
+    assert isinstance(north_pv, (int, float)) and isinstance(south_pv, (int, float)) and north_pv > south_pv, \
+        "regional PV sizing should account for the lower northern yield"
+    assert not any(item.get("field") == "region" for item in regional_designs[1]["missing_inputs"]), \
+        "known region should not remain a missing input"
+    results.append("PASS engine /design uses region for PV yield and sizing")
     try:
         explanation = call(ENGINE, "/explain", {"facts": FACTS, "component": "pv"})
     except NotPublished:
