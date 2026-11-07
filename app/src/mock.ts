@@ -61,8 +61,8 @@ function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRI
   const total = demand + evKwh + hpKwh;
 
   let pv = Math.round((total / 600) * 2) / 2;
-  const roofMax = f.roof_area_sqm ? Math.floor(f.roof_area_sqm / 5.5 * 2) / 2 : null;
-  if (roofMax !== null && pv > roofMax) pv = roofMax;
+  const roofMax = Math.floor(((f.roof_area_sqm ?? 60) / 5.5) * 2) / 2;
+  if (pv > roofMax) pv = roofMax;
   if (f.roof_area_sqm === undefined) assumptions.push({ field: "roof_area_sqm", value: 60, note: "typical roof, south-facing" });
   if (f.electricity_price_eur_per_kwh === undefined) assumptions.push({ field: "electricity_price_eur_per_kwh", value: 0.36, note: "German average tariff" });
 
@@ -81,7 +81,7 @@ function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRI
   const components: Design["components"] = {
     pv: comp("kWp", {
       recommended: true, size: pv, range: r(pv), quantity: Math.round((pv * 1000) / 430), confidence: conf,
-      reasons: [`${total.toLocaleString("en")} kWh/yr total demand${ev ? " incl. EV" : ""}${hpWanted ? " incl. heat pump" : ""}`, roofMax !== null && pv === roofMax ? "capped by roof area" : "sized to cover about 100% of yearly demand"],
+      reasons: [`${total.toLocaleString("en")} kWh/yr total demand${ev ? " incl. EV" : ""}${hpWanted ? " incl. heat pump" : ""}`, pv === roofMax ? `capped by roof area (${f.roof_area_sqm ?? 60} m²${f.roof_area_sqm ? "" : ", assumed"})` : "sized to cover about 100% of yearly demand"],
     }),
     battery: comp("kWh", total > 2500
       ? { recommended: true, size: battKwh, range: r(battKwh), confidence: conf, reasons: ["shifts midday solar to the evening", `about 1.1 kWh per kWp of solar`] }
@@ -217,7 +217,8 @@ function answerWhy(plan: Plan, text: string): string | null {
   const t = text.toLowerCase();
   if (!/(why|how come|what does it cost|cost|price)/.test(t)) return null;
   const c = plan.design.components;
-  if (t.includes("battery")) return c.battery.recommended ? `A ${c.battery.size} kWh battery because it ${c.battery.reasons.join(", and ")}.` : `No battery for now: ${c.battery.reasons[0]}.`;
+  const because = (rs: string[]) => rs.filter((r) => r !== "set by planner").join("; ") + (rs.includes("set by planner") ? " (size set by the planner)" : "");
+  if (t.includes("battery")) return c.battery.recommended ? `A ${c.battery.size} kWh battery: ${because(c.battery.reasons)}.` : `No battery for now: ${c.battery.reasons[0]}.`;
   if (t.includes("heat pump")) return c.heatpump.recommended ? `The heat pump ${c.heatpump.reasons.join("; ")}.` : `No heat pump: ${c.heatpump.reasons[0]}.`;
   if (/(cost|price|expensive)/.test(t)) {
     const top = [...plan.design.price.items].sort((a, b) => b.total_eur - a.total_eur).slice(0, 2);
@@ -298,6 +299,12 @@ export const mockApi: Api = {
     plan.flags = plan.design.components.battery.recommended && (plan.design.components.battery.size ?? 0) >= 10
       ? [{ component: "battery", text: "Battery larger than 85% of similar homes (mock)", severity: "warn" }]
       : [];
+    const d = plan.facts.annual_demand_kwh ?? 4500;
+    plan.similar_projects = [
+      { project_id: "mock-p-1021", facts: { annual_demand_kwh: d - 300, heating_type: plan.facts.heating_type }, expert: { pv: 9.5, battery: 8, heatpump: plan.facts.heating_type === "gas" ? 9 : null, wallbox: 11 } },
+      { project_id: "mock-p-0877", facts: { annual_demand_kwh: d + 400, heating_type: plan.facts.heating_type }, expert: { pv: 11, battery: 10, heatpump: null, wallbox: 11 } },
+      { project_id: "mock-p-1302", facts: { annual_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
+    ];
     plan.transcript.push(msg(`Done. Your plan is with SolarHaus Müller, ${name}. You'll see the final quote here once your planner has confirmed it.`));
     return delay(save(plan));
   },
@@ -321,7 +328,12 @@ export const mockApi: Api = {
     for (const [k, c] of Object.entries(plan.design.components)) if (c.locked) locks[k as keyof Locks] = { recommended: c.recommended, size: c.size ?? undefined };
     Object.assign(locks, edit.locks);
     plan.design = design(plan.facts, locks, edit.prices);
-    plan.installer_edits.push({ at: now(), change: JSON.stringify(edit), before, after: plan.design.price.total_eur });
+    const what = [
+      ...Object.entries(edit.locks ?? {}).map(([k, l]) => (l!.recommended ? `${k} set to ${l!.size ?? "recommended"}` : `${k} removed`)),
+      ...Object.entries(edit.facts ?? {}).map(([k, v]) => `${k} = ${v}`),
+      ...(edit.prices ? ["prices edited"] : []),
+    ].join(", ");
+    plan.installer_edits.push({ at: now(), change: what || "no change", before, after: plan.design.price.total_eur });
     plan.history.push({ at: now(), trigger: "installer edit", total_eur: plan.design.price.total_eur });
     return delay(save(plan));
   },

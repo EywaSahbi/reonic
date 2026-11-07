@@ -57,6 +57,7 @@ export function App() {
 
       <footer className="site-foot">
         SolarHaus Müller GmbH · demo site for the reo hackathon project
+        <a className="foot-link" href="#/installer">Planner login</a>
         {USING_MOCK && <span className="mock-badge">mock API</span>}
       </footer>
 

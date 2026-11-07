@@ -4,6 +4,9 @@ import type { Ask, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
+const SESSION_KEY = "reo-session-id";
+const readSaved = () => { try { return localStorage.getItem(SESSION_KEY); } catch { return null; } };
+const writeSaved = (id: string | null) => { try { if (id) localStorage.setItem(SESSION_KEY, id); else localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } };
 const stamp = () => new Date().toISOString();
 
 // The reo chat widget: messages, quick-reply chips, inline input for `ask`, live plan card, handoff.
@@ -38,11 +41,28 @@ export function Widget({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // Resume the last session in this browser (so the customer sees the final quote after a reload), else start one.
   useEffect(() => {
     if (started.current) return;
     started.current = true;
-    run(() => api.startSession());
+    const saved = readSaved();
+    if (!saved) { run(() => api.startSession()); return; }
+    api.getSession(saved)
+      .then((p) => {
+        setPlan(p);
+        setMessages(p.transcript);
+        if (p.status === "drafting") setChips(["Why this size?", "What does it cost?", "Send to installer"]);
+      })
+      .catch(() => { writeSaved(null); run(() => api.startSession()); });
   }, []);
+
+  useEffect(() => { if (plan?.id) writeSaved(plan.id); }, [plan?.id]);
+
+  function startOver() {
+    writeSaved(null);
+    setMessages([]); setPlan(null); setChips([]); setAsk(undefined); setHandoffOpen(false); setError(null);
+    run(() => api.startSession());
+  }
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -112,7 +132,10 @@ export function Widget({ onClose }: { onClose: () => void }) {
             <span>Energy advisor · SolarHaus Müller</span>
           </div>
         </div>
-        <button className="icon-btn" onClick={onClose} aria-label="Close">×</button>
+        <div className="widget-actions">
+          <button className="btn-ghost small" onClick={startOver} disabled={busy}>Start over</button>
+          <button className="icon-btn" onClick={onClose} aria-label="Close">×</button>
+        </div>
       </div>
 
       <div className="widget-body">
