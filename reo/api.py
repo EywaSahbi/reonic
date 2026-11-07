@@ -126,6 +126,9 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     if new.get("roof_width_m") and new.get("roof_length_m"):
         # customer's own measurement: the area is their fact (width x length); the engine fits modules from the sides
         new = {**new, "roof_area_sqm": round(new["roof_width_m"] * new["roof_length_m"], 1)}
+    elif "roof_area_sqm" in new:  # a new roof area (address lookup, "about 50 m²") replaces earlier measured sides
+        plan["facts"].pop("roof_width_m", None)
+        plan["facts"].pop("roof_length_m", None)
     if intent == "kwh":
         st["last_ask"] = "total_demand_kwh"
         m = reo_msg(plan, "Great, that's the most precise. What does your bill say per year?")
@@ -241,6 +244,9 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer) -> str:
         parts.append(f"Got it, so I've {changed}. The new estimate is {est}.")
     elif new:
         parts.append(f"Thanks, noted. The estimate is {est}.")
+    roof_limit = next((r for r in d["components"]["pv"]["reasons"] if "roof is the limit" in r), None)
+    if roof_limit and (new.get("roof_area_sqm") or new.get("roof_width_m")):
+        parts.append(roof_limit[0].upper() + roof_limit[1:] + ".")  # engine's own words: the roof caps the modules
     if intent == "question":
         parts.append(scripted.answer(d, topic))
     elif intent == "skip":
