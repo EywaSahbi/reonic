@@ -334,6 +334,14 @@ h1, h2, h3 { color: var(--ink); }
 .plan-offline p { margin: 0; font-size: 13px; color: var(--ink-500); }
 .ask-field select { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 12px; background: var(--white); color: var(--ink); }
 
+/* ---------- reo intro stage (#/reo-intro, pitch) ---------- */
+.reo-stage { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 40px; padding: 24px 16px; background: var(--paper-warm); transition: background 0.3s; }
+.reo-stage.is-dark { background: #141414; }
+.reo-stage-art { width: min(900px, 100%); height: auto; }
+.reo-stage-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; }
+.reo-stage-bar button { border: 1px solid var(--line); background: var(--white); color: var(--ink); border-radius: 999px; padding: 8px 16px; font: 500 14px var(--sans); cursor: pointer; }
+.reo-stage-bar input { width: 220px; accent-color: #f2784b; }
+
 /* ---------- reo avatar (src/ReoAvatar.tsx) ---------- */
 /* --lx / --ly (-1..1) are set by ReoAvatar from the cursor; svg px = avatar units */
 .reo-mascot { display: block; overflow: visible; --lx: 0.3; --ly: 0; -webkit-tap-highlight-color: transparent; }
@@ -367,3 +375,4 @@ h1, h2, h3 { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   .reo-mascot *, .reo-mascot.is-waving .reo-arm-wave { animation: none !important; }
 }
+.reo-stage-avatars { display: flex; gap: 28px; align-items: flex-end; }

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Learn mode</title>
+<style>
+  :root {
+    --bg: #faf9f5; --surface: #ffffff; --surface-1: #f1efe8; --border: #e3e0d6;
+    --text: #1f1e1c; --muted: #6b6a63; --hint: #97968d;
+    --want-bg:#FAEEDA; --want-fg:#633806; --revise-bg:#E6F1FB; --revise-fg:#0C447C;
+    --know-bg:#EAF3DE; --know-fg:#27500A; --live-bg:#E1F5EE; --live-fg:#0F6E56;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#1f1e1c; --surface:#2b2a27; --surface-1:#262521; --border:#3a3833;
+      --text:#eceae2; --muted:#a3a199; --hint:#78766e;
+      --want-bg:#412402; --want-fg:#FAC775; --revise-bg:#042C53; --revise-fg:#85B7EB;
+      --know-bg:#173404; --know-fg:#97C459; --live-bg:#04342C; --live-fg:#5DCAA5;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    line-height:1.6; padding:2rem 1.25rem; }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight:500; margin:0; display:flex; align-items:center; gap:10px; }
+  .top { display:flex; align-items:center; justify-content:space-between; margin-bottom:1.5rem; }
+  .pill { display:inline-flex; align-items:center; gap:6px; font-size:13px; padding:4px 10px; border-radius:999px; }
+  .live { background:var(--live-bg); color:var(--live-fg); }
+  .idle { background:var(--surface-1); color:var(--muted); }
+  .dot { width:8px; height:8px; border-radius:50%; background:currentColor; display:inline-block; }
+  .metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(120px,1fr)); gap:12px; margin-bottom:1.75rem; }
+  .metric { background:var(--surface-1); border-radius:8px; padding:1rem; }
+  .metric .lbl { font-size:13px; color:var(--muted); }
+  .metric .val { font-size:24px; font-weight:500; margin-top:2px; }
+  .sec { font-size:13px; color:var(--hint); margin:0 0 8px; }
+  .list { border:0.5px solid var(--border); border-radius:12px; overflow:hidden; margin-bottom:1.75rem; }
+  .row { display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:0.5px solid var(--border); }
+  .row:last-child { border-bottom:none; }
+  .row .ico { font-size:15px; color:var(--muted); }
+  .row .body { flex:1; min-width:0; }
+  .row .goal { font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .row .meta { font-size:13px; color:var(--hint); }
+  .row .when { font-size:12px; color:var(--hint); white-space:nowrap; }
+  .current { border:0.5px solid var(--border); border-left:3px solid var(--live-fg); border-radius:8px;
+    background:var(--surface); padding:0.9rem 1.1rem; margin-bottom:1.75rem; }
+  .current .h { font-size:13px; color:var(--live-fg); margin-bottom:4px; }
+  .current .g { font-size:15px; }
+  .current .m { font-size:13px; color:var(--muted); margin-top:4px; }
+  .files { font-size:13px; color:var(--muted); margin-top:6px; word-break:break-all; }
+  .empty { color:var(--hint); font-size:14px; padding:1rem 0; }
+  .foot { font-size:12px; color:var(--hint); margin-top:2rem; text-align:center; }
+  code { font-family: ui-monospace, "Cascadia Code", monospace; font-size:12px; }
+</style>
+</head>
+<body>
+<script>window.LEARN_DATA = {
+    "generated":  "2026-11-07T20:22:34Z",
+    "watch":  false,
+    "live":  null,
+    "sessions":  [
+                     {
+                         "id":  "6879eaa5-a51c-4907-b22d-4fc9c210f8fb",
+                         "project":  "app",
+                         "goal":  "I want to build my own AI companion design for reo, what is the easiest tool I can use to design the logo based on reoni...",
+                         "turns":  146,
+                         "files":  [
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\ReoIntro.tsx",
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\ReoIntroPreview.tsx",
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\main.tsx",
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\ReoAvatar.tsx"
+                                   ],
+                         "commands":  18,
+                         "git":  null,
+                         "updated":  "2026-11-07T20:14:13Z"
+                     },
+                     {
+                         "id":  "a1839293-75ec-487d-bbd7-574982d98dad",
+                         "project":  "app",
+                         "goal":  "are there any good examples of websites that actually have a cool avatar like reo, cause rn it feels like a customer cha...",
+                         "turns":  45,
+                         "files":  [
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\ReoAvatar.tsx",
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\styles.css",
+                                       "C:\\Projects\\Reonit-Hackathon\\reonic\\app\\src\\ReoIntroPreview.tsx"
+                                   ],
+                         "commands":  1,
+                         "git":  "app/src/main.tsx   |  2 ++\n app/src/styles.css | 43 +++++++++++++++++++++++++++++++++++++++++++\n 2 files changed, 45 insertions(+)",
+                         "updated":  "2026-11-07T20:22:34Z"
+                     }
+                 ]
+};</script>
+<div class="wrap">
+  <div class="top">
+    <h1>Learn mode</h1>
+    <span id="status" class="pill idle"><span class="dot"></span><span id="status-txt">idle</span></span>
+  </div>
+  <div id="current"></div>
+  <div class="metrics">
+    <div class="metric"><div class="lbl">Sessions · 7d</div><div class="val" id="m-sessions">0</div></div>
+    <div class="metric"><div class="lbl">Files touched · 7d</div><div class="val" id="m-files">0</div></div>
+    <div class="metric"><div class="lbl">Commands · 7d</div><div class="val" id="m-cmds">0</div></div>
+    <div class="metric"><div class="lbl">Turns · 7d</div><div class="val" id="m-turns">0</div></div>
+  </div>
+  <p class="sec">Recent sessions</p>
+  <div class="list" id="timeline"></div>
+  <div class="foot" id="foot"></div>
+</div>
+<script>
+  const D = window.LEARN_DATA || { sessions: [], live: null, watch: false, generated: null };
+  const esc = s => (s||"").replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  const rel = iso => {
+    if (!iso) return "";
+    const d = (Date.now() - new Date(iso).getTime())/1000;
+    if (d < 90) return "just now";
+    if (d < 3600) return Math.round(d/60) + "m ago";
+    if (d < 86400) return Math.round(d/3600) + "h ago";
+    return Math.round(d/86400) + "d ago";
+  };
+  const st = document.getElementById("status");
+  const stt = document.getElementById("status-txt");
+  if (D.watch) { st.className = "pill live"; stt.textContent = "watching · updates each turn"; }
+  else { st.className = "pill idle"; stt.textContent = "idle"; }
+
+  if (D.live) {
+    document.getElementById("current").innerHTML =
+      '<div class="current"><div class="h">Current session</div>' +
+      '<div class="g">' + esc(D.live.goal || "(working…)") + '</div>' +
+      '<div class="m">' + (D.live.turns||0) + ' turns · ' + ((D.live.files||[]).length) + ' files · ' + (D.live.commands||0) + ' commands</div>' +
+      (D.live.files && D.live.files.length ? '<div class="files">' + D.live.files.slice(-6).map(f=>'<code>'+esc(f)+'</code>').join(' · ') + '</div>' : '') +
+      '</div>';
+  }
+
+  const wk = Date.now() - 7*86400*1000;
+  const recent = (D.sessions||[]).filter(s => new Date(s.updated||0).getTime() >= wk);
+  document.getElementById("m-sessions").textContent = recent.length;
+  document.getElementById("m-files").textContent = recent.reduce((a,s)=>a+((s.files||[]).length),0);
+  document.getElementById("m-cmds").textContent = recent.reduce((a,s)=>a+(s.commands||0),0);
+  document.getElementById("m-turns").textContent = recent.reduce((a,s)=>a+(s.turns||0),0);
+
+  const sorted = (D.sessions||[]).slice().sort((a,b)=> new Date(b.updated||0) - new Date(a.updated||0)).slice(0,12);
+  const tl = document.getElementById("timeline");
+  if (!sorted.length) { tl.innerHTML = '<div class="row"><div class="empty" style="padding-left:0">No sessions logged yet. Code a bit — this fills in automatically.</div></div>'; }
+  else {
+    tl.innerHTML = sorted.map(s =>
+      '<div class="row"><span class="ico">&#9679;</span><div class="body">' +
+      '<div class="goal">' + esc(s.goal || "(session)") + '</div>' +
+      '<div class="meta">' + esc(s.project||"") + ' · ' + (s.turns||0) + ' turns · ' + ((s.files||[]).length) + ' files</div>' +
+      '</div><span class="when">' + rel(s.updated) + '</span></div>'
+    ).join("");
+  }
+  document.getElementById("foot").textContent = D.generated ? ("Generated " + new Date(D.generated).toLocaleString()) : "";
+</script>
+</body>
+</html>
