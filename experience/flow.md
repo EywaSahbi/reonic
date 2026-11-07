@@ -46,6 +46,7 @@ Ask for the open fields in this order. If the engine's `missing_inputs` ranks a 
 | 1 | `heating_type` | "How do you heat today? That decides whether a heat pump makes sense." | `choice`, options `gas, oil, heatpump, electric, district, other` | `Gas`, `Oil`, `Heat pump already`, `Other` |
 | 2 | `has_ev` / `ev_planned` | "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." | `choice`, field `has_ev`, options `Yes, already`, `Planned`, `No` | same as options |
 | 2b | `has_existing_pv` | "Is there solar on the roof already? Then I'd plan around it." | `choice`, options `Yes, I have solar`, `No solar yet` (→ `true` / `false`) | none (cards) |
+| 2c | `existing_pv_kwp` | only after "Yes, I have solar": "How big is it, roughly? Then I only add what's missing." | `number` | `About 5 kWp`, `About 10 kWp`, `Not sure` |
 | 3 | `roof_area_sqm` | "How big is the roof area that faces the sun? Or give me your address and I'll look it up." | `address` (falls back to `number` if lookup fails) | `Use my address`, `About 40 m²`, `Not sure` |
 | 3b | `region` | "Which federal state do you live in? That sets how much sun your panels get." | `choice`, options the 16 codes `BW, BY, BE, BB, HB, HH, HE, MV, NI, NW, RP, SL, SN, ST, SH, TH` (app shows state names, sends the code) | none (cards) |
 | 4 | `house_size_sqm` (+ `house_built_year`) | only if a heat pump is in play: "How big is the living space, and roughly when was the house built? That sizes the heat pump." | `number` | `About 120 m²`, `About 160 m²` |
@@ -84,7 +85,7 @@ Standing chips after every design turn (when nothing more specific fits): `Why t
 ### Stage 5: Handoff
 
 reo **offers** the handoff (once, then leaves the `Send to installer` chip) when any of these is true:
-- heating type, EV and existing solar are known (or skipped), or
+- heating type, EV and existing solar are known (or skipped) **and** the price range is narrow (high ≤ 1.5 × low), or
 - the engine has no `high`-impact `missing_inputs` left, or
 - the customer asks ("send it", "I want an offer", "can someone call me").
 
