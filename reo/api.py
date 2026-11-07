@@ -494,12 +494,15 @@ def prices():
 
 
 @app.get("/validation")
-def validation(split: str = "test"):
-    """data's latest score JSON for the split (test, else val), as published; reo never edits the numbers."""
-    for sp in dict.fromkeys([split, "test", "val"]):
-        files = sorted(REPORTS.glob(f"score_*_{sp}.json"), key=lambda f: f.stat().st_mtime)
-        if files:
-            return {"available": True, "file": files[-1].name, **json.loads(files[-1].read_text(encoding="utf-8"))}
+def validation(split: str = "test", view: str | None = None):
+    """data's score JSON by its fixed name (data NEED 20:19): test (default), val, or the installer-profile view.
+    Served as published; reo never edits the numbers."""
+    names = {"test": "score_test_test.json", "val": "score_val_val.json", "profiles": "score_val_profiles_val.json"}
+    order = [view] if view else list(dict.fromkeys([split, "test", "val"]))
+    for key in order:
+        f = REPORTS / names.get(key, "")
+        if key in names and f.exists():
+            return {"available": True, "file": f.name, **json.loads(f.read_text(encoding="utf-8"))}
     return {"available": False, "note": "validation numbers arrive from data/score.py"}
 
 
