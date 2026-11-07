@@ -133,4 +133,13 @@ GoalResult.run_id: string;
 | POST | `/plans/{id}/actions/{action_id}/approve` | as v1.1; runs the `execute` tool and appends a step to the offer run | Sat 23:30 |
 | POST | `/plans/{id}/actions/{action_id}/reject` | `{reason?}` → `Plan` (action `status: "rejected"`, nothing executed) | Sat 23:30 |
 
+State rules (v1.3, cleanup 2026-11-08; no shape changes):
+- Customer responses (`/sessions/...`) never carry `offer_pack`. While `handed_over` their `design` is the design the customer handed over (the planner's working copy, with installer prices such as the grant line, stays installer-only); once `quoted` it is the confirmed design.
+- After handoff a customer message changes no facts or design: reo keeps it in the transcript for the planner, answers "why/cost" questions from the design the customer sees, no `ask`. A repeated `/handoff` returns the plan unchanged.
+- A `quoted` plan is frozen: `/edit`, `/variant`, `/prepare`, `/finalize` → 409. `/finalize` also closes a pending `send_quote` (status `done`), so it can't send a second confirmation.
+- `customer_message_draft` (and the pending `send_quote.payload.message`) is regenerated whenever the plan design changes (edit, variant, stale pack) or a visit is booked (it then names the booked slot); `draft_for` = `chosen ?? recommended`.
+- `send_quote` quotes the plan as the planner left it: `payload.variant` if the planner sends one, else the chosen variant or later edits; the proposed variant only while no variant was chosen and nothing was edited since prep. Engine down → 503, nothing executed.
+- Edits made while a pack is `preparing` mark its variants `stale` when it lands. Choosing a stale variant re-runs it on today's facts (card, plan and draft agree; `stale` cleared). A newer `/prepare` wins over an older run still finishing.
+- A run cut off by a reo restart shows `status: "failed"` (last step `interrupted`) and its pack `failed`; `/prepare` again.
+
 `Action.status` gains `"rejected"`. Effect classes: models only ever call `read` and `propose` tools; `execute` tools (`calendar.book`, `crm.create_task`, `quote.send`) run only from `/approve`. Installer edits re-run the guards on an existing pack and mark variants `stale: true` (`Variant.stale?: boolean`) instead of silently changing them.

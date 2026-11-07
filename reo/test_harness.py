@@ -43,7 +43,7 @@ def test_offer_pack_and_approvals(tmp_path, monkeypatch):
     assert run["status"] == "needs_approval"
     assert any(s["kind"] == "guard" and s["tool"] == "grounding" and s["ok"] for s in run["steps"])
     assert not any(s.get("effect") == "execute" for s in run["steps"])
-    assert c.get(f"/sessions/{pid}").json().get("offer_pack") is not None or True  # customer view never needs it
+    assert "offer_pack" not in c.get(f"/sessions/{pid}").json()  # installer-only
 
     ids = {a["kind"]: a["id"] for a in pack["actions"]}
     p = c.post(f"/plans/{pid}/actions/{ids['create_crm_task']}/reject", json={"reason": "not needed"}).json()

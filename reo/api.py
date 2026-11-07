@@ -52,8 +52,30 @@ _lock = threading.Lock()
 def _load(store: Path | None = None) -> dict:
     f = store or STORE
     if f.exists():
-        return json.loads(f.read_text(encoding="utf-8"))
+        return _recover(json.loads(f.read_text(encoding="utf-8")))
     return {"plans": {}, "state": {}}
+
+
+def _recover(db: dict) -> dict:
+    """A run stored as 'running' that this process does not know was cut off by a restart: show it as failed
+    (and its offer pack), so the UI can offer 'Prepare again' instead of waiting forever."""
+    for run in db.get("runs", {}).values():
+        if run["status"] == "running" and run["id"] not in RUNS:
+            run["status"] = "failed"
+            run["steps"].append({"n": len(run["steps"]) + 1, "kind": "guard", "tool": "error", "ok": False, "ms": 0,
+                                 "args_summary": "interrupted", "result_summary": "reo restarted during this run; prepare again"})
+    for plan in db["plans"].values():
+        pack = plan.get("offer_pack")
+        if pack and pack["status"] == "preparing" and pack.get("run_id") not in RUNS:
+            pack["status"] = "failed"
+    return db
+
+
+def _read() -> dict:
+    """Read-only snapshot for endpoints that do not write: under the lock, so a concurrent _save (e.g. the
+    background offer run) is never seen half-written."""
+    with _lock:
+        return _load()
 
 
 def _save(db: dict, store: Path | None = None) -> None:
@@ -71,10 +93,24 @@ def _get(db: dict, pid: str) -> tuple[dict, dict]:
 
 
 def out(plan: dict, installer: bool = False) -> dict:
-    """Plan as the app sees it. Customer responses never carry other homes (similar_projects)."""
+    """Plan as the app sees it. Customer responses never carry other homes (similar_projects) or the installer's
+    offer pack, and until the quote is confirmed they show the design the customer handed over, not the planner's
+    working copy (which may carry installer prices such as the grant line)."""
+    shown = {k: v for k, v in plan.items() if k not in ("customer_design", "offer_pack")}
+    if not installer:
+        shown.update(similar_projects=[], design=customer_design(plan))
+    elif "offer_pack" in plan:
+        shown["offer_pack"] = plan["offer_pack"]
     if plan["status"] != "drafting":
-        plan = {**plan, "summary": scripted.summary(plan)}
-    return plan if installer else {**plan, "similar_projects": []}
+        shown["summary"] = scripted.summary(shown)
+    return shown
+
+
+def customer_design(plan: dict) -> dict:
+    """What the customer may see: the handed-over design while the planner works, the plan itself otherwise."""
+    if plan["status"] == "handed_over":
+        return plan.get("customer_design") or plan["design"]
+    return plan["design"]
 
 
 def attach_evidence(plan: dict) -> None:
@@ -108,6 +144,8 @@ def _design(plan: dict, st: dict) -> tuple[dict, bool]:
 def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) -> dict:
     plan, st = _get(db, pid)
     intent, topic, new = parsed["intent"], parsed.get("topic"), parsed["facts"]
+    if plan["status"] != "drafting":
+        return after_handoff_turn(plan, intent, topic)
 
     if intent == "bill_yes":  # confirm what bill_reader read
         new = st.pop("bill_pending", None) or {}
@@ -177,6 +215,20 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     if ask:
         turn["ask"] = flow.ui_ask(ask)
     return turn
+
+
+def after_handoff_turn(plan: dict, intent: str, topic: str | None) -> dict:
+    """Once handed over the plan is the planner's (flow.md: no more questions). A customer message is kept in the
+    transcript for the planner but changes no facts or design; questions are answered from what the customer sees."""
+    d = customer_design(plan)
+    who = "Your planner has confirmed your quote" if plan["status"] == "quoted" else "Your plan is with Sonnfeld now"
+    if intent == "question" and d.get("params_version") != engine.OFFLINE:
+        text = scripted.answer(d, topic)
+    else:
+        text = f"{who}, so I can't change it here. I've kept your message so your planner sees it."
+    m = reo_msg(plan, text)
+    plan["updated_at"] = now()
+    return {"messages": [m], "plan": out(plan), "suggestions": []}
 
 
 GOALS = {"budget": "your budget", "independence": "as much independence as possible", "lowest_bill": "the lowest monthly bill"}
@@ -419,7 +471,10 @@ def handoff(pid: str, body: Handoff):
     with _lock:
         db = _load()
         plan, _ = _get(db, pid)
+        if plan["status"] != "drafting":  # a repeated handoff (double click, retry) must not reopen the plan or restart prep
+            return out(plan)
         plan["status"] = "handed_over"
+        plan["customer_design"] = plan["design"]  # what the customer agreed to; the planner edits plan["design"]
         plan["customer"] = {"name": body.name, **({"email": body.email} if body.email else {})}
         attach_evidence(plan)
         reo_msg(plan, f"Done. Your plan is with Sonnfeld, {body.name}. "
@@ -427,12 +482,12 @@ def handoff(pid: str, body: Handoff):
         plan["updated_at"] = now()
         _save(db)
     start_offer_prep(pid, "handoff")  # trigger: handoff -> offer_prep (runs in the background)
-    return out(_get(_load(), pid)[0])
+    return out(_get(_read(), pid)[0])
 
 
 @app.get("/sessions/{pid}")
 def get_session(pid: str):
-    return out(_get(_load(), pid)[0])
+    return out(_get(_read(), pid)[0])
 
 
 # ---------- installer endpoints ----------
@@ -453,7 +508,7 @@ class Finalize(BaseModel):
 
 @app.get("/plans")
 def list_plans(status: str | None = None):
-    plans = [p for p in _load()["plans"].values() if not status or p["status"] == status]  # installer inbox
+    plans = [p for p in _read()["plans"].values() if not status or p["status"] == status]  # installer inbox
     plans.sort(key=lambda p: p["updated_at"], reverse=True)
     return [{"id": p["id"], "customer": p["customer"], "total_eur": p["design"]["price"]["total_eur"],
              "status": p["status"], "updated_at": p["updated_at"]} for p in plans]
@@ -461,7 +516,7 @@ def list_plans(status: str | None = None):
 
 @app.get("/plans/{pid}")
 def get_plan(pid: str):
-    return out(_get(_load(), pid)[0], installer=True)
+    return out(_get(_read(), pid)[0], installer=True)
 
 
 @app.post("/plans/{pid}/edit")
@@ -469,6 +524,7 @@ def edit_plan(pid: str, body: Edit):
     with _lock:
         db = _load()
         plan, st = _get(db, pid)
+        _not_quoted(plan)
         st["locks"].update(body.locks or {})  # locks persist across edits, merged per component
         st["prices"].update(body.prices or {})
         facts = {**plan["facts"], **(body.facts or {})}
@@ -487,14 +543,46 @@ def edit_plan(pid: str, body: Edit):
         attach_evidence(plan)
         for v in (plan.get("offer_pack") or {}).get("variants", []):
             v["stale"] = True  # trigger: installer edit -> variants no longer match the facts / locks / prices
+        _refresh_draft(db, plan)  # the draft and the pending quote describe the plan as edited
         plan["updated_at"] = now()
         _save(db)
         return out(plan, installer=True)
 
 
+def _not_quoted(plan: dict) -> None:
+    """The customer already holds a confirmed quote: changing the design now would contradict it."""
+    if plan["status"] == "quoted":
+        raise HTTPException(409, "plan is already quoted; the confirmed quote can't be changed")
+
+
+def _visit(db: dict, plan: dict) -> tuple[str, bool]:
+    """The site-visit slot the customer message should name: the booked one, else the proposed one if still free."""
+    acts = [a for a in (plan.get("offer_pack") or {}).get("actions", []) if a["kind"] == "book_visit"]
+    done = next((a["payload"]["slot"] for a in acts if a["status"] == "done"), None)
+    if done:
+        return done, True
+    booked = db.get("calendar", [])
+    slot = next((a["payload"].get("slot") for a in acts if a["status"] == "proposed" and a["payload"].get("slot") not in booked), None)
+    return slot or htools.free_slots(booked)[0], False
+
+
+def _refresh_draft(db: dict, plan: dict) -> None:
+    """Regenerate the customer message from the plan's current design (template, grounded by construction) and
+    put it on the pending send_quote, so the sent message always matches the quoted design."""
+    pack = plan.get("offer_pack")
+    if not pack or pack.get("status") != "ready" or plan["design"].get("params_version") == engine.OFFLINE:
+        return
+    slot, booked = _visit(db, plan)
+    pack["customer_message_draft"] = hskills._draft(plan["customer"].get("name", ""), plan["design"], slot, booked)
+    pack["draft_for"] = pack.get("chosen") or pack.get("recommended")
+    for act in pack.get("actions", []):
+        if act["kind"] == "send_quote" and act["status"] == "proposed":
+            act["payload"]["message"] = pack["customer_message_draft"]
+
+
 @app.post("/plans/{pid}/ask")
 def ask_plan(pid: str, body: Ask):
-    plan, st = _get(_load(), pid)
+    plan, st = _get(_read(), pid)
     d = engine.design(plan["facts"], st["locks"], st["prices"])  # fresh engine call for this answer
     if d is None:
         return {"answer": "The calculation isn't reachable right now, so I can't explain the numbers yet."}
@@ -519,7 +607,13 @@ def finalize(pid: str, body: Finalize):
     with _lock:
         db = _load()
         plan, _ = _get(db, pid)
+        _not_quoted(plan)  # a second finalize would send the customer a second confirmation
         _finalize(plan, body.note)
+        for a in (plan.get("offer_pack") or {}).get("actions", []):  # the quote is out: close the pending send_quote
+            if a["kind"] == "send_quote" and a["status"] == "proposed":
+                a.update(status="done", result="quote sent with Finalize", at=now())
+                _log_step(db, plan, {"kind": "tool", "tool": "quote.send", "effect": "execute",
+                                     "args_summary": "finalized by planner", "result_summary": "quote sent to the customer"})
         _save(db)
         return out(plan, installer=True)
 
@@ -568,6 +662,7 @@ def start_offer_prep(pid: str, trigger: str) -> str:
         ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
         runner = Runner(SKILLS["offer_prep"], ctx, trigger)
         plan["offer_pack"] = {**PREPARING, "run_id": runner.run["id"]}
+        db.setdefault("runs", {})[runner.run["id"]] = json.loads(json.dumps(runner.run))  # findable after a restart
         _save(db)
     threading.Thread(target=_finish_offer, args=(pid, runner, STORE), daemon=True).start()
     return runner.run["id"]
@@ -580,16 +675,25 @@ def _finish_offer(pid: str, runner: Runner, store: Path) -> None:
         plan = db["plans"].get(pid)
         if plan is None:
             return
+        db.setdefault("runs", {})[run["id"]] = run
+        if (plan.get("offer_pack") or {}).get("run_id") != run["id"]:  # a newer prepare replaced this run
+            _save(db, store)
+            return
         pack = run["output"] or {**PREPARING, "status": "failed", "run_id": run["id"]}
         if pack.get("status") == "preparing":
             pack["status"] = "failed"
         plan["offer_pack"] = {**pack, "duration_s": run["duration_s"], "prepared_at": now()}
-        db.setdefault("runs", {})[run["id"]] = run
+        st = db["state"][pid]
+        basis = (runner.ctx.facts, runner.ctx.st.get("locks") or {}, runner.ctx.st.get("prices") or {})
+        if basis != (plan["facts"], st.get("locks") or {}, st.get("prices") or {}):  # planner edited while reo prepared
+            for v in plan["offer_pack"]["variants"]:
+                v["stale"] = True
+            _refresh_draft(db, plan)
         _save(db, store)
 
 
 def _run(rid: str) -> dict:
-    run = RUNS.get(rid) or _load().get("runs", {}).get(rid)
+    run = RUNS.get(rid) or _read().get("runs", {}).get(rid)
     if run is None:
         raise HTTPException(404, f"no run {rid}")
     return run
@@ -609,9 +713,9 @@ class VariantName(BaseModel):
 
 @app.post("/plans/{pid}/prepare")
 def prepare(pid: str, _: dict | None = None):
-    _get(_load(), pid)
+    _not_quoted(_get(_read(), pid)[0])
     start_offer_prep(pid, "prepare")
-    return out(_get(_load(), pid)[0], installer=True)
+    return out(_get(_read(), pid)[0], installer=True)
 
 
 @app.post("/plans/{pid}/variant")
@@ -619,6 +723,7 @@ def choose_variant(pid: str, body: VariantName):
     with _lock:
         db = _load()
         plan, st = _get(db, pid)
+        _not_quoted(plan)
         pack = plan.get("offer_pack") or {}
         v = next((x for x in pack.get("variants", []) if x["name"] == body.name), None)
         if v is None:
@@ -630,14 +735,12 @@ def choose_variant(pid: str, body: VariantName):
         st["locks"] = dict(v["locks"])
         plan["design"] = d
         pack["chosen"] = body.name
-        # the draft must describe the chosen variant: regenerate it from that design (template, grounded by construction)
-        slot = next((a["payload"].get("slot") for a in pack.get("actions", []) if a["kind"] == "book_visit"), None)             or htools.free_slots(db.get("calendar", []))[0]
-        pack["customer_message_draft"] = hskills._draft(plan["customer"].get("name", ""), d, slot)
-        pack["draft_for"] = body.name
+        if v.pop("stale", False):  # an outdated card is re-run on today's facts: card, plan and draft agree again
+            v["design"], v["why"] = d, hskills._why(v["name"], d)
         for act in pack.get("actions", []):
             if act["kind"] == "send_quote" and act["status"] == "proposed":
                 act["label"], act["payload"]["variant"] = f"Send quote ({body.name} variant)", body.name
-                act["payload"]["message"] = pack["customer_message_draft"]
+        _refresh_draft(db, plan)  # the draft must describe the chosen variant
         plan["installer_edits"].append({"at": now(), "change": f"variant {body.name} chosen", "before": before,
                                         "after": d["price"]["total_eur"]})
         plan["history"].append({"at": now(), "trigger": f"variant {body.name}", "total_eur": d["price"]["total_eur"]})
@@ -676,17 +779,25 @@ def approve(pid: str, aid: str, body: Payload | None = None):
         payload = {**a["payload"], **override}
         if a["kind"] == "book_visit" and payload.get("slot") in db.get("calendar", []):
             raise HTTPException(409, f"slot {payload['slot']} is already booked")
-        result = htools.execute(a["kind"], payload, db)
         if a["kind"] == "send_quote":
-            # the quote is the plan as the planner left it: a chosen variant (plus later edits) wins over the proposal
+            # the quote is the plan as the planner left it: an explicit variant, else a chosen variant or later edits;
+            # the proposed variant only while the plan is still exactly as reo prepared it
+            _not_quoted(plan)
             pack = plan["offer_pack"]
-            want = override.get("variant") or (None if pack.get("chosen") else payload.get("variant"))
-            payload["variant"] = want or pack.get("chosen") or payload.get("variant")
+            edited = any(v.get("stale") for v in pack["variants"])
+            want = override.get("variant") or (None if pack.get("chosen") or edited else payload.get("variant"))
             v = next((x for x in pack["variants"] if x["name"] == want), None)
             if v and pack.get("chosen") != v["name"]:
                 d = engine.design(plan["facts"], v["locks"], st["prices"])
-                if d:
-                    st["locks"], plan["design"], pack["chosen"] = dict(v["locks"]), d, v["name"]
+                if d is None:
+                    raise HTTPException(503, "engine not reachable, quote not sent")
+                st["locks"], plan["design"], pack["chosen"] = dict(v["locks"]), d, v["name"]
+                if pack.get("draft_for") != v["name"]:
+                    _refresh_draft(db, plan)
+                    payload["message"] = override.get("message") or pack["customer_message_draft"]
+            payload["variant"] = pack.get("chosen") or (None if edited else payload.get("variant"))
+        result = htools.execute(a["kind"], payload, db)  # after every check: nothing half-done on a refusal
+        if a["kind"] == "send_quote":
             _finalize(plan, payload.get("message"))
         elif a["kind"] == "book_visit":
             reo_msg(plan, f"Your site visit with Sonnfeld is booked for {payload['slot']}.")
@@ -694,6 +805,8 @@ def approve(pid: str, aid: str, body: Payload | None = None):
             reo_msg(plan, f"Your planner would like a few documents: {', '.join(payload.get('documents', []))}. "
                           "You can send them by email or bring them to the site visit.")
         a.update(status="done", payload=payload, result=result, at=now())
+        if a["kind"] == "book_visit" and plan["status"] != "quoted":
+            _refresh_draft(db, plan)  # the message now names the booked slot
         _log_step(db, plan, {"kind": "tool", "tool": htools.EXECUTE_TOOL[a["kind"]], "effect": "execute",
                              "args_summary": f"approved by planner: {a['label']}", "result_summary": result})
         plan["updated_at"] = now()
@@ -717,7 +830,7 @@ def reject(pid: str, aid: str, body: Reason | None = None):
 
 @app.get("/calendar/slots")
 def calendar_slots():
-    return {"slots": htools.free_slots(_load().get("calendar", []))}
+    return {"slots": htools.free_slots(_read().get("calendar", []))}
 
 
 @app.get("/runs/{rid}")
@@ -727,8 +840,8 @@ def get_run(rid: str):
 
 @app.get("/plans/{pid}/runs")
 def plan_runs(pid: str):
-    stored = _load().get("runs", {})
-    runs = {**stored, **{k: v for k, v in RUNS.items() if k not in stored}}
+    stored = _read().get("runs", {})
+    runs = {**stored, **RUNS}  # a live run's in-memory copy is newer than its stored start record
     mine = [{k: v for k, v in r.items() if k != "output"} for r in runs.values() if r["plan_id"] == pid]
     return sorted(mine, key=lambda r: r["started_at"], reverse=True)
 

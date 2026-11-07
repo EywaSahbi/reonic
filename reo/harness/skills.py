@@ -63,11 +63,12 @@ def _questions(d: dict) -> list[str]:
     return qs + [f"Assumed: {a['note']}" for a in d.get("assumptions", [])[:3] if a.get("note")]
 
 
-def _draft(name: str, d: dict, slot: str) -> str:
+def _draft(name: str, d: dict, slot: str, booked: bool = False) -> str:
     suggestion = scripted.headline(d).removeprefix("I'd suggest ")
+    visit = (f"Your site visit is booked for {slot}; we will look at your roof then." if booked else
+             f"Before we confirm the final price we would like to see your roof. Would {slot} suit you for a short site visit?")
     return (f"Hello {name},\n\nthank you for planning your solar system with Sonnfeld. Based on your details we suggest "
-            f"{suggestion} Before we confirm the final price we would like to see your roof. Would {slot} suit you for a short "
-            f"site visit?\n\nBest regards,\nSonnfeld")
+            f"{suggestion} {visit}\n\nBest regards,\nSonnfeld")
 
 
 def _total(ctx: Ctx, name: str) -> float:
