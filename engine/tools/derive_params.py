@@ -7,7 +7,8 @@ without --split all projects are used, which makes any evaluation in-sample).
 - c        median of kWp × Y / D (kept to explain the size: "produces ~c× your demand")
 - r_B      median battery kWh per PV kWp; battery catalogue = sizes offered at least 20 times
 - battery bands: the experts' most common battery size per PV size band (sizes battery like experts do)
-- installer_profiles: the PV line and battery bands per installer, from that installer's projects only
+- installer_profiles: the PV line and battery bands per installer, from that installer's projects only; for installers
+  that sell fixed packages (top 5 PV sizes ≥ 50% of their designs) the PV sizes they sold at least 5 times
 - heat-pump and wallbox sizes offered
 """
 import argparse
@@ -36,6 +37,38 @@ def pv_line(pv):
     b, a = np.polyfit(bands.d / 1000, bands.kwp, 1, w=np.sqrt(bands.n))
     err = float((pv.pv_kwp - (a + b * pv.total_demand_kwh / 1000)).abs().median())
     return float(a), float(b), err
+
+
+PACKAGE_BANDS = 6                      # demand bands for package sellers (chosen on val: 4 / 5 / 6 / 8 tried)
+
+
+def pv_packages(df):
+    """For installers that sell fixed packages (top 5 PV sizes ≥ 50% of designs): the package they sell most often
+    per demand band, as [[upper total_demand_kwh or null, kWp], ...]; [] for installers that design freely."""
+    g = df[(df.pv_kwp > 0) & ~df.has_existing_pv.astype(bool)]
+    sizes = g.pv_kwp.round(2).value_counts()
+    if not len(sizes) or sizes.head(5).sum() / sizes.sum() < 0.5:
+        return []
+    edges = sorted(set(float(e) for e in np.quantile(g.total_demand_kwh, np.linspace(0, 1, PACKAGE_BANDS + 1))[1:-1]))
+    modes, lo = [], -1.0
+    for hi in edges + [None]:
+        band = g[(g.total_demand_kwh > lo) & ((g.total_demand_kwh <= hi) if hi else True)]
+        modes.append(float(band.pv_kwp.round(2).mode().iloc[0]))
+        lo = hi
+    # bands hold ~40 projects each, so their modes are noisy: make the package grow with demand (smallest package
+    # in the lowest band, then never smaller than the band before); better on val (65% vs 61% within ±20%)
+    mono = [min(modes)]
+    for m in modes[1:]:
+        mono.append(max(mono[-1], m))
+    return [[hi, m] for hi, m in zip(edges + [None], mono)]
+
+
+def module_w(df):
+    """The installer's typical module power (W): median kWp per module over its designs with a module count.
+    Used only for package sellers, so packages come out exact (10.8 kWp = 24 × 450 W); free designers keep the
+    engine's finer 430 W steps (closer to the experts on val)."""
+    g = df[(df.pv_kwp > 0) & (df.pv_modules > 0)]
+    return round(float((g.pv_kwp * 1000 / g.pv_modules).median())) if len(g) else None
 
 
 def battery_bands(df):
@@ -84,8 +117,10 @@ def main():
         ga, gb, gerr = pv_line(pv[pv.installer == inst])
         profiles[inst] = {"pv_line": {"a_kwp": round(ga, 3), "b_kwp_per_mwh": round(gb, 3),
                                       "median_abs_error_kwp": round(gerr, 2)},
-                          "battery_by_pv_band": battery_bands(g), "projects": len(g)}
-        print(f"  {inst}: kWp = {ga:.2f} + {gb:.3f} × D_MWh, battery bands {profiles[inst]['battery_by_pv_band']}")
+                          "battery_by_pv_band": battery_bands(g), "pv_packages": pv_packages(g),
+                          "module_w": module_w(g) if pv_packages(g) else None, "projects": len(g)}
+        print(f"  {inst}: kWp = {ga:.2f} + {gb:.3f} × D_MWh, battery bands {profiles[inst]['battery_by_pv_band']}, "
+              f"packages {profiles[inst]['pv_packages']}")
     params["installer_profiles"] = profiles
     params["heatpump_catalogue_kw"] = hp_sizes
     params["derived_from_dataset"] = {"on": date.today().isoformat(), "script": "engine/tools/derive_params.py",

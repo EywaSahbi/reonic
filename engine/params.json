@@ -277,6 +277,33 @@
           18.0
         ]
       ],
+      "pv_packages": [
+        [
+          3000.0,
+          6.3
+        ],
+        [
+          4000.0,
+          6.3
+        ],
+        [
+          4500.0,
+          10.8
+        ],
+        [
+          6000.0,
+          10.8
+        ],
+        [
+          9000.0,
+          10.8
+        ],
+        [
+          null,
+          10.8
+        ]
+      ],
+      "module_w": 450,
       "projects": 235
     },
     "2a8ba8e2": {
@@ -311,6 +338,8 @@
           15.0
         ]
       ],
+      "pv_packages": [],
+      "module_w": null,
       "projects": 863
     }
   },
@@ -494,5 +523,47 @@
     "usable_roof_share": "PLACEHOLDER 0.75: share of the roof that takes modules (edges, chimneys, windows); open question for the Reonic experts",
     "existing_pv_default_kwp": "PLACEHOLDER 5 kWp when a customer has PV but does not know its size",
     "sim_calibration": "see sim_calibration.source"
+  },
+  "expert_spread": {
+    "pv": {
+      "all": [
+        0.707,
+        1.454
+      ],
+      "23c108b7": [
+        0.75,
+        1.714
+      ],
+      "2a8ba8e2": [
+        0.692,
+        1.381
+      ]
+    },
+    "battery": {
+      "all": [
+        0.667,
+        1.4
+      ],
+      "23c108b7": [
+        1.0,
+        1.64
+      ],
+      "2a8ba8e2": [
+        0.5,
+        1.4
+      ]
+    },
+    "quantiles": {
+      "pv": [
+        0.15,
+        0.85
+      ],
+      "battery": [
+        0.2,
+        0.8
+      ]
+    },
+    "split": "train",
+    "script": "engine/tools/derive_spread.py"
   }
 }

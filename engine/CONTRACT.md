@@ -32,9 +32,9 @@ type Component = {
   recommended: boolean;
   size: number | null;                  // kWp (pv), kWh (battery), kW (heatpump, wallbox)
   unit: "kWp" | "kWh" | "kW";
-  range: [number, number] | null;       // plausible sizes given what is still unknown
+  range: [number, number] | null;       // sizes comparable expert designs choose, incl. what is still unknown (~80% of expert sizes fall inside on val)
   quantity?: number;                    // e.g. number of PV modules
-  confidence: "low" | "medium" | "high";
+  confidence: "low" | "medium" | "high";   // how much the still-missing inputs could move the size
   locked: boolean;
   reasons: string[];                    // 1–3, name the input that drove the decision
 };

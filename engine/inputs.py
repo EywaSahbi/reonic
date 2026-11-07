@@ -47,6 +47,7 @@ class Home:
 @dataclass
 class PvSizing:
     kwp: float                          # new PV, snapped to whole modules
+    module_w: float
     modules: int
     area_needed_sqm: float
     roof: str                           # "unknown" | "too_small" | "fits"
@@ -172,6 +173,8 @@ def profile(installer: str | None) -> dict:
     prof = PARAMS.get("installer_profiles", {}).get(installer or "")
     return {"pv_line": prof["pv_line"] if prof else PARAMS["pv_line"],
             "battery_by_pv_band": prof["battery_by_pv_band"] if prof else PARAMS["battery"]["by_pv_band"],
+            "pv_packages": prof.get("pv_packages", []) if prof else [],
+            "module_w": (prof.get("module_w") if prof else None) or PARAMS["module_w"],
             "installer": installer if prof else None}
 
 
@@ -183,15 +186,19 @@ def pv_kwp_for(demand_kwh, home: Home, line: dict | None = None):
 
 
 def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None = None,
-            line: dict | None = None) -> PvSizing:
+            line: dict | None = None, packages: list | None = None, module_w: float | None = None) -> PvSizing:
     """PV from the expert line, minus existing PV, snapped to modules; then the roof check (METHOD.md step 0)."""
     p = PARAMS
-    w, area = p["module_w"], p["module_area_sqm"]
+    w = module_w or p["module_w"]
+    area = p["module_area_sqm"] * w / p["module_w"]     # shortcut: same module efficiency, area scales with W
     line = line or p["pv_line"]
     if pv_kwp_locked is not None:
         modules = round(pv_kwp_locked * 1000 / w)
     else:
         need = max(0.0, pv_kwp_for(home.total_demand_kwh, home, line) - home.existing_pv_kwp)
+        if packages and need:
+            # installers that sell fixed packages: the package they sell most often for this demand (train)
+            need = next(kwp for upper, kwp in packages if upper is None or home.total_demand_kwh <= upper)
         modules = round(need * 1000 / w)
     area_needed = modules * area
     missing = []
@@ -226,5 +233,5 @@ def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None =
                 hp = {"suggested": True, "kwp": hp_modules * w / 1000, "modules": hp_modules, "kwh": hp_kwh,
                       "heat": heat, "kw": kw}
 
-    return PvSizing(modules * w / 1000, modules, area_needed, roof, fitting, hp["suggested"], hp["kwp"],
+    return PvSizing(modules * w / 1000, w, modules, area_needed, roof, fitting, hp["suggested"], hp["kwp"],
                     hp["modules"], hp["kwh"], hp["heat"], hp["kw"], missing)

@@ -45,9 +45,15 @@ def test_each_fact_narrows_the_design():
     narrow = post({"total_demand_kwh": 4500, "region": "BY", "roof_orientation_deg": 180, "has_ev": False,
                    "roof_area_sqm": 60, "heating_type": "heatpump", "electricity_price_eur_per_kwh": 0.3})
     w, n = wide["components"]["pv"]["range"], narrow["components"]["pv"]["range"]
-    assert n[1] - n[0] < w[1] - w[0] and n[0] == n[1]
-    assert narrow["components"]["pv"]["confidence"] == "high"
+    assert n[1] - n[0] < w[1] - w[0]
+    assert narrow["components"]["pv"]["confidence"] == "high"      # nothing left that would change the size
     assert len(narrow["missing_inputs"]) < len(wide["missing_inputs"])
+
+
+def test_range_keeps_expert_spread_around_size():
+    pv = post({"total_demand_kwh": 4500, "region": "BY", "roof_orientation_deg": 180, "has_existing_pv": False})["components"]["pv"]
+    lo_r, hi_r = PARAMS["expert_spread"]["pv"]["all"]
+    assert pv["range"] == [round(pv["size"] * lo_r, 2), round(pv["size"] * hi_r, 2)]
 
 
 def test_ev_adds_wallbox_and_evening_load():

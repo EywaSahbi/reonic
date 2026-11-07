@@ -61,7 +61,7 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     pv_locked = None
     if lock["pv"]:
         pv_locked = lock["pv"].get("size", None) if lock["pv"]["recommended"] else 0.0
-    sizing = size_pv(home, facts, 0.0 if retrofit else pv_locked, prof["pv_line"])
+    sizing = size_pv(home, facts, 0.0 if retrofit else pv_locked, prof["pv_line"], prof["pv_packages"], prof["module_w"])
 
     # heat pump: suggested by the roof check, or forced on / off by a lock
     hp_rec, hp_kw, heat, hp_note = sizing.heatpump_suggested, sizing.heatpump_kw, sizing.heat_demand_kwh, None
@@ -111,7 +111,7 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
             cost[c][1] += q * hi
 
     if pv_rec and pv_kwp:
-        item(f"PV system, {pv_modules} modules × {p['module_w']} W, inverter", pv_kwp, "kWp", "pv_eur_per_kwp", "pv",
+        item(f"PV system, {pv_modules} modules × {sizing.module_w:g} W, inverter", pv_kwp, "kWp", "pv_eur_per_kwp", "pv",
              {"pv": pv_kwp - hp_pv, "heatpump": hp_pv})
         item("PV installation, scaffolding, grid registration", 1, "flat", "pv_base_eur", "pv")
     if bat_rec:
@@ -211,7 +211,10 @@ def reasons_for(key, r, no_battery_autarky):
         if r["retrofit"]:
             return [f"you already have {h.existing_pv_kwp:g} kWp; {r['modules']} extra modules only for the heat pump"]
         out = [f"{h.total_demand_kwh:,.0f} kWh/yr: {who} designs install {line['a_kwp']:.1f} kWp "
-               f"+ {line['b_kwp_per_mwh']:.2f} kWp per MWh"]
+               f"+ {line['b_kwp_per_mwh']:.2f} kWp per MWh"
+               if not r["profile"]["pv_packages"] else
+               f"{h.total_demand_kwh:,.0f} kWh/yr: installer {r['profile']['installer']} most often sells the "
+               f"{size:g} kWp package to homes with this demand"]
         gen = size * h.y_kwh_per_kwp
         out.append(f"{r['modules']} new modules produce ~{gen:,.0f} kWh/yr ({h.y_kwh_per_kwp:,.0f} kWh per kWp"
                    + (f" in {h.region}" if h.region else ", German average") + ")"
@@ -326,7 +329,12 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
             seen = [r["sizes"][k] for r in every if r["sizes"][k]]
         rng = [round(size, 2)] * 2 if locked and size else ([round(min(seen), 2), round(max(seen), 2)] if size else None)
         spread = (rng[1] - rng[0]) / size if size and rng else 1
-        conf = "high" if locked or spread < 0.1 else "medium" if spread < 0.3 else "low"
+        conf = "high" if locked or spread < 0.1 else "medium" if spread < 0.3 else "low"   # from missing inputs only
+        es = PARAMS.get("expert_spread", {}).get(k)
+        if es and size and not locked and not (k == "pv" and base["retrofit"]):
+            # widen to what comparable expert designs choose (10-90% of expert ÷ engine on train)
+            lo_r, hi_r = es.get(base["profile"]["installer"] or "all", es["all"])
+            rng = [round(min(rng[0], size * lo_r), 2), round(max(rng[1], size * hi_r), 2)]
         if k == "heatpump" and size and not locked and any(a["field"] == "heating_demand_kwh" for a in base["assumptions"]):
             conf = "low"
         reasons = reasons_for(k, base, no_bat)
