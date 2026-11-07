@@ -83,6 +83,9 @@ export type Ask = {
 
 export type Turn = { messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask };
 
+/** POST /sessions/{id}/voice: a normal turn plus what reo heard and its spoken reply (base64 mp3). */
+export type VoiceTurn = Turn & { heard: string; audio: string | null };
+
 export type PlanSummary = Pick<Plan, "id" | "customer" | "status" | "updated_at"> & { total_eur: number };
 
 export type Health = { ok: boolean; llm: boolean; voice: boolean; engine: boolean };

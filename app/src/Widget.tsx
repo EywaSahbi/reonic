@@ -3,6 +3,7 @@ import { api } from "./api";
 import type { Ask, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
+import { MicButton, useReoAudio, voiceForced } from "./Voice";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
@@ -22,6 +23,35 @@ export function Widget({ onClose }: { onClose: () => void }) {
   const [handoffOpen, setHandoffOpen] = useState(false);
   const started = useRef(false);
   const bottom = useRef<HTMLDivElement>(null);
+  const [voiceOn, setVoiceOn] = useState(voiceForced());
+  const [notice, setNotice] = useState<string | null>(null);
+  const reoAudio = useReoAudio();
+
+  // Mic only when reo can do voice (ElevenLabs key set in reo/.env), or forced with ?voice=1.
+  useEffect(() => {
+    api.health().then((h) => setVoiceOn((v) => v || h.voice)).catch(() => {});
+  }, []);
+
+  // One spoken turn: reo transcribes (ElevenLabs), runs the normal turn, and returns its reply as mp3.
+  async function sendVoice(audio: Blob) {
+    if (!id) return;
+    setBusy(true);
+    setError(null);
+    setChips([]);
+    setAsk(undefined);
+    try {
+      const t = await api.sendVoice(id, audio);
+      setMessages((m) => [...m, ...(t.heard ? [{ role: "customer" as const, text: t.heard, at: stamp() }] : []), ...t.messages]);
+      setPlan(t.plan);
+      setChips(t.suggestions);
+      setAsk(t.ask);
+      if (t.audio) reoAudio.play(t.audio);
+    } catch (e) {
+      setError(errText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function run(p: () => Promise<Turn>, customerText?: string) {
     if (customerText) setMessages((m) => [...m, { role: "customer", text: customerText, at: stamp() }]);
@@ -170,8 +200,13 @@ export function Widget({ onClose }: { onClose: () => void }) {
                   {visibleChips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
                 </div>
               )}
+              {notice && <div className="voice-hint">{notice}</div>}
+              {reoAudio.speaking && (
+                <div className="speaking"><span className="mic-dot" /> reo is speaking <button type="button" onClick={reoAudio.stop}>Stop</button></div>
+              )}
               <form className="composer" onSubmit={(e) => { e.preventDefault(); say(text); }}>
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder="Type a message…" disabled={busy || !id} aria-label="Message reo" />
+                {voiceOn && <MicButton disabled={busy || !id} onRecorded={sendVoice} onStart={() => { reoAudio.stop(); setNotice(null); }} onError={setNotice} />}
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message reo" />
                 <button type="submit" disabled={busy || !text.trim()}>Send</button>
               </form>
             </div>

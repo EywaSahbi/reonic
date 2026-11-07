@@ -351,6 +351,19 @@ export const mockApi: Api = {
   },
 
   async validation() { return delay({ note: "mock: reality-check numbers arrive from data/score.py via reo" }); },
+
+  // Mock voice: no speech-to-text in the browser, so "heard" is the next demo line the plan still needs.
+  // shortcut: fake transcript + no audio; the real path is reo -> ElevenLabs (reo/VOICE.md).
+  async health() { return delay({ ok: true, llm: false, voice: true, engine: true }); },
+  async sendVoice(id) {
+    const f = get(id).facts;
+    const heard = f.total_demand_kwh === undefined && f.num_inhabitants === undefined ? "We use about 4,500 kWh a year"
+      : !f.heating_type ? "We heat with gas"
+      : f.has_ev === undefined && f.ev_planned === undefined ? "We're buying an electric car next year"
+      : "Why a battery?";
+    const turn = await mockApi.sendMessage(id, heard);
+    return { ...turn, heard, audio: null };
+  },
 };
 
 function respondToFacts(plan: Plan, facts: Partial<HomeFacts>, trigger: string, skipped: Set<string>): Turn {

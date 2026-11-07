@@ -1,5 +1,5 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
-import type { HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn } from "./types";
+import type { Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
 import { mockApi } from "./mock";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "";
@@ -16,6 +16,8 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
 }
 
 export type Api = {
+  health(): Promise<Health>;
+  sendVoice(id: string, audio: Blob): Promise<VoiceTurn>;
   startSession(): Promise<Turn>;
   sendMessage(id: string, text: string): Promise<Turn>;
   sendFacts(id: string, facts: Partial<HomeFacts>): Promise<Turn>;
@@ -31,6 +33,14 @@ export type Api = {
 };
 
 const httpApi: Api = {
+  health: () => call("GET", "/health"),
+  async sendVoice(id, audio) {
+    const form = new FormData();
+    form.append("audio", audio, audio.type.includes("mp4") ? "speech.mp4" : "speech.webm");
+    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/voice`, { method: "POST", body: form });
+    if (!res.ok) throw new Error(`POST /sessions/${id}/voice → ${res.status} ${await res.text()}`);
+    return res.json() as Promise<VoiceTurn>;
+  },
   startSession: () => call("POST", "/sessions", {}),
   sendMessage: (id, text) => call("POST", `/sessions/${id}/messages`, { text }),
   sendFacts: (id, facts) => call("POST", `/sessions/${id}/facts`, { facts }),
