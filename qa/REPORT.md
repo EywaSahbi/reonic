@@ -2,6 +2,11 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — engine total-demand contract update (commit 336060e)
+
+- Smoke coverage now requests designs with no demand, `total_demand_kwh`, and household-only `annual_demand_kwh`, plus the separate weekly/daily EV distance cases. This validates acceptance and response shapes; the active engine stub is not yet available for runtime execution.
+- reo's contract now documents voice routes as M2 and explicitly gated on a human DECISION; voice checks remain deferred until that decision and service implementation.
+
 ## 2026-11-07 — tap cards and house illustration (commit adfa400)
 
 - `cd app && npm run build`: passed.

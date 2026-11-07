@@ -22,6 +22,7 @@ EV_DISTANCE_FACTS = (
     {"annual_demand_kwh": 4500, "has_ev": True, "ev_km_per_week": 250},
     {"annual_demand_kwh": 4500, "has_ev": True, "ev_km_per_day": 35},
 )
+DEMAND_FACTS = ({}, {"total_demand_kwh": 4500}, FACTS)
 
 
 class NotPublished(Exception):
@@ -119,9 +120,10 @@ def engine_checks(results: list[str]) -> None:
     prices = call(ENGINE, "/prices")
     assert isinstance(prices, dict), "GET /prices must return a price-list object"
     results.append("PASS engine GET /prices")
-    design = call(ENGINE, "/design", {"facts": FACTS})
-    check_design(design, "engine POST /design")
-    results.append("PASS engine POST /design")
+    for design_facts in DEMAND_FACTS:
+        design = call(ENGINE, "/design", {"facts": design_facts})
+        check_design(design, "engine POST /design")
+    results.append("PASS engine /design with no demand, total demand, and household demand")
     for distance_facts in EV_DISTANCE_FACTS:
         distance_design = call(ENGINE, "/design", {"facts": distance_facts})
         check_design(distance_design, "engine POST /design with EV distance")
