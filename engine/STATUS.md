@@ -2,7 +2,7 @@
 
 ## Backlog (top = next)
 
-Plan and what each item became: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.md).
+Plan and what each item became: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.md). Every outside number: [SOURCES.md](SOURCES.md).
 
 - [x] Step 0 (`inputs.py`): HomeFacts → home, PV from the expert line, existing PV, orientation, roof check, heat-pump suggestion and kW
 - [x] Y from PVGIS + MaStR (`tools/derive_y.py`); line, r_B, catalogues from the dataset (`tools/derive_params.py`); hourly profiles (`tools/derive_profiles.py`)
@@ -10,7 +10,7 @@ Plan and what each item became: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.m
 - [x] Ranges, ranked `missing_inputs`, reasons, confidence, bundle, locks, budget (`design.py`)
 - [x] API `/health`, `/prices`, `/design`, `/explain` (`api.py`); `predict.py` evaluation
 - [x] Phase 2: battery by expert bands, installer profiles, retrofit rule, /explain deltas + step what-ifs
-- [ ] Phase 2: H0 optimism, remaining placeholders (PLAN.md open points)
+- [x] Phase 2: H0 optimism calibrated on 74 measured homes; sourced price list; placeholders replaced by published values (two left, PLAN.md)
 
 ## Published
 
@@ -43,4 +43,6 @@ Baseline (same as data's `score.py`): every home gets PV and a battery at the **
 - Battery recommended whenever there is PV and no battery (95% of expert PV offers); size = experts' most common size per PV band (chosen on val over ratio rule and fixed 5/7/10/15 steps).
 - Existing PV = retrofit, no new panels unless locked (51 of 52 no-PV test homes).
 - Test is not re-scored after these changes; data freezes final test numbers at M3.
-- Module 430 W, 1.95 m² (area placeholder until the module datasheet is chosen).
+- Module 430 W, 2.0 m² (Jinko Tiger Neo 430 W datasheet).
+- Prices: sourced market ranges (prices.json `_sources`), KfW base grant 30% only; default tariff stays 0.32 €/kWh (owner).
+- HTW load profiles (CC BY-NC 4.0) are not in the repo; only the derived factor table is.

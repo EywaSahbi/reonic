@@ -234,7 +234,7 @@ These are rules, not preferences: a violating candidate is deleted, not scored l
 
 ## Step 4: simulate one year per candidate
 
-> **Implemented** in `sim.py` (hourly, ~3 ms per year). Load = BDEW H0 profile (2019, via demandlib) × household kWh + EV charging 18–22 h + heat pump spread by heating degree hours (base 15 °C, 15% hot water flat). PV = PVGIS 2019 hourly output at the centre of Germany × kWp × Y_home. Battery: 95% efficiency each way, max 0.5 × capacity per hour. Profiles: `tools/derive_profiles.py` → `profiles.json`. *Limitation:* H0 averages many homes, so one home's peaks are smoother than reality and autarky comes out optimistic (~10 points). Steps 5–8 below (learned scorer) are not built; battery size uses the experts' most common size per PV band instead ([PLAN.md](PLAN.md) #8).
+> **Implemented** in `sim.py` (hourly, ~3 ms per year). Load = BDEW H0 profile (2019, via demandlib) × household kWh + EV charging 18–22 h + heat pump spread by heating degree hours (base 15 °C, 15% hot water flat). PV = PVGIS 2019 hourly output at the centre of Germany × kWp × Y_home. Battery: 95% efficiency each way, max 0.5 × capacity per hour. Profiles: `tools/derive_profiles.py` → `profiles.json`. H0 averages many homes and is too smooth, so the self-used energy is multiplied by a factor measured on 74 real single-family homes at 1-minute resolution (HTW Berlin, `tools/derive_calibration.py`, factors 0.71–0.95). Example: PV producing 2× the demand with 2 kWh battery per MWh: H0 86% autarky, measured homes 77%. Steps 5–8 below (learned scorer) are not built; battery size uses the experts' most common size per PV band instead ([PLAN.md](PLAN.md) #8).
 
 | Symbol | Meaning |
 |---|---|

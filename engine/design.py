@@ -120,12 +120,25 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     if wb_rec:
         item(f"Wallbox {wb_kw:g} kW incl. installation", 1, "piece", "wallbox_eur", "wallbox")
     if hp_rec and hp_kw:
+        device = [price_of(k, overrides) for k in ("heatpump_eur_per_kw", "heatpump_base_eur")]
         item(f"Air-water heat pump {hp_kw:g} kW", hp_kw, "kW", "heatpump_eur_per_kw", "heatpump")
         item("Heat pump installation, hydraulics", 1, "flat", "heatpump_base_eur", "heatpump")
+        # KfW 458 base grant: share of the eligible heat-pump cost (bonuses are case by case, not applied)
+        share = price_of("heatpump_subsidy_share", overrides)[0]
+        cap = price_of("heatpump_subsidy_max_eligible_eur", overrides)[0]
+        mid, lo, hi = (hp_kw * per_kw + base for per_kw, base in zip(*device))
+        grant = round(share * min(mid, cap), 2)
+        items.append({"label": f"KfW 458 base grant {share:.0%} (estimate, eligible up to €{cap:,.0f})", "qty": 1,
+                      "unit": "flat", "unit_price_eur": -grant, "total_eur": -grant})
+        cost["heatpump"][0] -= share * min(lo, cap)
+        cost["heatpump"][1] -= share * min(hi, cap)
     total = round(sum(i["total_eur"] for i in items), 2)
 
     # economics: one year before and after
-    price, feed_in = home.electricity_price_eur_per_kwh, price_of("feed_in_eur_per_kwh", overrides)[0]
+    price = home.electricity_price_eur_per_kwh
+    # EEG: full rate for the first 10 kWp, lower rate above; one blended rate for the whole system
+    r10, r_above = price_of("feed_in_eur_per_kwh", overrides)[0], price_of("feed_in_above_10kwp_eur_per_kwh", overrides)[0]
+    feed_in = (min(pv_total, 10) * r10 + max(0.0, pv_total - 10) * r_above) / pv_total if pv_total else r10
     house = max(0.0, home.total_demand_kwh - home.ev_kwh - home.heatpump_kwh)
     after = sim(round(house), round(home.ev_kwh), round(home.heatpump_kwh + hp_el), round(pv_total, 2),
                 round(home.y_kwh_per_kwp, 1), (bat_kwh if bat_rec else 0.0) + existing_bat)

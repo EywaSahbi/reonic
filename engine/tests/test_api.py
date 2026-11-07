@@ -60,7 +60,9 @@ def test_gas_home_with_spare_roof_gets_heatpump_priced_and_saved():
     hp = d["components"]["heatpump"]
     assert hp["recommended"] and hp["size"] in PARAMS["heatpump_catalogue_kw"] and "gas" in hp["reasons"][0]
     assert any("heat pump" in i["label"].lower() for i in d["price"]["items"])
-    assert d["economics"]["total_demand_kwh"] == 4500 + 5000
+    assert d["economics"]["total_demand_kwh"] == round(4500 + 15000 / PARAMS["cop"])
+    grant = [i for i in d["price"]["items"] if i["label"].startswith("KfW")]
+    assert grant and grant[0]["total_eur"] < 0
     assert d["economics"]["bill_today_eur_per_month"] > d["economics"]["bill_after_eur_per_month"]
 
 

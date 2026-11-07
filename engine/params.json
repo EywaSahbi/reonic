@@ -5,12 +5,11 @@
     "ev_km_per_year": 13000,
     "electricity_price_eur_per_kwh": 0.32
   },
-  "_placeholders": "k_ev, cop, usable_roof_share, heatpump_full_load_hours, building_type_factor are hand-set",
   "c_coverage": 1.94,
   "k_ev_kwh_per_km": 0.18,
-  "cop": 3.0,
+  "cop": 3.3,
   "module_w": 430,
-  "module_area_sqm": 1.95,
+  "module_area_sqm": 2.0,
   "pv_yield": {
     "y_kwh_per_kwp": 1081.9,
     "sd_kwh_per_kwp": 59.1,
@@ -223,24 +222,25 @@
   "heatpump_full_load_hours": 2000,
   "heating_demand_default_kwh": 15800.0,
   "heat_demand_kwh_per_sqm_by_built_year": {
-    "_note": "approximate, German building typology (IWU) ranges",
+    "_note": "rough heating demand by construction period, consistent with published ranges: before 1978 unrenovated 200-300, 1978-2000 120-200, 2000-2015 70-120, new builds 30-70 kWh/m²a",
     "1978": 200,
     "1994": 150,
     "2009": 100,
     "9999": 60
   },
   "demand_by_inhabitants_kwh": {
-    "_note": "approximate, Stromspiegel für Deutschland, house without electric hot water",
-    "1": 2300,
-    "2": 3000,
-    "3": 3600,
-    "4": 4000,
-    "5": 4800
+    "_note": "Stromspiegel für Deutschland 2025 (co2online), single-family house without electric hot water",
+    "1": 1800,
+    "2": 2700,
+    "3": 3500,
+    "4": 3800,
+    "5": 4500
   },
   "building_type_factor": {
+    "_note": "no published difference between house types (Stromspiegel splits house / flat only); kept neutral",
     "detached": 1.0,
-    "semi": 0.95,
-    "terraced": 0.9
+    "semi": 1.0,
+    "terraced": 1.0
   },
   "existing_pv_default_kwp": 5,
   "wallbox_kw": 11,
@@ -313,5 +313,186 @@
       ],
       "projects": 863
     }
+  },
+  "sim_calibration": {
+    "gen_ratio": [
+      0.5,
+      0.75,
+      1.0,
+      1.5,
+      2.0,
+      2.5,
+      3.0,
+      4.0
+    ],
+    "battery_kwh_per_mwh": [
+      0.0,
+      0.5,
+      1.0,
+      1.5,
+      2.0,
+      3.0,
+      4.0
+    ],
+    "factor": [
+      [
+        0.7079,
+        0.8475,
+        0.8886,
+        0.9135,
+        0.9317,
+        0.9453,
+        0.9526
+      ],
+      [
+        0.7322,
+        0.8498,
+        0.8758,
+        0.8802,
+        0.8938,
+        0.902,
+        0.9042
+      ],
+      [
+        0.7482,
+        0.8536,
+        0.8739,
+        0.8765,
+        0.8939,
+        0.9016,
+        0.9008
+      ],
+      [
+        0.7654,
+        0.8566,
+        0.871,
+        0.8761,
+        0.8963,
+        0.906,
+        0.9106
+      ],
+      [
+        0.777,
+        0.8598,
+        0.8704,
+        0.8803,
+        0.9011,
+        0.9166,
+        0.9211
+      ],
+      [
+        0.7865,
+        0.8634,
+        0.87,
+        0.8807,
+        0.903,
+        0.9213,
+        0.9301
+      ],
+      [
+        0.7944,
+        0.8668,
+        0.871,
+        0.8821,
+        0.9067,
+        0.9289,
+        0.9382
+      ],
+      [
+        0.8075,
+        0.8731,
+        0.8737,
+        0.8871,
+        0.9147,
+        0.9389,
+        0.9482
+      ]
+    ],
+    "measured_self_use": [
+      [
+        0.23409999907016754,
+        0.3553999960422516,
+        0.41429999470710754,
+        0.4404999911785126,
+        0.45019999146461487,
+        0.4571000039577484,
+        0.46059998869895935
+      ],
+      [
+        0.274399995803833,
+        0.4165000021457672,
+        0.5008000135421753,
+        0.5478000044822693,
+        0.5710999965667725,
+        0.5932000279426575,
+        0.605400025844574
+      ],
+      [
+        0.30239999294281006,
+        0.4553000032901764,
+        0.5537999868392944,
+        0.6104999780654907,
+        0.6399999856948853,
+        0.6668000221252441,
+        0.6802999973297119
+      ],
+      [
+        0.33889999985694885,
+        0.5034000277519226,
+        0.6169000267982483,
+        0.6855999827384949,
+        0.722599983215332,
+        0.7565000057220459,
+        0.7724000215530396
+      ],
+      [
+        0.3621000051498413,
+        0.532800018787384,
+        0.6545000076293945,
+        0.7289000153541565,
+        0.770799994468689,
+        0.8112000226974487,
+        0.8312000036239624
+      ],
+      [
+        0.3785000145435333,
+        0.5532000064849854,
+        0.6797000169754028,
+        0.7578999996185303,
+        0.8019000291824341,
+        0.84579998254776,
+        0.8680999875068665
+      ],
+      [
+        0.39079999923706055,
+        0.5680999755859375,
+        0.6980999708175659,
+        0.7786999940872192,
+        0.8241000175476074,
+        0.868399977684021,
+        0.8924000263214111
+      ],
+      [
+        0.4083999991416931,
+        0.5885000228881836,
+        0.7232999801635742,
+        0.8069999814033508,
+        0.8547999858856201,
+        0.8986999988555908,
+        0.9211000204086304
+      ]
+    ],
+    "source": "HTW Berlin, 74 measured single-family load profiles, 1-minute (Tjaden et al., CC BY-NC 4.0), vs the engine's hourly H0 simulation",
+    "derived_on": "2026-11-07",
+    "script": "engine/tools/derive_calibration.py"
+  },
+  "_sources": {
+    "k_ev_kwh_per_km": "ADAC Ecotest values incl. charging losses span 0.155 (Hyundai Ioniq 6) to 0.204 (NIO ET7) kWh/km; 0.18 is the middle",
+    "cop": "Fraunhofer ISE field test of air-water heat pumps in existing homes: seasonal performance factor 3.3 (WP-QS im Bestand, 2024 interim; final 2025 reported 3.4; WPsmart 2020: 3.1)",
+    "module": "Jinko Tiger Neo JKM430N-54HL4R datasheet: 430 W, 1,762 × 1,134 mm = 2.0 m²",
+    "heatpump_full_load_hours": "common sizing rule for existing single-family houses: heat load = yearly heat demand / 1,800-2,100 full-load hours",
+    "usable_roof_share": "PLACEHOLDER 0.75: share of the roof that takes modules (edges, chimneys, windows); open question for the Reonic experts",
+    "existing_pv_default_kwp": "PLACEHOLDER 5 kWp when a customer has PV but does not know its size",
+    "sim_calibration": "see sim_calibration.source"
   }
 }

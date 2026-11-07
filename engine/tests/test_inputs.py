@@ -30,7 +30,7 @@ def test_household_demand_plus_ev_when_no_total():
 
 def test_demand_from_inhabitants():
     h = read_inputs({"num_inhabitants": 4, "building_type": "terraced"})
-    assert h.total_demand_kwh == pytest.approx(4000 * 0.9)
+    assert h.total_demand_kwh == pytest.approx(PARAMS["demand_by_inhabitants_kwh"]["4"] * PARAMS["building_type_factor"]["terraced"])
 
 
 def test_ev_km_from_week_or_day():
@@ -93,7 +93,7 @@ def test_spare_roof_suggests_heatpump_for_gas():
     s = size_pv(read_inputs({"total_demand_kwh": 4500, "roof_area_sqm": 100,
                              "heating_type": "gas", "heating_demand_kwh": 15000}))
     assert s.roof == "fits" and s.heatpump_suggested
-    assert s.heatpump_electricity_kwh == pytest.approx(5000)
+    assert s.heatpump_electricity_kwh == pytest.approx(15000 / PARAMS["cop"])
     assert s.heatpump_kw == min(PARAMS["heatpump_catalogue_kw"], key=lambda k: abs(k - 7.5))   # 15,000 kWh / 2,000 h
     assert 0 < s.heatpump_extra_modules <= s.modules_fitting - s.modules
 
