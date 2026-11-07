@@ -35,6 +35,7 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 | Tap **Gas** | Heat pump question answered; range updates | "Taps answer instantly; every tap re-runs the engine." |
 | Tap **Planned** (electric car) | Wallbox + car appear on the house; reo says what changed and why | "Buying an EV next year: the design adapts and reo explains why." |
 | Tap **No solar yet** | Next question or the handoff offer | "This question exists because our validation showed it was missing (step 5)." |
+| If asked for the roof: type **Musterstraße 12, 80331 München** in the roof/address box | "I looked up your address: …" 48 m², south, 35°, Bavaria; PV re-derived to fit the roof (mocked lookup, reo 9979655) | "An address is enough; reo reads roof size and orientation." |
 | Optional: type **why a battery?** | reo answers from the engine's reasons | "It explains, it doesn't invent numbers." |
 
 ### 1:50 — Handoff
