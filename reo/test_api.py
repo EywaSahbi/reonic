@@ -40,6 +40,7 @@ def test_demo_flow(tmp_path, monkeypatch):
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we use about 4,500 kWh a year"}).json()
     assert t["plan"]["facts"]["total_demand_kwh"] == 4500
     assert "8 kWp" in t["messages"][0]["text"] and "estimate" in t["messages"][0]["text"]
+    assert "For your home, I'd suggest" in t["messages"][0]["text"]
     assert t["ask"]["field"] == "heating_type"
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Gas"}).json()  # chip
@@ -50,6 +51,9 @@ def test_demo_flow(tmp_path, monkeypatch):
     assert t["plan"]["facts"]["ev_planned"] is True
     assert "added a wallbox" in t["messages"][0]["text"]
     assert t["suggestions"][0] == "Yes, send it"  # heating + EV known -> offer the handoff once
+
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Not yet"}).json()
+    assert "only here to help" not in t["messages"][0]["text"]
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "why a battery?"}).json()
     assert "evening use" in t["messages"][0]["text"]
@@ -87,3 +91,8 @@ def test_voice_turn(tmp_path, monkeypatch):
     assert t["heard"].startswith("we use") and t["plan"]["facts"]["total_demand_kwh"] == 4500 and t["audio"] == "bXAz"
     t = c.post(f"/sessions/{pid}/voice", files={"audio": ("a.webm", b"", "audio/webm")}).json()
     assert t["heard"] == "" and "didn't catch" in t["messages"][0]["text"]
+
+
+def test_articles():
+    import scripted
+    assert [scripted.a_n(n) for n in ["8", "11", "18", "80", "10", "12", "1"]] == ["an", "an", "an", "an", "a", "a", "a"]

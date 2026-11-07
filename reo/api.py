@@ -139,7 +139,7 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer) -> str:
     est = f"roughly {scripted.eur(lo)}–{scripted.eur(hi)[1:]} (estimate)"
     parts = []
     if new and not had_numbers:
-        parts.append("For your home, " + scripted.headline(d)[0].lower() + scripted.headline(d)[1:])
+        parts.append("For your home, " + scripted.headline(d))
     elif changed:
         parts.append(f"Got it, so I've {changed}. The new estimate is {est}.")
     elif new:

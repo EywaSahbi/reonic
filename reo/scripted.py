@@ -30,7 +30,7 @@ CHIP_FACTS = {
 }
 CHIP_INTENTS = {
     "yes, send it": ("handoff", None), "send to installer": ("handoff", None), "send it": ("handoff", None),
-    "not sure": ("skip", None), "no fixed budget": ("skip", None), "not yet": ("other", None),
+    "not sure": ("skip", None), "no fixed budget": ("skip", None), "not yet": ("continue", None),
     "i know my yearly kwh": ("kwh", None),
     "why this size?": ("question", "pv"), "what does it cost?": ("question", "price"),
     "what would make it cheaper?": ("question", "price"), "what if i skip it?": ("question", None),
@@ -113,6 +113,11 @@ def kwp(x: float) -> str:
     return f"{round(x * 2) / 2:g}"
 
 
+def a_n(n: str) -> str:
+    """'a' or 'an' before a spoken number: an 8, an 11, an 18, an 80."""
+    return "an" if n.startswith("8") or n.split(".")[0] in ("11", "18") else "a"
+
+
 def headline(d: dict) -> str:
     c = d["components"]
     parts = []
@@ -120,11 +125,14 @@ def headline(d: dict) -> str:
         panels = f" (around {c['pv']['quantity']} panels)" if c["pv"].get("quantity") else ""
         parts.append(f"about {kwp(c['pv']['size'])} kWp of solar{panels}")
     if c["battery"]["recommended"] and c["battery"]["size"]:
-        parts.append(f"a {round(c['battery']['size'])} kWh battery")
+        n = str(round(c['battery']['size']))
+        parts.append(f"{a_n(n)} {n} kWh battery")
     if c["heatpump"]["recommended"] and c["heatpump"]["size"]:
-        parts.append(f"a {round(c['heatpump']['size'])} kW heat pump")
+        n = str(round(c['heatpump']['size']))
+        parts.append(f"{a_n(n)} {n} kW heat pump")
     if c["wallbox"]["recommended"] and c["wallbox"]["size"]:
-        parts.append(f"an {round(c['wallbox']['size'])} kW wallbox")
+        n = str(round(c['wallbox']['size']))
+        parts.append(f"{a_n(n)} {n} kW wallbox")
     if not parts:
         return "I don't have a design to suggest yet."
     items = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
@@ -187,8 +195,8 @@ def summary(plan: dict) -> str:
         home.append("EV planned")
     if f.get("roof_area_sqm"):
         home.append(f"roof {f['roof_area_sqm']:g} m²")
-    assumed = [a["field"] for a in d.get("assumptions", [])]
-    s = (", ".join(home) or "Few facts given") + (f"; assumed: {', '.join(assumed)}." if assumed else ".")
+    assumed = [a["note"] or a["field"].replace("_", " ") for a in d.get("assumptions", [])]
+    s = (", ".join(home) or "Few facts given") + (f". Assumed: {'; '.join(assumed)}." if assumed else ".")
     asks = sum(1 for m in plan["transcript"] if m["role"] == "customer" and re.search(r"cost|price|kost|teuer|€", m["text"].lower()))
     if asks:
         s += f" Customer asked {asks}x about cost."
