@@ -1,12 +1,17 @@
 # reo/ status (owner: `EywaSahbi`)
 
+## Handover (session ended 2026-11-07 by Eywa's decision)
+
+Everything above the open items works and is pushed. To resume: read this file, CONTRACT.md, run `uv run pytest` (17 pass), start `uv run uvicorn api:app --port 8001` with the engine on :8000.
+Open: Haiku vs Sonnet for installer_qa (human call, models in `llm.py`), German scripted replies, chat_turn onto the harness, live bill test, final voice. Possible engine NEED: 5 kWh battery suggested even when the roof caps PV at ~1 kWp.
+
 ## Backlog (top = next)
 
 - [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
 - [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [x] installer_qa on the harness (Sonnet 5.5 / scripted)
 - [x] Mocked address lookup (`addresses.json`: Musterstraße München, Hauptstraße Hamburg, Lindenweg Dresden)
-- [x] Roof from address via OpenStreetMap (roof.py), width x length input, skip; waiting on engine for the hard module cap (NEED 21:10)
+- [x] Roof from address via OpenStreetMap (roof.py), width x length input, skip; engine cap delivered (ad07027), verified with app's dimensions input (de19c1e)
 - [ ] chat_turn onto the harness; German scripted replies; follow_up (stretch)
 
 - [x] `CONTRACT.md` v1; API (`api.py`) with plan store, all customer + installer endpoints, Claude loop, scripted fallback, engine-offline mode (M0/M1)
