@@ -1,0 +1,8 @@
+{
+  "version": "v0-handset",
+  "defaults": {
+    "annual_demand_kwh": 4500,
+    "ev_km_per_year": 13000,
+    "electricity_price_eur_per_kwh": 0.32
+  }
+}
