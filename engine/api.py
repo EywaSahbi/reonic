@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from design import PRICES, VERSION, design, explain
+from inputs import PARAMS
 
 app = FastAPI(title="reo engine")
 app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:5173", "http://localhost:8001"],
@@ -16,6 +17,7 @@ class DesignRequest(BaseModel):
     facts: dict = {}
     locks: dict = {}
     prices: dict = {}
+    installer: str | None = None        # installer id: use that installer's expert habits (installer_profiles)
 
 
 class ExplainRequest(DesignRequest):
@@ -27,6 +29,12 @@ def health():
     return {"ok": True, "params_version": VERSION}
 
 
+@app.get("/installers")
+def installers():
+    return {k: {"projects": v["projects"], "pv_line": v["pv_line"], "battery_by_pv_band": v["battery_by_pv_band"]}
+            for k, v in PARAMS.get("installer_profiles", {}).items()}
+
+
 @app.get("/prices")
 def prices():
     return PRICES
@@ -35,7 +43,7 @@ def prices():
 @app.post("/design")
 def post_design(req: DesignRequest):
     try:
-        return design(req.facts, req.locks, req.prices)
+        return design(req.facts, req.locks, req.prices, req.installer)
     except (ValueError, KeyError, TypeError) as e:
         raise HTTPException(422, str(e))
 
@@ -43,6 +51,6 @@ def post_design(req: DesignRequest):
 @app.post("/explain")
 def post_explain(req: ExplainRequest):
     try:
-        return explain(req.facts, req.locks, req.prices, req.component)
+        return explain(req.facts, req.locks, req.prices, req.component, req.installer)
     except (ValueError, KeyError, TypeError) as e:
         raise HTTPException(422, str(e))

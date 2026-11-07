@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from api import app  # noqa: E402
-from design import sim  # noqa: E402
+from design import battery_for, sim  # noqa: E402
 from inputs import PARAMS  # noqa: E402
 
 client = TestClient(app)
@@ -14,7 +14,7 @@ GAS_HOME = {"total_demand_kwh": 4500, "heating_type": "gas", "roof_area_sqm": 10
             "heating_demand_kwh": 15000}
 
 
-def post(facts, **kw):
+def post(facts, **kw):  # noqa: D103
     r = client.post("/design", json={"facts": facts, **kw})
     assert r.status_code == 200, r.text
     return r.json()
@@ -33,7 +33,8 @@ def test_empty_facts_give_full_design():
     assert pv["recommended"] and pv["range"][0] < pv["range"][1] and pv["quantity"] > 0
     assert d["components"]["battery"]["recommended"]
     assert d["price"]["range_eur"][0] < d["price"]["total_eur"] < d["price"]["range_eur"][1]
-    assert d["missing_inputs"][0]["field"] == "total_demand_kwh" and d["missing_inputs"][0]["impact"] == "high"
+    top = [m["field"] for m in d["missing_inputs"][:2]]
+    assert {"has_existing_pv", "total_demand_kwh"} == set(top) and d["missing_inputs"][0]["impact"] == "high"
     assert d["bundle"] in {"S", "M", "L", "XL"}
     for k in ("bill_today_eur_per_month", "bill_after_eur_per_month", "autarky_pct", "payback_years"):
         assert d["economics"][k] is not None
@@ -74,7 +75,7 @@ def test_battery_lock_rederives_price_and_autarky():
 def test_pv_lock_rederives_battery():
     d = post({"total_demand_kwh": 4500}, locks={"pv": {"recommended": True, "size": 15}})
     assert d["components"]["pv"]["size"] == 15 and d["components"]["pv"]["range"] == [15, 15]
-    assert d["components"]["battery"]["size"] == 14       # nearest catalogue size to 0.93 × 15
+    assert d["components"]["battery"]["size"] == battery_for(15, PARAMS["battery"]["by_pv_band"])
 
 
 def test_price_override_is_exact():
@@ -91,7 +92,15 @@ def test_reasons_match_facts():
 
 def test_explain_battery_what_ifs():
     r = client.post("/explain", json={"facts": {"total_demand_kwh": 4500}, "component": "battery"}).json()
-    assert r["reasons"] and r["what_if"][0]["change"] == "no battery" and "autarky" in r["what_if"][0]["effect"]
+    changes = [w["change"] for w in r["what_if"]]
+    assert changes[0] == "no battery" and len(changes) == 3          # off, one step down, one step up
+    off = r["what_if"][0]["delta"]
+    assert off["price_eur"] < 0 and off["autarky_pct"] < 0 and r["what_if"][0]["locks"]["battery"] == {"recommended": False}
+
+
+def test_explain_adds_missing_component():
+    r = client.post("/explain", json={"facts": {"total_demand_kwh": 4500, "has_ev": False}, "component": "wallbox"}).json()
+    assert r["what_if"][0]["change"] == "add wallbox" and r["what_if"][0]["delta"]["price_eur"] > 0
 
 
 def test_bad_input_is_422():
@@ -120,8 +129,22 @@ def test_more_facts_do_not_widen_price_range():
     assert b[1] / b[0] <= a[1] / a[0] * 1.1        # a wallbox adds a little, a possible heat pump adds nothing
 
 
-def test_pv_reason_separates_existing_pv():
+def test_existing_pv_is_a_retrofit():
     d = post({"total_demand_kwh": 6000, "has_existing_pv": True, "existing_pv_kwp": 5})
-    pv = d["components"]["pv"]
-    assert f"{pv['quantity']} new modules produce ~{pv['size'] * 1082:,.0f}"[:20] in pv["reasons"][1]
-    assert "existing 5 kWp" in pv["reasons"][1]
+    assert not d["components"]["pv"]["recommended"] and "already have 5 kWp" in d["components"]["pv"]["reasons"][0]
+    assert d["components"]["battery"]["recommended"]          # storage for the existing panels
+    assert d["bundle"] is None
+
+
+def test_existing_pv_lock_still_allows_more_panels():
+    d = post({"total_demand_kwh": 6000, "has_existing_pv": True, "existing_pv_kwp": 5},
+             locks={"pv": {"recommended": True, "size": 4}})
+    assert d["components"]["pv"]["size"] == 4
+
+
+def test_installer_profile_changes_style():
+    a = post({"total_demand_kwh": 4500}, installer="23c108b7")
+    b = post({"total_demand_kwh": 4500}, installer="2a8ba8e2")
+    assert a["installer_profile"] == "23c108b7" and a["components"]["pv"]["size"] != b["components"]["pv"]["size"]
+    assert post({"total_demand_kwh": 4500}, installer="unknown")["installer_profile"] is None
+    assert set(client.get("/installers").json()) == {"23c108b7", "2a8ba8e2"}

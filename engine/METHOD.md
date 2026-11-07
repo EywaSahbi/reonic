@@ -234,7 +234,7 @@ These are rules, not preferences: a violating candidate is deleted, not scored l
 
 ## Step 4: simulate one year per candidate
 
-> **Implemented** in `sim.py` (hourly, ~3 ms per year). Load = BDEW H0 profile (2019, via demandlib) × household kWh + EV charging 18–22 h + heat pump spread by heating degree hours (base 15 °C, 15% hot water flat). PV = PVGIS 2019 hourly output at the centre of Germany × kWp × Y_home. Battery: 95% efficiency each way, max 0.5 × capacity per hour. Profiles: `tools/derive_profiles.py` → `profiles.json`. *Limitation:* H0 averages many homes, so one home's peaks are smoother than reality and autarky comes out optimistic (~10 points). Steps 5–8 below (learned scorer) are not built; battery size uses the expert ratio r_B instead ([PLAN.md](PLAN.md) #8).
+> **Implemented** in `sim.py` (hourly, ~3 ms per year). Load = BDEW H0 profile (2019, via demandlib) × household kWh + EV charging 18–22 h + heat pump spread by heating degree hours (base 15 °C, 15% hot water flat). PV = PVGIS 2019 hourly output at the centre of Germany × kWp × Y_home. Battery: 95% efficiency each way, max 0.5 × capacity per hour. Profiles: `tools/derive_profiles.py` → `profiles.json`. *Limitation:* H0 averages many homes, so one home's peaks are smoother than reality and autarky comes out optimistic (~10 points). Steps 5–8 below (learned scorer) are not built; battery size uses the experts' most common size per PV band instead ([PLAN.md](PLAN.md) #8).
 
 | Symbol | Meaning |
 |---|---|

@@ -11,7 +11,7 @@ Step 0 (`inputs.py`) gave PV kWp, module count, the roof check and the heat-pump
 | 5 | **Wallbox** | 11 kW when `has_ev` or `ev_planned` | `design.py` |
 | 6 | **Heat-pump kW** | heat demand ÷ 2,000 full-load hours → nearest size offered in the data (5, 7, 10, 12 kW); heat from `heating_demand_kwh`, else `house_size_sqm` × typical demand by `house_built_year`, else the dataset median 15,800 kWh | `inputs.py` |
 | 7 | **Hourly simulation** | 8,760 h: H0 × household, EV 18–22 h, heat pump by degree hours; PVGIS 2019 hourly PV; battery 95% each way, 0.5 C | `sim.py`, `tools/derive_profiles.py` |
-| 8 | **Battery** | Yes whenever there is PV and no battery (95% of expert PV offers have one); size = nearest catalogue size (5–18 kWh, offered ≥ 20× in the data) to 0.93 kWh per kWp; the simulation gives the autarky gain shown as its reason | `design.py` |
+| 8 | **Battery** | Yes whenever there is PV and no battery (95% of expert PV offers have one); size = the experts' most common battery for that PV size band (train), per installer when known. On val within ±20%: 43% (ratio rule 38%, fixed 5/7/10/15 steps 30%, baseline 41%) | `design.py`, `tools/derive_params.py` |
 | 9 | **Price** | `prices.json`: base + per-unit price with low / high from public German market ranges; line items, total, `range_eur`; request `prices` overrides fix a key | `prices.json`, `design.py` |
 | 10 | **Economics** | Before vs after from the simulation: import × tariff − export × feed-in (7.86 ct), plus fuel cost replaced by a heat pump; savings, payback, autarky, self-consumption, monthly bills | `design.py` |
 | 11 | **Ranges** | Re-run the design at the low / high plausible value of each missing input (`params.json` `plausible`); range = min / max size over the runs | `design.py` |
@@ -20,11 +20,12 @@ Step 0 (`inputs.py`) gave PV kWp, module count, the roof check and the heat-pump
 | 14 | **Locks** | Locked component keeps its value; battery re-derives from locked PV, heat-pump PV from the roof left, price and economics recomputed | `design.py` |
 | 15 | **API** | `/health`, `/prices`, `/design`, `/explain` (what-ifs), CORS for :5173 / :8001, ~15–35 ms per design | `api.py` |
 | 16 | **Evaluation** | `predict.py` over all 1,593 projects → `out/predictions_all.csv` (data's format) + `out/score_all.json`; scores in [STATUS.md](STATUS.md) | `predict.py`, `dataset.py` |
+| + | **Installer profiles** | PV line and battery bands per installer from its own train projects; `installer` in requests, `GET /installers`. On val: PV MAE 2.46 (global 2.50, baseline 2.71), battery MAE 2.93 (3.09, baseline 2.99) | `tools/derive_params.py`, `design.py` |
+| + | **Retrofit** | `has_existing_pv` → no new PV (storage / wallbox only) unless PV is locked; existing panels take roof space; asked first via `missing_inputs` | `design.py`, `inputs.py` |
 | + | **Budget** (`budget_eur`) | Battery steps down, then PV, until the price fits; noted in reasons and assumptions | `design.py` |
 
 ## Open points
 
-- Battery size within ±20% of the expert's: 37% vs 41% for "always the median size". Experts cluster on 5 and 10 kWh more than the ratio rule does.
 - Heat pumps: the dataset has no roof areas, so the engine never suggests one there (13 expert heat pumps in 1,593 projects); untestable on this data.
 - Wallbox: experts sell one to 23% of homes without an EV (planned EVs are not recorded); the rule only follows `has_ev` / `ev_planned`.
 - Autarky is optimistic (~10 points) because H0 is an averaged profile; payback ignores heat-pump subsidies (BEG) and price increases.

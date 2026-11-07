@@ -6,6 +6,8 @@ without --split all projects are used, which makes any evaluation in-sample).
 - PV line  kWp = a + b × D_MWh   fitted through the medians of demand bands (robust to odd projects)
 - c        median of kWp × Y / D (kept to explain the size: "produces ~c× your demand")
 - r_B      median battery kWh per PV kWp; battery catalogue = sizes offered at least 20 times
+- battery bands: the experts' most common battery size per PV size band (sizes battery like experts do)
+- installer_profiles: the PV line and battery bands per installer, from that installer's projects only
 - heat-pump and wallbox sizes offered
 """
 import argparse
@@ -22,6 +24,29 @@ sys.path.insert(0, str(ROOT))
 from dataset import expert_designs  # noqa: E402
 
 PARAMS_PATH = ROOT / "params.json"
+PV_BANDS = [6, 8, 10, 12, 15]          # upper kWp bounds; above the last = last band
+
+
+def pv_line(pv):
+    """(a, b, median abs error) of kWp = a + b × D_MWh through the medians of ten demand bands."""
+    pv = pv.copy()
+    pv["band"] = pd.qcut(pv.total_demand_kwh, 10, duplicates="drop")
+    bands = pv.groupby("band", observed=True).agg(d=("total_demand_kwh", "median"), kwp=("pv_kwp", "median"),
+                                                  n=("pv_kwp", "size"))
+    b, a = np.polyfit(bands.d / 1000, bands.kwp, 1, w=np.sqrt(bands.n))
+    err = float((pv.pv_kwp - (a + b * pv.total_demand_kwh / 1000)).abs().median())
+    return float(a), float(b), err
+
+
+def battery_bands(df):
+    """[[upper PV kWp or null, most common expert battery kWh], ...] over projects with PV and a battery."""
+    t = df[(df.pv_kwp > 0) & (df.battery_kwh > 0)]
+    out, lo = [], 0
+    for hi in PV_BANDS + [None]:
+        g = t[(t.pv_kwp > lo) & ((t.pv_kwp <= hi) if hi else True)]
+        out.append([hi, float(g.battery_kwh.round(0).mode().iloc[0])])
+        lo = hi
+    return out
 
 
 def main():
@@ -34,12 +59,8 @@ def main():
     pv = df[(df.pv_kwp > 0) & ~df.has_existing_pv.astype(bool) & (df.heatpump_kw == 0)
             & df.annual_demand_kwh.between(1000, 20000) & (df.pv_kwp <= 40)].copy()
 
-    pv["band"] = pd.qcut(pv.total_demand_kwh, 10, duplicates="drop")
-    bands = pv.groupby("band", observed=True).agg(d=("total_demand_kwh", "median"), kwp=("pv_kwp", "median"),
-                                                  n=("pv_kwp", "size"))
-    b, a = np.polyfit(bands.d / 1000, bands.kwp, 1, w=np.sqrt(bands.n))
+    a, b, line_err = pv_line(pv)
     c = float((pv.pv_kwp * y / pv.total_demand_kwh).median())
-    line_err = float((pv.pv_kwp - (a + b * pv.total_demand_kwh / 1000)).abs().median())
     c_err = float((pv.pv_kwp - c / y * pv.total_demand_kwh).abs().median())
 
     bat = df[(df.pv_kwp > 0) & (df.battery_kwh > 0)]
@@ -56,7 +77,16 @@ def main():
     params["pv_line"] = {"a_kwp": round(float(a), 3), "b_kwp_per_mwh": round(float(b), 3),
                          "median_abs_error_kwp": round(line_err, 2), "projects": len(pv)}
     params["c_coverage"] = round(c, 3)
-    params["battery"] = {"share_with_pv": round(share, 3), "r_b_kwh_per_kwp": round(r_b, 3), "catalogue_kwh": catalogue}
+    params["battery"] = {"share_with_pv": round(share, 3), "r_b_kwh_per_kwp": round(r_b, 3), "catalogue_kwh": catalogue,
+                         "by_pv_band": battery_bands(df)}
+    profiles = {}
+    for inst, g in df.groupby("installer"):
+        ga, gb, gerr = pv_line(pv[pv.installer == inst])
+        profiles[inst] = {"pv_line": {"a_kwp": round(ga, 3), "b_kwp_per_mwh": round(gb, 3),
+                                      "median_abs_error_kwp": round(gerr, 2)},
+                          "battery_by_pv_band": battery_bands(g), "projects": len(g)}
+        print(f"  {inst}: kWp = {ga:.2f} + {gb:.3f} × D_MWh, battery bands {profiles[inst]['battery_by_pv_band']}")
+    params["installer_profiles"] = profiles
     params["heatpump_catalogue_kw"] = hp_sizes
     params["derived_from_dataset"] = {"on": date.today().isoformat(), "script": "engine/tools/derive_params.py",
                                       "projects": len(df), "split": split or "all"}

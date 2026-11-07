@@ -22,7 +22,7 @@ type HomeFacts = {
   roof_type?: "gable" | "flat" | "mono" | "other";   // flat without orientation = east-west racks
   region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH";   // federal state (ISO 3166-2 code); sets the PV yield, else the national value
   electricity_price_eur_per_kwh?: number;
-  has_existing_pv?: boolean; existing_pv_kwp?: number; has_existing_battery?: boolean;
+  has_existing_pv?: boolean; existing_pv_kwp?: number; has_existing_battery?: boolean;   // existing PV = retrofit: no new panels unless pv is locked
   budget_eur?: number;                  // design steps the battery, then the PV down until the price fits
 };
 
@@ -50,6 +50,7 @@ type Design = {
                annual_savings_eur: number; payback_years: number | null;
                bill_today_eur_per_month: number; bill_after_eur_per_month: number };   // after < 0 = net feed-in credit
   bundle: "S" | "M" | "L" | "XL" | null;                                          // by new PV kWp: < 6, < 10, < 14, else XL
+  installer_profile: string | null;     // installer whose expert habits were used, null = all installers
   assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];     // defaults the engine used
   missing_inputs: { field: keyof HomeFacts; why: string; impact: "high" | "medium" | "low" }[];  // ranked
   params_version: string;
@@ -61,6 +62,14 @@ type Design = {
 | Method | Path | Body → Response | Milestone |
 |---|---|---|---|
 | GET | `/health` | → `{ok: true, params_version}` | M0 |
+| GET | `/installers` | → `{[id]: {projects, pv_line, battery_by_pv_band}}` (profiles fitted on that installer's train projects) | M1 |
 | GET | `/prices` | → `PriceList` (defaults, with `_low` / `_high`) | M0 |
-| POST | `/design` | `{facts: HomeFacts, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>, prices?: PriceList}` → `Design` (< 100 ms) | M1 |
-| POST | `/explain` | `{facts, locks?, prices?, component: ComponentKey}` → `{reasons: string[], what_if: {change: string, effect: string}[]}` | M1 |
+| POST | `/design` | `{facts: HomeFacts, locks?: Partial<Record<ComponentKey, {recommended: boolean, size?: number}>>, prices?: PriceList, installer?: string}` → `Design` (< 100 ms) | M1 |
+| POST | `/explain` | `{facts, locks?, prices?, installer?, component: ComponentKey}` → `{reasons: string[], what_if: WhatIf[]}`: component off (or on), one size step down and up | M1 |
+
+```ts
+type WhatIf = { change: string; effect: string;
+  delta: { price_eur: number; annual_savings_eur: number; payback_years: number | null; autarky_pct: number;
+           bill_after_eur_per_month: number };
+  locks: Record<ComponentKey, {recommended: boolean, size?: number}> };   // pass to /design to apply this variant
+```

@@ -142,6 +142,32 @@
       14.0,
       15.0,
       18.0
+    ],
+    "by_pv_band": [
+      [
+        6,
+        5.0
+      ],
+      [
+        8,
+        5.0
+      ],
+      [
+        10,
+        10.0
+      ],
+      [
+        12,
+        10.0
+      ],
+      [
+        15,
+        10.0
+      ],
+      [
+        null,
+        15.0
+      ]
     ]
   },
   "heatpump_catalogue_kw": [
@@ -188,6 +214,9 @@
     ],
     "has_ev": [
       true
+    ],
+    "has_existing_pv": [
+      true
     ]
   },
   "usable_roof_share": 0.75,
@@ -214,5 +243,75 @@
     "terraced": 0.9
   },
   "existing_pv_default_kwp": 5,
-  "wallbox_kw": 11
+  "wallbox_kw": 11,
+  "installer_profiles": {
+    "23c108b7": {
+      "pv_line": {
+        "a_kwp": 7.854,
+        "b_kwp_per_mwh": 0.444,
+        "median_abs_error_kwp": 1.85
+      },
+      "battery_by_pv_band": [
+        [
+          6,
+          6.0
+        ],
+        [
+          8,
+          9.0
+        ],
+        [
+          10,
+          9.0
+        ],
+        [
+          12,
+          9.0
+        ],
+        [
+          15,
+          9.0
+        ],
+        [
+          null,
+          18.0
+        ]
+      ],
+      "projects": 235
+    },
+    "2a8ba8e2": {
+      "pv_line": {
+        "a_kwp": 5.902,
+        "b_kwp_per_mwh": 0.607,
+        "median_abs_error_kwp": 1.96
+      },
+      "battery_by_pv_band": [
+        [
+          6,
+          5.0
+        ],
+        [
+          8,
+          5.0
+        ],
+        [
+          10,
+          10.0
+        ],
+        [
+          12,
+          10.0
+        ],
+        [
+          15,
+          10.0
+        ],
+        [
+          null,
+          15.0
+        ]
+      ],
+      "projects": 863
+    }
+  }
 }

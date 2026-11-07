@@ -167,21 +167,31 @@ def heat_demand(facts: dict, home: Home):
     return q, {"field": "heating_demand_kwh", "value": q, "note": "median heat demand in the expert projects"}
 
 
-def pv_kwp_for(demand_kwh, home: Home):
+def profile(installer: str | None) -> dict:
+    """The installer's own expert habits (fitted on its train projects), else the all-installer ones."""
+    prof = PARAMS.get("installer_profiles", {}).get(installer or "")
+    return {"pv_line": prof["pv_line"] if prof else PARAMS["pv_line"],
+            "battery_by_pv_band": prof["battery_by_pv_band"] if prof else PARAMS["battery"]["by_pv_band"],
+            "installer": installer if prof else None}
+
+
+def pv_kwp_for(demand_kwh, home: Home, line: dict | None = None):
     """Expert line kWp = a + b × D_MWh, scaled from the national yield to this roof's yield."""
-    line = PARAMS["pv_line"]
+    line = line or PARAMS["pv_line"]
     nat = PARAMS["pv_yield"]["y_kwh_per_kwp"]
     return (line["a_kwp"] + line["b_kwp_per_mwh"] * demand_kwh / 1000) * nat / home.y_kwh_per_kwp
 
 
-def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None = None) -> PvSizing:
+def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None = None,
+            line: dict | None = None) -> PvSizing:
     """PV from the expert line, minus existing PV, snapped to modules; then the roof check (METHOD.md step 0)."""
     p = PARAMS
     w, area = p["module_w"], p["module_area_sqm"]
+    line = line or p["pv_line"]
     if pv_kwp_locked is not None:
         modules = round(pv_kwp_locked * 1000 / w)
     else:
-        need = max(0.0, pv_kwp_for(home.total_demand_kwh, home) - home.existing_pv_kwp)
+        need = max(0.0, pv_kwp_for(home.total_demand_kwh, home, line) - home.existing_pv_kwp)
         modules = round(need * 1000 / w)
     area_needed = modules * area
     missing = []
@@ -191,7 +201,8 @@ def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None =
     if home.roof_area_sqm is None:
         missing.append({"field": "roof_area_sqm", "why": "needed to check the design fits the roof", "impact": "medium"})
     else:
-        fitting = math.floor(home.roof_area_sqm * p["usable_roof_share"] / area)
+        existing_modules = round(home.existing_pv_kwp * 1000 / w)      # existing panels already use roof
+        fitting = max(0, math.floor(home.roof_area_sqm * p["usable_roof_share"] / area) - existing_modules)
         if fitting < modules:
             roof = "too_small"
             missing.append({"field": "roof_area_sqm",
@@ -209,7 +220,7 @@ def size_pv(home: Home, facts: dict | None = None, pv_kwp_locked: float | None =
                                     "impact": "high"})
                 hp_kwh = heat / p["cop"]
                 # marginal expert rate: b kWp per extra MWh, scaled to this roof's yield
-                extra = p["pv_line"]["b_kwp_per_mwh"] * hp_kwh / 1000 * p["pv_yield"]["y_kwh_per_kwp"] / home.y_kwh_per_kwp
+                extra = line["b_kwp_per_mwh"] * hp_kwh / 1000 * p["pv_yield"]["y_kwh_per_kwp"] / home.y_kwh_per_kwp
                 hp_modules = min(round(extra * 1000 / w), spare)
                 kw = min(p["heatpump_catalogue_kw"], key=lambda s: abs(s - heat / p["heatpump_full_load_hours"]))
                 hp = {"suggested": True, "kwp": hp_modules * w / 1000, "modules": hp_modules, "kwh": hp_kwh,

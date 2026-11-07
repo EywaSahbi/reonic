@@ -19,10 +19,10 @@ OUT = Path(__file__).parent / "out"
 TOL = {"pv": 0.2, "battery": 0.2, "heatpump": 0.2, "wallbox": 0.0}   # size within ±20% (wallbox exact)
 
 
-def predict(df):
+def predict(df, use_profiles=False):
     rows = []
     for _, r in df.iterrows():
-        s = core(facts(r), {}, {})["sizes"]
+        s = core(facts(r), {}, {}, r.installer if use_profiles else None)["sizes"]
         rows.append({"project_id": r.project_id,
                      **{f"has_{k}": bool(s[k]) for k in ("pv", "battery", "heatpump", "wallbox")},
                      "pv_kwp": s["pv"] or 0, "battery_kwh": s["battery"] or 0,
@@ -60,10 +60,12 @@ def baseline(truth):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--split", choices=["train", "val", "test"], default=None)
-    split = ap.parse_args().split
-    name = split or "all"
+    ap.add_argument("--profiles", action="store_true", help="use each project's installer profile")
+    args = ap.parse_args()
+    split = args.split
+    name = (split or "all") + ("_profiles" if args.profiles else "")
     truth = expert_designs(PARAMS["k_ev_kwh_per_km"], PARAMS["cop"], split)
-    pred = predict(truth)
+    pred = predict(truth, args.profiles)
     OUT.mkdir(exist_ok=True)
     pred.to_csv(OUT / f"predictions_{name}.csv", index=False)
 
