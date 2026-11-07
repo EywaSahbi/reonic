@@ -29,7 +29,7 @@ You write only inside your own folder. You may **read and run** anything in the 
 | `EywaSahbi` | **data** | `data/` | expert designs, split, scoring, benchmarks for flags, reality-check numbers |
 | `RaneemK-commits` | **app** | `app/`, `experience/`, `pitch/`, `README.md` | the web UI (installer website + reo chat widget + installer dashboard); reo's creative direction; pitch |
 | `RaneemK-commits` | **qa** (Codex) | `qa/` | verifies every delivery, end-to-end smoke test, demo rehearsal; reports, never fixes |
-| humans only | shared | `AGENTS.md`, `CLAUDE.md`, `docs/`, `tools/`, `.claude/`, `.gitignore`, `.gitattributes` | |
+| `RaneemK-commits` | **lead** (human coordinator session, not an agent loop) | `AGENTS.md`, `CLAUDE.md`, `docs/`, `tools/`, `.claude/`, `.gitignore`, `.gitattributes` | plans, setup, board tool; changes to these files are human decisions |
 | nobody | raw data | `Project Data/` (read-only, never edit) | |
 
 Need a change in a folder you do not own? Post a `NEED` on the board to its owner. Never edit it yourself, not even "just one line".

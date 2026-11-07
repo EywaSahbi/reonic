@@ -32,6 +32,7 @@ ROLES = {  # role -> GitHub login of the human who runs that agent
     "data": "EywaSahbi",
     "app": "RaneemK-commits",
     "qa": "RaneemK-commits",
+    "lead": "RaneemK-commits",  # the human coordinator's session (plans, setup); not an agent loop
 }
 LOGINS = list(dict.fromkeys(ROLES.values()))
 TYPES = ["NEED", "DONE", "CONTRACT", "BLOCKED", "ACK", "FYI", "DECISION"]
