@@ -157,6 +157,17 @@ def engine_checks(results: list[str]) -> None:
     assert not any(item.get("field") == "region" for item in regional_designs[1]["missing_inputs"]), \
         "known region should not remain a missing input"
     results.append("PASS engine /design uses region for PV yield and sizing")
+    fact_consistent = call(ENGINE, "/design", {"facts": {
+        "total_demand_kwh": 4500, "heating_type": "gas", "ev_planned": True, "region": "BY"
+    }})
+    check_design(fact_consistent, "engine POST /design with gas heating and planned EV")
+    hp_reason = " ".join(fact_consistent["components"]["heatpump"]["reasons"]).lower()
+    assert "gas" in hp_reason and "already electric" not in hp_reason, \
+        "heat-pump explanation must match gas heating"
+    ev_notes = [item.get("note") for item in fact_consistent["assumptions"] if item.get("field") == "has_ev"]
+    assert ev_notes == ["no EV today, one is planned"], \
+        "planned EV assumption must not claim there is no planned EV"
+    results.append("PASS engine explanations and assumptions match gas heating and planned EV facts")
     try:
         explanation = call(ENGINE, "/explain", {"facts": FACTS, "component": "pv"})
     except NotPublished:

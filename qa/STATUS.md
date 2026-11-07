@@ -18,7 +18,7 @@
 - Verified app integration (`28527ca`): production build passes. Live customer flow against reo with the engine offline keeps the plan paused, displays no sizes/prices, and continues collecting inputs without a handoff action. Full engine-backed journey remains pending the engine service.
 - Reo engine-down behavior (`9b01a6c`): reo pytest suite and live smoke confirm offline fallback; API key was unset for the scripted fallback test.
 - Verified reo voice turn (`2756583`): the mocked ElevenLabs transcription and TTS path passes, including an empty-audio response with no state change.
-- Verified engine stub (`3c0b18b`): all 25 engine tests pass; live `/health`, `/prices`, `/design` demand/EV/region checks pass. Region smoke confirms northern Schleswig-Holstein yields a larger PV size than southern Bavaria for the same demand.
+- Verified engine stub and correction (`3c0b18b`, `1031712`): all 26 engine tests pass; live `/health`, `/prices`, `/design` demand/EV/region/reason/assumption checks pass. Region smoke confirms northern Schleswig-Holstein yields a larger PV size than southern Bavaria for the same demand.
 - Full live `qa/smoke.py` passes engine and reo routes through handoff, edit, and finalize. `/explain` and `/validation` remain milestone-gated; processed data and split artifacts are not yet published.
 
 ## Decisions
