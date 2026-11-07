@@ -63,7 +63,7 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
             {preparing ? <><span className="op-spinner" aria-hidden /> reo is preparing the offer…</>
               : pack.status === "failed" ? "reo could not finish the offer pack."
               : <>reo prepared this in <strong>{num(pack.duration_s)} s</strong></>}
-            <span className={`op-model ${pack.model === "scripted" ? "is-scripted" : ""}`}>{model}</span>
+            {pack.model && <span className={`op-model ${pack.model === "scripted" ? "is-scripted" : ""}`}>{model}</span>}
           </p>
         </div>
         {!preparing && !quoted && (
@@ -123,9 +123,11 @@ function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
       <div className="op-price">{eur(v.design.price.total_eur)}</div>
       <dl className="op-rows">
         {rows.map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}
-        <div><dt>Own power</dt><dd>{num(e.autarky_pct)}%</dd></div>
+        <div><dt>Own power</dt><dd>{Math.round(e.autarky_pct)}%</dd></div>
         <div><dt>Payback</dt><dd>{e.payback_years == null ? "–" : `~${Math.round(e.payback_years)} yrs`}</dd></div>
-        {e.bill_after_eur_per_month != null && <div><dt>Bill / month</dt><dd>{e.bill_today_eur_per_month != null ? `${eur(e.bill_today_eur_per_month)} → ` : ""}{eur(e.bill_after_eur_per_month)}</dd></div>}
+        {e.bill_after_eur_per_month != null && (
+          <div><dt>Bill / month</dt><dd>{e.bill_today_eur_per_month != null ? `${eur(e.bill_today_eur_per_month)} → ` : ""}{e.bill_after_eur_per_month < 0 ? `${eur(-e.bill_after_eur_per_month)} credit` : eur(e.bill_after_eur_per_month)}</dd></div>
+        )}
       </dl>
       <p className="op-why">{v.why}</p>
       <button className={chosen ? "btn-ghost small op-inuse" : "btn-small op-use"} disabled={disabled || chosen} onClick={onChoose}>
@@ -201,6 +203,32 @@ function Actions({ plan, busy, error, quoted, act }: {
   );
 }
 
+function plural(n: number, one: string, many = one + "s") { return `${n} ${n === 1 ? one : many}`; }
+
+/** One readable line per step; raw JSON summaries from read/propose tools become plain words. */
+function stepText(s: RunStep): string {
+  const raw = (s.result_summary || s.args_summary || "").trim();
+  let j: Record<string, unknown> | null = null;
+  if (raw.startsWith("{")) { try { j = JSON.parse(raw); } catch { j = null; } }
+  switch (s.tool) {
+    case "llm": return /tool call/.test(raw) ? `planned next step (${raw})` : raw;
+    case "plan.read": return "read the handed-over plan";
+    case "evidence.percentile": {
+      const n = j && typeof j.n === "number" ? j.n : Number(raw.match(/"n":\s*(\d+)/)?.[1]); // reo truncates long summaries
+      return n ? `compared with ${n.toLocaleString("en")} similar homes` : "compared with similar homes";
+    }
+    case "evidence.similar": return j && Array.isArray(j.projects) ? `looked at ${plural(j.projects.length, "similar home")}` : raw;
+    case "calendar.slots": return j && Array.isArray(j.slots) ? `found ${plural(j.slots.length, "free visit slot")}` : "checked the calendar";
+    case "plan.propose_variant": return `proposed a variant: ${raw}`;
+    case "plan.propose_action": return "proposed a next step (waiting for your approval)";
+    case "plan.add_question": return j?.added === "site_visit" ? "added a site-visit check" : "added an open question";
+    case "plan.draft_message": return "drafted the message to the customer";
+    case "finish": return "finished the offer pack";
+  }
+  if (j) return raw.length > 90 ? raw.slice(0, 90) + "…" : raw;
+  return raw;
+}
+
 // Live run timeline: SSE steps from the harness when the pack has a run_id, else the pack's short trace.
 function RunTimeline({ runId, trace, live }: { runId?: string; trace: { step: number; tool: string; summary: string }[]; live: boolean }) {
   const [steps, setSteps] = useState<RunStep[] | null>(null);
@@ -223,8 +251,10 @@ function RunTimeline({ runId, trace, live }: { runId?: string; trace: { step: nu
           <li key={s.n} className={`op-step is-${s.kind} ${s.ok === false ? "is-fail" : ""}`}>
             <span className="op-step-dot" aria-hidden>{s.kind === "guard" ? (s.ok === false ? "!" : "✓") : ""}</span>
             <span className="op-step-text">
-              {s.kind === "guard" && s.ok !== false ? <strong>numbers verified</strong> : s.tool ? <code>{s.tool}</code> : null}
-              {" "}{s.result_summary}
+              {s.kind === "guard"
+                ? (s.ok === false ? <><strong>check failed</strong> {s.tool}: {s.result_summary}</> : <><strong>numbers verified</strong> <span className="muted">{s.tool === "grounding" ? "every number matches an engine result" : s.tool}</span></>)
+                : s.kind === "think" ? <span className="muted">{stepText(s)}</span>
+                : <>{s.tool && <code>{s.tool}</code>} {stepText(s)}</>}
             </span>
             {s.ms > 0 && <span className="op-step-ms">{s.ms < 1000 ? `${s.ms} ms` : `${(s.ms / 1000).toFixed(1)} s`}</span>}
           </li>
