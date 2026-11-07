@@ -157,7 +157,7 @@ function extract(text: string): Partial<HomeFacts> {
 const QUESTIONS: { field: keyof HomeFacts; done: (f: HomeFacts) => boolean; ask: Ask; chips: string[]; say: string }[] = [
   { field: "heating_type", done: (f) => !!f.heating_type, ask: { field: "heating_type", prompt: "How do you heat today?", input: "choice", options: ["gas", "oil", "heatpump", "electric", "district", "other"] }, chips: ["Gas", "Oil", "Heat pump already", "Other"], say: "How do you heat your home today? That decides whether a heat pump makes sense." },
   { field: "has_ev", done: (f) => f.has_ev !== undefined || f.ev_planned !== undefined, ask: { field: "has_ev", prompt: "Electric car?", input: "choice", options: ["Yes, already", "Planned", "No"] }, chips: ["Yes, already", "Planned", "No"], say: "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." },
-  { field: "roof_area_sqm", done: (f) => f.roof_area_sqm !== undefined, ask: { field: "roof_area_sqm", prompt: "Roof area facing the sun (m²) or your address", input: "address" }, chips: ["About 40 m²", "About 60 m²", "Not sure"], say: "How big is the roof area that faces the sun? Or give me your address and I'll look it up." },
+  { field: "roof_area_sqm", done: (f) => f.roof_area_sqm !== undefined, ask: { field: "roof_area_sqm", prompt: "Roof area facing the sun (m²) or your address", input: "address" }, chips: ["Enter width × length", "Skip"], say: "How big is the roof area that faces the sun? Or give me your address and I'll look it up." },
 ];
 
 function msg(text: string): Message {
@@ -203,6 +203,7 @@ const skippedBySession: Record<string, Set<string>> = {};
 function applyFacts(plan: Plan, facts: Partial<HomeFacts>, trigger: string): string[] {
   const before = plan.design;
   plan.facts = { ...plan.facts, ...facts };
+  if (facts.roof_width_m && facts.roof_length_m) plan.facts.roof_area_sqm = facts.roof_width_m * facts.roof_length_m;
   plan.design = design(plan.facts);
   plan.history.push({ at: now(), trigger, total_eur: plan.design.price.total_eur });
   const c = plan.design.components;
@@ -256,6 +257,11 @@ export const mockApi: Api = {
       plan.transcript.push(...messages);
       return delay({ messages, plan: save(plan), suggestions: ["About 3,000 kWh", "About 4,500 kWh"], ask: { field: "total_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number" } });
     }
+    if (t === "enter width × length") {
+      const messages = [msg("Enter the width and length of the sunny roof area in metres.")];
+      plan.transcript.push(...messages);
+      return delay({ messages, plan: save(plan), suggestions: ["Skip"], ask: { field: "roof_area_sqm", prompt: "Sunny roof dimensions", input: "dimensions" } });
+    }
     const why = answerWhy(plan, text);
     if (why) {
       const messages = [msg(why)];
@@ -293,9 +299,9 @@ export const mockApi: Api = {
     const plan = get(id);
     const known = /musterstra|hauptstra/i.test(address);
     if (!known) {
-      const messages = [msg("I can't look up that address yet. Could you tell me roughly how big the sunny side of your roof is, in m²?")];
+      const messages = [msg("I can't find that roof in the demo lookup. Enter the sunny roof width and length, or skip.")];
       plan.transcript.push(...messages);
-      return delay({ messages, plan: save(plan), suggestions: ["About 40 m²", "About 60 m²"], ask: { field: "roof_area_sqm", prompt: "Roof area (m²)", input: "number" } });
+      return delay({ messages, plan: save(plan), suggestions: ["Skip"], ask: { field: "roof_area_sqm", prompt: "Sunny roof dimensions", input: "dimensions" } });
     }
     return delay(respondToFacts(plan, { roof_area_sqm: 48, roof_orientation_deg: 180, roof_tilt_deg: 35 }, `address: ${address}`, (skippedBySession[id] ??= new Set())));
   },

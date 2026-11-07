@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import { OfferPackPanel } from "./OfferPack";
+import { OfferPackPanel, RunTimeline } from "./OfferPack";
 import { RealityCheck } from "./RealityCheck";
 import { SonnfeldMark } from "./Logo";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
@@ -355,7 +355,7 @@ function FactsEditor({ facts, assumed, disabled, onSave }: { facts: HomeFacts; a
 
 function AskReo({ id }: { id: string }) {
   const [q, setQ] = useState("");
-  const [qa, setQa] = useState<{ q: string; a: string }[]>([]);
+  const [qa, setQa] = useState<{ q: string; a: string; runId?: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   useEffect(() => { if (qa.length) end.current?.scrollIntoView({ block: "nearest" }); }, [qa]);
@@ -363,8 +363,8 @@ function AskReo({ id }: { id: string }) {
     if (!text.trim()) return;
     setBusy(true);
     try {
-      const { answer } = await api.askPlan(id, text);
-      setQa((x) => [...x, { q: text, a: answer }]);
+      const { answer, run_id } = await api.askPlan(id, text);
+      setQa((x) => [...x, { q: text, a: answer, runId: run_id }]);
       setQ("");
     } catch (e) {
       setQa((x) => [...x, { q: text, a: `Error: ${errText(e)}` }]);
@@ -379,7 +379,7 @@ function AskReo({ id }: { id: string }) {
         {["Why this battery size?", "Why a heat pump?", "Why does it cost this much?"].map((s) => <button key={s} className="chip" disabled={busy} onClick={() => ask(s)}>{s}</button>)}
       </div>
       {qa.map((x, i) => (
-        <div key={i} className="qa"><p className="qa-q">{x.q}</p><p className="qa-a">{x.a}</p></div>
+        <div key={i} className="qa"><p className="qa-q">{x.q}</p><p className="qa-a">{x.a}</p>{x.runId && <RunTimeline runId={x.runId} trace={[]} live={false} />}</div>
       ))}
       <div ref={end} />
       <form className="composer" onSubmit={(e) => { e.preventDefault(); ask(q); }}>

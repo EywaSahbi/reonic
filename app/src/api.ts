@@ -28,7 +28,7 @@ export type Api = {
   listPlans(status?: Plan["status"]): Promise<PlanSummary[]>;
   getPlan(id: string): Promise<Plan>;
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
-  askPlan(id: string, text: string): Promise<{ answer: string }>;
+  askPlan(id: string, text: string): Promise<{ answer: string; run_id?: string }>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
   validation(split?: "test" | "val", view?: "profiles"): Promise<unknown>;
   preparePlan(id: string): Promise<Plan>;

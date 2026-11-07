@@ -14,6 +14,8 @@ export type HomeFacts = {
   ev_km_per_week?: number;
   ev_km_per_day?: number;
   roof_area_sqm?: number;
+  roof_width_m?: number;
+  roof_length_m?: number;
   roof_orientation_deg?: number;
   roof_tilt_deg?: number;
   region?: "BW" | "BY" | "BE" | "BB" | "HB" | "HH" | "HE" | "MV" | "NI" | "NW" | "RP" | "SL" | "SN" | "ST" | "SH" | "TH"; // federal state; sets PV yield

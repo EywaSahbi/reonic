@@ -283,6 +283,8 @@ function AskInput({ ask, onFacts, onAddress }: {
   onAddress: (a: string) => void;
 }) {
   const [v, setV] = useState("");
+  const [width, setWidth] = useState("");
+  const [length, setLength] = useState("");
 
   if (ask.input === "choice" && (ask.options?.length ?? 0) > 8 && !ask.options?.some((o) => iconFor(o))) {
     // Long lists (e.g. 16 federal states): one picker instead of a wall of cards.
@@ -318,8 +320,15 @@ function AskInput({ ask, onFacts, onAddress }: {
   }
 
   if (ask.input === "dimensions") {
-    return <form className="ask dimensions" onSubmit={(e) => { e.preventDefault(); const [w, h] = v.split("x").map((n) => Number(n.trim().replace(",", "."))); if (w > 0 && h > 0) onFacts({ roof_width_m: w, roof_length_m: h } as Partial<HomeFacts>, `${w} × ${h} m`); }}>
-      <label className="ask-label" htmlFor="ask-dimensions">{ask.prompt}</label><div className="ask-field"><input id="ask-dimensions" type="number" min="1" step="any" placeholder="Width (m)" onChange={(e) => setV(`${e.target.value}x${v.split("x")[1] ?? ""}`)} /><span>×</span><input type="number" min="1" step="any" placeholder="Length (m)" onChange={(e) => setV(`${v.split("x")[0] ?? ""}x${e.target.value}`)} /><button type="submit" className="btn-small">OK</button></div>
+    const valid = Number(width) > 0 && Number(length) > 0;
+    return <form className="ask dimensions" onSubmit={(e) => { e.preventDefault(); if (valid) onFacts({ roof_width_m: Number(width), roof_length_m: Number(length) }, `${width} × ${length} m`); }}>
+      <span className="ask-label">{ask.prompt}</span>
+      <div className="ask-field">
+        <label>Width (m)<input type="number" min="0.01" step="any" required value={width} onChange={(e) => setWidth(e.target.value)} autoFocus /></label>
+        <span aria-hidden>×</span>
+        <label>Length (m)<input type="number" min="0.01" step="any" required value={length} onChange={(e) => setLength(e.target.value)} /></label>
+        <button type="submit" className="btn-small" disabled={!valid}>OK</button>
+      </div>
     </form>;
   }
 

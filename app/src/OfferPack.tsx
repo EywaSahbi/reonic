@@ -249,7 +249,7 @@ function stepText(s: RunStep): string {
 }
 
 // Live run timeline: SSE steps from the harness when the pack has a run_id, else the pack's short trace.
-function RunTimeline({ runId, trace, live }: { runId?: string; trace: { step: number; tool: string; summary: string }[]; live: boolean }) {
+export function RunTimeline({ runId, trace, live }: { runId?: string; trace: { step: number; tool: string; summary: string }[]; live: boolean }) {
   const [steps, setSteps] = useState<RunStep[] | null>(null);
   useEffect(() => {
     if (!runId) { setSteps(null); return; }

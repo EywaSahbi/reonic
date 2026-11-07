@@ -27,7 +27,7 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 
 - [x] Offer pack with live run timeline, bill upload and confirmation, goal chips, monthly bill headline, and reality-check panel from `/validation`.
 - [x] Applied reo's NEED: roof address prompt, skip / width × length route and two-field dimensions input.
-- [ ] "Ask reo why" in the planner view: show the run trace (`run_id` from reo `ba790de`; the grounding retry is a nice demo moment).
+- [x] "Ask reo why" in the planner view: show the run trace (`run_id` from reo `ba790de`; the grounding retry is a nice demo moment).
 - [ ] Check the bill reader against a real bill.
 - [ ] Rehearse `pitch/demo-script.md` with qa; fix timings and wording.
 - [ ] Pick the advisor's voice (`ELEVENLABS_VOICE_ID`, placeholder "Jessica").
@@ -64,3 +64,5 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Offer pack: a customer message written for another variant is flagged; planner edits are never overwritten.
 - Mock persists plans in localStorage so the planner view sees handoffs without reo.
 - `app/learning/` holds auto-captured learning-mode session logs; committed at Raneem's request.
+
+- Codex continuation: planner answers now expose their harness run timeline; roof fields have explicit labels, positive decimal validation and typed width/length facts. Mock supports dimension chips and address fallback. Build verified before push.
