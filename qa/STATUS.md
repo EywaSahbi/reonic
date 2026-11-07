@@ -12,8 +12,9 @@
 
 ## Published
 
-- `qa/smoke.py` v1: engine + reo route/shape checks, including empty/total/household demand and weekly/daily EV distance inputs, plus optional processed-data/split checks; later milestone endpoints skip on 404/405.
+- `qa/smoke.py` v1: engine + reo route/shape checks, including empty/total/household demand and weekly/daily EV distance inputs, plus optional processed-data/split checks. `--skip-engine`/`--skip-reo` allow per-service checks; later milestone endpoints skip on 404/405.
 - Verified app mock flow (`0e16e40`), tap-first opening (`9ac9490`), Reonic branding (`e0b56cf`), and picture cards/house illustration (`adfa400`): production builds pass; customer design → handoff → installer edit/re-derive → rationale → finalise → confirmed quote; both views reviewed.
+- Verified reo API v1 (`2d6428f`): dependency sync and 4 tests pass; offline-mode smoke passed all current routes and confirms the API reports unavailability without numeric claims.
 
 ## Decisions
 

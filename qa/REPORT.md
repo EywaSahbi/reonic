@@ -2,6 +2,12 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — reo API v1 (commit 2d6428f)
+
+- `cd reo && uv sync && uv run pytest`: passed, 4 tests, including scripted fallback with `ANTHROPIC_API_KEY` unset and engine-down behavior.
+- `python qa/smoke.py --skip-engine` against the live reo API on `:8002`: passed health, customer turn/facts/address/handoff/retrieval, installer list/detail/ask/finalize. The API returned the contracted HTTP 503 for `/prices` and installer edit while the engine was offline; the offline turn messages contained no numeric claims. The handed-over plan included its installer summary.
+- Engine checks were skipped because the engine server is not yet available. `/validation` returned the documented unavailable response; processed data files are still unpublished.
+
 ## 2026-11-07 — engine total-demand contract update (commit 336060e)
 
 - Smoke coverage now requests designs with no demand, `total_demand_kwh`, and household-only `annual_demand_kwh`, plus the separate weekly/daily EV distance cases. This validates acceptance and response shapes; the active engine stub is not yet available for runtime execution.

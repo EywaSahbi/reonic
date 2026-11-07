@@ -5,6 +5,7 @@ when they return 404/405, so the same check works against M0 stubs.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sys
@@ -45,6 +46,16 @@ def call(base: str, path: str, body: dict | None = None):
             raise NotPublished(f"HTTP {exc.code}") from exc
         detail = exc.read().decode("utf-8", errors="replace")
         raise AssertionError(f"{request.method} {path}: HTTP {exc.code}: {detail}") from exc
+
+
+def expect_status(base: str, path: str, status: int, body: dict | None = None) -> None:
+    try:
+        call(base, path, body)
+    except AssertionError as exc:
+        if f"HTTP {status}" in str(exc):
+            return
+        raise
+    raise AssertionError(f"{path}: expected HTTP {status}, request succeeded")
 
 
 def check_range(value: object, label: str, nullable: bool = True) -> None:
@@ -109,7 +120,11 @@ def check_turn(value: object, label: str) -> dict:
     for message in value["messages"]:
         assert isinstance(message, dict) and message.get("role") in ("reo", "customer", "installer") and isinstance(message.get("text"), str) and isinstance(message.get("at"), str), f"{label}: invalid Message"
     assert isinstance(value["suggestions"], list) and all(isinstance(x, str) for x in value["suggestions"]), f"{label}.suggestions must be string array"
-    check_plan(value["plan"], label + ".plan")
+    plan = check_plan(value["plan"], label + ".plan")
+    if plan["design"]["params_version"] == "engine-offline":
+        for message in value["messages"]:
+            if message["role"] == "reo":
+                assert not any("0" <= ch <= "9" for ch in message["text"]), f"{label}: reo invented a number while engine is offline"
     return value
 
 
@@ -138,6 +153,19 @@ def engine_checks(results: list[str]) -> None:
 
 
 def reo_checks(results: list[str]) -> None:
+    health = call(REO, "/health")
+    assert isinstance(health, dict) and health.get("ok") is True, "reo GET /health must return ok=true"
+    for key in ("llm", "voice", "engine"):
+        assert isinstance(health.get(key), bool), f"reo GET /health missing boolean {key}"
+    results.append("PASS reo GET /health")
+    if health["engine"]:
+        prices = call(REO, "/prices")
+        assert isinstance(prices, dict), "reo GET /prices must return a price-list object"
+        results.append("PASS reo GET /prices")
+    else:
+        expect_status(REO, "/prices", 503)
+        results.append("PASS reo GET /prices returns 503 while engine is offline")
+
     turn = check_turn(call(REO, "/sessions", {}), "reo POST /sessions")
     plan_id = turn["plan"]["id"]
     encoded_id = urllib.parse.quote(plan_id, safe="")
@@ -163,6 +191,8 @@ def reo_checks(results: list[str]) -> None:
         handoff = check_plan(call(REO, f"/sessions/{encoded_id}/handoff", {"name": "QA smoke"}), "reo POST /sessions/{id}/handoff")
         if handoff["status"] != "handed_over":
             raise AssertionError("handoff must set plan.status to handed_over")
+        if not isinstance(handoff.get("summary"), str) or not handoff["summary"]:
+            raise AssertionError("handed-over Plan must include its installer summary")
         results.append("PASS reo handoff")
     except NotPublished:
         results.append("SKIP handoff: M1 endpoint")
@@ -189,6 +219,10 @@ def reo_checks(results: list[str]) -> None:
         results.append("PASS reo installer edit")
     except NotPublished:
         results.append("SKIP installer edit: M1 endpoint")
+    except AssertionError as exc:
+        if health["engine"] or "HTTP 503" not in str(exc):
+            raise
+        results.append("PASS reo installer edit rejects offline engine with HTTP 503")
     try:
         answer = call(REO, f"/plans/{encoded_id}/ask", {"text": "Why this battery size?"})
         assert isinstance(answer, dict) and isinstance(answer.get("answer"), str), "POST /plans/{id}/ask response shape invalid"
@@ -204,8 +238,12 @@ def reo_checks(results: list[str]) -> None:
         results.append("SKIP finalize: M1 endpoint")
     try:
         validation = call(REO, "/validation")
-        assert isinstance(validation, dict) and "split" in validation and "components" in validation, "GET /validation score shape invalid"
-        results.append("PASS reo GET /validation")
+        assert isinstance(validation, dict), "GET /validation must return JSON object"
+        if validation.get("available") is False:
+            results.append("SKIP reo GET /validation: data report not published")
+        else:
+            assert "split" in validation and "components" in validation, "GET /validation score shape invalid"
+            results.append("PASS reo GET /validation")
     except NotPublished:
         results.append("SKIP validation: M2 endpoint")
 
@@ -233,8 +271,21 @@ def data_check() -> str:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--skip-engine", action="store_true", help="check reo and data without requiring :8000")
+    parser.add_argument("--skip-reo", action="store_true", help="check engine and data without requiring :8001")
+    args = parser.parse_args()
     results = []
-    for label, check in (("engine", engine_checks), ("reo", reo_checks)):
+    checks = []
+    if not args.skip_engine:
+        checks.append(("engine", engine_checks))
+    else:
+        results.append("SKIP engine checks: --skip-engine")
+    if not args.skip_reo:
+        checks.append(("reo", reo_checks))
+    else:
+        results.append("SKIP reo checks: --skip-reo")
+    for label, check in checks:
         try:
             check(results)
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, NotPublished, AssertionError) as exc:
