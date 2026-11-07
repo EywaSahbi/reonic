@@ -288,3 +288,107 @@ Option composition by system family, as the number of options containing each te
   3. What exactly does `ses` stand for, and is `energy_price_with_flexible_tariff` a dynamic tariff?
   4. Why is energy demand lower for EV projects?
   5. Are the two folders two different installers?
+
+---
+
+## 8. Worked example: one complete project
+
+Project `f1aedc4ad3f6c4d1` from `2a8ba8e2`. It was picked because it shows most of the quirks above in one small case: an EV, an existing heat pump, a single offer option, PV + battery + wallbox, a swapped spec column and a PV size that has to be reconstructed.
+
+### 8.1 The input row (`projects_status_quo.csv`)
+
+Raw line, exactly as in the file:
+
+```csv
+f1aedc4ad3f6c4d1,66829ea112732a9f,,2025-05-06 07:30:41.961000,2025-05-16 11:24:40.974000,Germany,3500000.0,0.00032,0.03,0.0002,,,H0,,True,20000,False,,,,,,,False,,,False,,Heatpump,,,5300.0,18550000.0,,,
+```
+
+Column by column (empty columns grouped at the end):
+
+| Column | Raw value | Read as |
+|---|---|---|
+| `project_id` | `f1aedc4ad3f6c4d1` | Key; joins to the 13 part rows below. |
+| `customer_contact_id` | `66829ea112732a9f` | Anonymised customer. |
+| `request_created_at` | empty | Typical for `2a8ba8e2` (only 18 of 1,277 filled). |
+| `offer_created_at` | `2025-05-06 07:30:41.961000` | Offer on 6 May 2025. |
+| `first_signed_at` | `2025-05-16 11:24:40.974000` | Signed 10 days later, faster than the median of about 20 days. |
+| `country` | `Germany` | |
+| `energy_demand_wh` | `3500000.0` | 3,500 kWh/year household electricity. A round number, so probably an estimate. |
+| `energy_price_per_wh` | `0.00032` | 0.32 €/kWh. This is the installer's most common value (71% of rows), so likely a pre-filled default. |
+| `energy_price_increase` | `0.03` | 3% price increase per year. |
+| `energy_price_with_flexible_tariff` | `0.0002` | 0.20 €/kWh with a flexible tariff **(inferred)**. Only 5.5% of `2a8ba8e2` rows have this. |
+| `load_profile` | `H0` | German standard household profile (the default). |
+| `has_ev` / `ev_annual_drive_distance_km` | `True` / `20000` | EV driving 20,000 km/year. At roughly 0.18 kWh/km that is about 3,600 kWh/year **(inferred, outside knowledge)**. |
+| `has_solar`, `has_storage`, `has_wallbox` | `False`, `False`, `False` | No existing PV, battery or wallbox, so all three can be sold new. |
+| `heating_existing_type` | `Heatpump` | The home **already has** a heat pump. |
+| `heating_existing_electricity_demand_kwh` | `5300.0` | The heat pump uses 5,300 kWh electricity/year. This column really is in kWh. |
+| `heating_existing_heating_demand_wh` | `18550000.0` | 18.55 MWh heat/year. 18,550 / 5,300 ≈ 3.5, a plausible heat-pump efficiency (COP). |
+| `base_price_*`, `load_profile_editor_id`, `solar_*`, `storage_*`, `wallbox_charge_speed_kw`, `heating_existing_cost_*`, `house_*`, `num_inhabitants` | empty | Not recorded, as for most projects. |
+
+**What this tells us about the home.** The 3,500 kWh in `energy_demand_wh` is only the household. Heat pump (5,300 kWh) and EV (about 3,600 kWh) come on top, so the total electricity need is about **12,400 kWh/year**, more than three times the headline figure **(inferred)**. This fits the note in 5.2 that EV (and heat-pump) consumption is not included in `energy_demand_wh`.
+
+### 8.2 The delivered design (`project_options_parts.csv`)
+
+One option (`c0469d813518aa08`, `option_number` 1), so there is no question which option is the expert design. 13 line items:
+
+| # | `technology` | `component_type` | `component_name` | `brand` | `quantity` | Spec value | Meaning |
+|---|---|---|---|---|---|---|---|
+| 1 | solar | ServiceFee | Optional Solar Credit | | 1 | | Fee or financing line, no size. |
+| 2 | wallbox | **Wallbox** | Wallbox 11kW | EcoFlow | 1 | `wb_charging_speed_kw` = 11000 | **Wallbox 11 kW** (value in W). |
+| 3 | wallbox | InstallationFee | Install Wallbox | | 1 | | Service. |
+| 4 | ses | **BatteryStorage** | Battery LFP 10kWh | EcoFlow | 1 | **`inverter_power_kw` = 10000** | **Battery 10 kWh.** The value sits in the wrong column (swap, section 3) and is in Wh. |
+| 5 | ses | InstallationFee | Install Battery Storage | | 1 | | Service. |
+| 6 | solar | InstallationFee | Planning & Consulting | | 1 | | Service. |
+| 7 | solar | ServiceFee | Travel & Logistics Flat Rate | | 1 | | Service. |
+| 8 | solar | **ModuleFrameConstruction** | Substructure Concrete Tile Roof | | **32** | | Roof mounting for **32 modules**. |
+| 9 | solar | **AccessoryToModule** | DC Install Concrete Tile Roof | | **32** | | DC installation for the same 32 modules; confirms the count. |
+| 10 | solar | InstallationFee | Install Inverter | | 1 | | An inverter is installed, but there is **no `Inverter` hardware row**. |
+| 11 | solar | InstallationFee | Meter Cabinet Repair | | 1 | | Site-specific work. |
+| 12 | solar | AccessoryToInverter | Home Energy Monitor | | 1 | | Energy-management device. |
+| 13 | solar | ServiceFee | All-Inclusive Package B | | 1 | | Package or price line, no size. |
+
+Raw lines (header + rows 2, 4 and 8 as samples):
+
+```csv
+project_id,option_id,option_number,technology,line_item_function,component_type,component_name,component_brand,quantity,quantity_units,module_watt_peak,inverter_power_kw,battery_capacity_kwh,wb_charging_speed_kw,heatpump_nominal_power_kw
+f1aedc4ad3f6c4d1,c0469d813518aa08,1,wallbox,default,Wallbox,Wallbox 11kW,EcoFlow,1.0,Item,,,,11000.0,
+f1aedc4ad3f6c4d1,c0469d813518aa08,1,ses,default,BatteryStorage,Battery LFP 10kWh,EcoFlow,1.0,Item,,10000.0,,,
+f1aedc4ad3f6c4d1,c0469d813518aa08,1,solar,default,ModuleFrameConstruction,Substructure Concrete Tile Roof,,32.0,Item,,,,,
+```
+
+Only 3 of the 13 rows (2, 4, 8/9) carry sizing information. The other 10 are fees and services (section 5.4).
+
+### 8.3 Turning it into one target row
+
+| Target | Value | How it was derived |
+|---|---|---|
+| `has_pv`, `pv_kwp` | `True`, **≈ 14.4–15.4** | No `Module` row and no `module_watt_peak`. 32 substructure / DC-install units × a typical 450–480 W module **(inferred)**. Mark `target_source = module_count`. |
+| `has_battery`, `battery_kwh` | `True`, **10.0** | `BatteryStorage` row, value from `inverter_power_kw` (swapped) ÷ 1,000. Matches "10kWh" in the name. |
+| `has_wallbox`, `wallbox_kw` | `True`, **11.0** | `wb_charging_speed_kw` ÷ 1,000. Matches "11kW" in the name. |
+| `has_heatpump`, `heatpump_kw` | `False`, 0 | No `heatpump` rows. The home already has one, so this is a correct "no". |
+| inverter kW | unknown | "Install Inverter" without a hardware row. Probably an inverter integrated in the EcoFlow system or listed elsewhere **(inferred)**. |
+
+As a row in the shape of `data/CONTRACT.md`:
+
+```csv
+project_id,has_pv,pv_kwp,has_battery,battery_kwh,has_heatpump,heatpump_kw,has_wallbox,wallbox_kw
+f1aedc4ad3f6c4d1,True,14.9,True,10.0,False,0,True,11.0
+```
+
+(`14.9` = 32 × 465 W, the midpoint of the module range; the exact module wattage is unknown.)
+
+### 8.4 Why the expert design makes sense
+
+- **PV ≈ 15 kWp for 3,500 kWh demand looks oversized at first.** Against the full need of about 12,400 kWh (household + heat pump + EV) it fits: in Germany 15 kWp produce roughly 13,000–14,000 kWh/year **(inferred)**. A model that only looks at `energy_demand_wh` would undersize this system badly. This is the "decisions are coupled" point from the brief.
+- **Battery 10 kWh** is a common catalogue size and in the usual 5–15 kWh band. It shifts midday PV into the evening, when the EV is typically charged.
+- **Wallbox 11 kW** follows directly from `has_ev = True` and `has_wallbox = False`.
+- **No heat pump** because `heating_existing_type = Heatpump`: the expert correctly sells none. A model must learn that an existing heat pump means "do not sell one" but "do size PV for its consumption".
+
+### 8.5 Pitfalls this one project shows
+
+1. Battery capacity is in `inverter_power_kw` (swapped column) and in Wh.
+2. PV size is not in any column and must be reconstructed from quantities.
+3. `energy_demand_wh` is not the total electricity demand once an EV or heat pump is present.
+4. `heating_existing_type = Heatpump` is a reason *not* to sell a heat pump.
+5. Inverter work without an inverter hardware row, so inverter kW cannot always be derived.
+6. 10 of 13 rows are fees and services and must be filtered out before building targets.
