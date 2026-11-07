@@ -76,3 +76,4 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Unknown address falls back to width/length; manual dimensions and skip remain available. Opening lookup from another question and cancelling restores that question rather than skipping it on the backend.
 - Backend has no map coordinates/outline in its published response, so no invented map or satellite image is shown.
 - Browser verified in mock mode: demo address result, unknown-address fallback, decimal width/length submission. Live OSM path not exercised in this frontend session. Production build passes.
+- Isolated UI refinement: original Plan my home pill raised 16px without moving reo; 104px advisor beside replies (64px on mobile); duplicate header avatar removed. Build passed and desktop preview checked on :5174.
