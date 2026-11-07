@@ -34,11 +34,11 @@ class Skill:
 
 def _why(name: str, d: dict) -> str:
     e, c = d["economics"], d["components"]
-    bat = f"{round(c['battery']['size'])} kWh battery" if c["battery"]["recommended"] and c["battery"]["size"] else "no battery"
+    bat = f"{scripted.rnd(c['battery']['size'])} kWh battery" if c["battery"]["recommended"] and c["battery"]["size"] else "no battery"
     head = {"Basic": "Lowest price", "Recommended": "Best balance", "Independence": "Most independence"}[name]
-    pb = f"payback about {round(e['payback_years'])} years" if e.get("payback_years") else "no payback on savings alone"
+    pb = f"payback about {scripted.rnd(e['payback_years'])} years" if e.get("payback_years") else "no payback on savings alone"
     return (f"{head}: {scripted.kwp(c['pv']['size'] or 0)} kWp PV, {bat}, about {scripted.eur(d['price']['total_eur'])}; "
-            f"autarky {round(e['autarky_pct'])}%, saves about €{round(e['annual_savings_eur'], -1):,.0f} a year, {pb}.")
+            f"autarky {scripted.rnd(e['autarky_pct'])}%, saves about €{scripted.rnd(e['annual_savings_eur'], 10):,.0f} a year, {pb}.")
 
 
 def _checklist(facts: dict, d: dict) -> list[str]:
@@ -188,12 +188,12 @@ def _score(goal: str, d: dict, budget: float | None):
 def _goal_why(label: str, d: dict) -> str:
     c, e = d["components"], d["economics"]
     parts = [f"{scripted.kwp(c['pv']['size'])} kWp PV" if c["pv"]["recommended"] and c["pv"]["size"] else None,
-             f"{round(c['battery']['size'])} kWh battery" if c["battery"]["recommended"] and c["battery"]["size"] else "no battery",
-             f"{round(c['heatpump']['size'])} kW heat pump" if c["heatpump"]["recommended"] and c["heatpump"]["size"] else None,
-             f"{round(c['wallbox']['size'])} kW wallbox" if c["wallbox"]["recommended"] and c["wallbox"]["size"] else None]
+             f"{scripted.rnd(c['battery']['size'])} kWh battery" if c["battery"]["recommended"] and c["battery"]["size"] else "no battery",
+             f"{scripted.rnd(c['heatpump']['size'])} kW heat pump" if c["heatpump"]["recommended"] and c["heatpump"]["size"] else None,
+             f"{scripted.rnd(c['wallbox']['size'])} kW wallbox" if c["wallbox"]["recommended"] and c["wallbox"]["size"] else None]
     bill = e.get("bill_after_eur_per_month")
-    money = "" if bill is None else (f", monthly bill about €{round(bill)}" if bill >= 0 else f", net feed-in credit about €{round(-bill)} a month")
-    return f"{label}: {', '.join(p for p in parts if p)}; about {scripted.eur(d['total_eur'])}, autarky {round(e['autarky_pct'])}%{money}."
+    money = "" if bill is None else (f", monthly bill about €{scripted.rnd(bill)}" if bill >= 0 else f", net feed-in credit about €{scripted.rnd(-bill)} a month")
+    return f"{label}: {', '.join(p for p in parts if p)}; about {scripted.eur(d['total_eur'])}, autarky {scripted.rnd(e['autarky_pct'])}%{money}."
 
 
 def goal_scripted(ctx: Ctx, call) -> None:

@@ -35,3 +35,9 @@ def test_basics_come_first_and_existing_pv_size():
     f = {"heating_type": "gas", "ev_planned": True, "has_existing_pv": True}
     assert flow.next_question(f, design)["field"] == "existing_pv_kwp"
     assert not flow.offer_handoff(f, design)  # range far too wide to call it solid
+
+
+def test_rounding_matches_app():
+    import scripted
+    assert scripted.eur(63650) == "€63,700"  # half up, like the plan card (qa BLOCKED 20:17)
+    assert scripted.eur(13190) == "€13,200" and scripted.kwp(8.25) == "8.5" and scripted.rnd(10.5) == 11

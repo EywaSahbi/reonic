@@ -129,12 +129,20 @@ def extract(text: str, last_field: str | None = None) -> dict:
 
 # ---------- phrasing (rounding only) ----------
 
+def rnd(x: float, step: float = 1):
+    """Round half away from zero, like the app (Python's round() goes to even: 636.5 -> 636, the app shows 637)."""
+    import math
+    q = math.floor(abs(x) / step + 0.5) * step
+    q = q if x >= 0 else -q
+    return int(q) if step >= 1 else q
+
+
 def eur(x: float) -> str:
-    return f"€{round(x / 100) * 100:,.0f}"
+    return f"€{rnd(x, 100):,.0f}"
 
 
 def kwp(x: float) -> str:
-    return f"{round(x * 2) / 2:g}"
+    return f"{rnd(x, 0.5):g}"
 
 
 def a_n(n: str) -> str:
@@ -149,13 +157,13 @@ def headline(d: dict) -> str:
         panels = f" (around {c['pv']['quantity']} panels)" if c["pv"].get("quantity") else ""
         parts.append(f"about {kwp(c['pv']['size'])} kWp of solar{panels}")
     if c["battery"]["recommended"] and c["battery"]["size"]:
-        n = str(round(c['battery']['size']))
+        n = str(rnd(c['battery']['size']))
         parts.append(f"{a_n(n)} {n} kWh battery")
     if c["heatpump"]["recommended"] and c["heatpump"]["size"]:
-        n = str(round(c['heatpump']['size']))
+        n = str(rnd(c['heatpump']['size']))
         parts.append(f"{a_n(n)} {n} kW heat pump")
     if c["wallbox"]["recommended"] and c["wallbox"]["size"]:
-        n = str(round(c['wallbox']['size']))
+        n = str(rnd(c['wallbox']['size']))
         parts.append(f"{a_n(n)} {n} kW wallbox")
     if not parts:
         return "I don't have a design to suggest yet."
@@ -172,7 +180,7 @@ def changes(before: dict | None, after: dict) -> str | None:
     for key, name in [("pv", "the solar"), ("battery", "the battery"), ("heatpump", "a heat pump"), ("wallbox", "a wallbox")]:
         b, a = before["components"][key], after["components"][key]
         unit = a["unit"]
-        size = (kwp(a["size"]) if key == "pv" else str(round(a["size"]))) if a["size"] else None
+        size = (kwp(a["size"]) if key == "pv" else str(rnd(a["size"]))) if a["size"] else None
         if a["recommended"] and not b["recommended"]:
             out.append(f"added {name.replace('the ', 'a ')}" + (f" ({size} {unit})" if size else ""))
         elif b["recommended"] and not a["recommended"]:
@@ -198,8 +206,8 @@ def answer(d: dict, topic: str | None) -> str:
         return f"Most of the cost is {parts}. All prices are estimates until your planner confirms them."
     if topic == "savings":
         e = d["economics"]
-        pb = f"pays for itself in about {round(e['payback_years'])} years" if e["payback_years"] else "doesn't pay back on savings alone"
-        return f"You'd save around €{round(e['annual_savings_eur'], -1):,.0f} a year, and it {pb}."
+        pb = f"pays for itself in about {rnd(e['payback_years'])} years" if e["payback_years"] else "doesn't pay back on savings alone"
+        return f"You'd save around €{rnd(e['annual_savings_eur'], 10):,.0f} a year, and it {pb}."
     return f"The solar size: {'; '.join(c['pv']['reasons']) or 'no reason recorded'}."
 
 
@@ -226,13 +234,13 @@ def summary(plan: dict) -> str:
         s += f" Customer asked {asks}x about cost."
     if d.get("params_version") != "engine-offline":
         c = d["components"]
-        comps = [f"{kwp(c[k]['size']) if k == 'pv' else round(c[k]['size'])} {c[k]['unit']} {n}"
+        comps = [f"{kwp(c[k]['size']) if k == 'pv' else rnd(c[k]['size'])} {c[k]['unit']} {n}"
                  for k, n in [("pv", "PV"), ("battery", "battery"), ("heatpump", "heat pump"), ("wallbox", "wallbox")]
                  if c[k]["recommended"] and c[k]["size"]]
         lo, hi = d["price"]["range_eur"]
         pb = d["economics"]["payback_years"]
         s += f" Proposal: {', '.join(comps) or 'no components'}; {eur(d['price']['total_eur'])} (range {eur(lo)}–{eur(hi)[1:]})"
-        s += f", payback ~{round(pb)} yrs." if pb else ", no payback."
+        s += f", payback ~{rnd(pb)} yrs." if pb else ", no payback."
     check = [m["field"] for m in d.get("missing_inputs", []) if m["impact"] == "high"] + [fl["text"] for fl in plan.get("flags", [])]
     if check:
         s += f" Check: {'; '.join(check)}."

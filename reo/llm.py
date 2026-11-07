@@ -151,6 +151,16 @@ def extract(text: str, facts: dict, last_question: str | None = None) -> dict | 
     return data
 
 
+def _display(d: dict | None) -> dict | None:
+    """Prices formatted exactly as the app's plan card shows them, so chat and card never differ."""
+    if not d or not d.get("price", {}).get("total_eur"):
+        return None
+    import scripted
+    lo, hi = d["price"]["range_eur"]
+    return {"total": scripted.eur(d["price"]["total_eur"]), "range": f"{scripted.eur(lo)}–{scripted.eur(hi)[1:]}",
+            "items": {i["label"]: scripted.eur(i["total_eur"]) for i in d["price"]["items"]}}
+
+
 def reply(*, audience: str, latest_message: str, facts: dict, engine_result: dict | None,
           next_question: dict | None = None, offer_handoff: bool = False, changed: str | None = None,
           transcript: list[dict] | None = None, flags: list[dict] | None = None) -> str | None:
@@ -161,6 +171,7 @@ def reply(*, audience: str, latest_message: str, facts: dict, engine_result: dic
         "latest_message": latest_message,
         "facts": facts,
         "engine_result": engine_result,
+        "display_prices": _display(engine_result),
         "next_question": next_question and next_question["prompt"],
         "offer_handoff": offer_handoff,
         "changed": changed,
