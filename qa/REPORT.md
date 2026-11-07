@@ -2,6 +2,13 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — app customer mock skeleton (commit 8ce3904)
+
+- `cd app && npm install`: passed; npm reported two dependency advisories (one moderate, one high).
+- `cd app && npm run build`: passed (`tsc --noEmit` and Vite production build).
+- Browser mock walk passed: opened reo, selected 4,500 kWh, selected Gas, typed “we're buying an electric car next year”, confirmed the 20.5 kWp / 11 kW wallbox update, and submitted the handoff form; plan moved to “With your planner.” The page marked itself “mock API.”
+- `app/src/types.ts` matches the current HomeFacts, Design, Turn and Plan shapes in the reo/engine contracts. Live backend, installer dashboard, and final quote remain unverified because they are not delivered yet.
+
 ## 2026-11-07 — app experience contract check (commit 1155aa0)
 
 - **BLOCKED app:** `experience/flow.md`, Stage 5 says to ask `{field: name, ..., input: "text"}`. In `reo/CONTRACT.md`, `Turn.ask.field` is `keyof HomeFacts` and `input` is only `number | boolean | choice | address`; `name` and `text` are invalid. Reproduce by comparing Stage 5's ask object with the `Turn` type. Expected: collect the name through a contract-valid handoff flow (the handoff body already has `name`). Actual: the prescribed ask object cannot conform to the reo response type.
