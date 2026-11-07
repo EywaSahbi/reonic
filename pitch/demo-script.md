@@ -12,7 +12,7 @@
 | app on :5173, live | `cd app && VITE_API_URL=http://localhost:8001 npm run dev` (PowerShell: `$env:VITE_API_URL='http://localhost:8001'; npm run dev`) |
 | Two browser windows | **A** customer: `http://localhost:5173/` · **B** planner: `http://localhost:5173/#/installer` |
 | Clean state | In window A: reo → "Start over". Old plans in B's inbox are fine; the new one appears on top. |
-| Fallbacks ready | Recording of this exact run (see bottom); `data/reports/*.png` open in a tab for step 5 |
+| Fallbacks ready | Recording of this exact run (see bottom); planner Reality check panel available; report PNGs as backup |
 
 Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), offer agent on Sonnet 5.5 (~15 s). Without a key everything runs scripted with the same screens.
 
@@ -64,9 +64,9 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 From `data/reports/reality_check_test.md` (235 homes the engine never saw, parameters from train only, baseline = train medians):
 
 - "On unseen homes the engine sizes PV within about 2 kWp of the experts (median miss 1.9 kWp) and beats the naive baseline on PV size: 49 % vs 42 % within ±20 %."
-- "Where we lose: battery size (39 % vs 42 %) because experts pick catalogue steps, and yes/no decisions are level with the baseline (52 %)."
+- "Battery sizing is still difficult: 46 % vs 42 % within ±20 %. Full-bundle decisions remain close to the baseline (52.8 % vs 52.3 %)."
 - "The biggest miss was data, not sizing: 49 of 52 'no PV' homes were retrofits with existing solar nobody recorded. So reo now asks 'do you already have solar?'. The data told us which question was missing."
-- Show `pv_scatter_test.png` (and `no_pv_test.png` if asked).
+- Show the planner **Reality check** panel with **Test set** selected. Latest engine report: `a56e3f9`, 235 homes; PV 49.2 % vs 41.5 %, battery 45.6 % vs 41.9 %. Check that `/validation` has the matching published score before quoting it; retain report PNGs as backup.
 
 ### 4:45 — Close (15 s)
 
@@ -92,6 +92,6 @@ Record one clean run of steps 0:20–3:40 with two windows side by side (screen 
 
 ## Open before M3
 
-- Reality-check panel in the app (`/validation`) to replace the PNGs in step 5.
-- Bill photo + goal chips ("Keep it under €20,000") as an optional moment once the widget has them.
-- Larger hero photo; final check that "Sonnfeld" is not a real installer.
+- Rehearse the new reality-check panel and confirm the published score version.
+- Bill photo + goal chips are available; test the reader on a real bill before including it.
+- Brand search found no exact installer match in the initial search, but related names exist; retain Sonnfeld as a fictional demo brand pending Raneem review.

@@ -66,3 +66,5 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - `app/learning/` holds auto-captured learning-mode session logs; committed at Raneem's request.
 
 - Codex continuation: planner answers now expose their harness run timeline; roof fields have explicit labels, positive decimal validation and typed width/length facts. Mock supports dimension chips and address fallback. Build verified before push.
+
+- README setup/architecture/limits drafted; demo script updated to engine a56e3f9 reported metrics and the reality-check panel. Initial Sonnfeld web search found related names (Sonnfeld ZT architecture; EWS Sonnenfeld project), no exact installer match; this is not name clearance. Voice choice, real-bill test and QA rehearsal still pending.
