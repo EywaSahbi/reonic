@@ -2,7 +2,7 @@
 
 ## Handover (session ended 2026-11-07 by Eywa's decision)
 
-Everything above the open items works and is pushed. To resume: read this file, CONTRACT.md, run `uv run pytest` (17 pass), start `uv run uvicorn api:app --port 8001` with the engine on :8000.
+Everything above the open items works and is pushed. To resume: read this file, CONTRACT.md, run `uv run pytest` (27 pass), start `uv run uvicorn api:app --port 8001` with the engine on :8000.
 Open: Haiku vs Sonnet for installer_qa (human call, models in `llm.py`), German scripted replies, chat_turn onto the harness, live bill test, final voice. Possible engine NEED: 5 kWh battery suggested even when the roof caps PV at ~1 kWp.
 
 ## Installer-backend cleanup (2026-11-08)
@@ -15,7 +15,8 @@ Reproduced and fixed (regressions in `test_installer.py`, fake engine; live chec
 - Draft kept proposing the original slot after a different slot was booked.
 - `/finalize` then approving `send_quote` sent a second confirmation; edits after quote changed the confirmed design (now 409).
 - Edits during preparation left the landed variants not stale; an older run could overwrite a newer pack; a reo restart left packs `preparing` forever and their runs 404.
-Checks: `uv run pytest` 26 pass; `uv run python -m evals` 9/9 (scripted, live engine); live journey incl. SSE replay, Sonnet pack, 409s on repeat approve/reject, restart mid-prep → failed.
+- engine 11f5a6a answers 422 for demand/roof <= 0: reo drops those customer values (asks again) and /edit returns 422, so a 422 never reads as "engine down".
+Checks: `uv run pytest` 27 pass; `uv run python -m evals` 9/9 (scripted, live engine); live journey incl. SSE replay, Sonnet pack, 409s on repeat approve/reject, restart mid-prep → failed.
 Not covered: engine downtime only with the fake engine (did not stop Ege's engine); customer `installer_edits`/`history` still visible to the customer (totals only, no change in this pass).
 
 ## Backlog (top = next)
