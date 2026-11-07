@@ -21,3 +21,4 @@
 (one line each: what, why)
 - Installer brand in demo is "SolarHaus Müller"; persona and flow use it verbatim.
 - Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).
+- Persona: reo may mention heat pump funding in general (never amounts), and aggregate "similar homes" comparisons from attached benchmarks in the customer chat; individual projects stay installer-only. Raneem's call.

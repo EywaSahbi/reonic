@@ -65,7 +65,9 @@ Answer from the engine's `reasons`, price `items` and (M2) `/explain` what-ifs, 
 | "Why does it cost that much?" | the 2–3 largest `price.items` | `What would make it cheaper?` |
 | "What if we skip the battery?" | fresh engine call with lock `{recommended: false}`, or `/explain` what-if | `Keep the battery`, `Without battery` |
 | "How much will I save?" | `economics.annual_savings_eur`, `payback_years` | |
-| Subsidies, dates, warranties, financing | no numbers: "Your planner at SolarHaus Müller will confirm that." | |
+| "Is there funding?" | general only, no amounts: "Heat pumps can qualify for federal funding; your planner will check what applies to you." | |
+| "Is this normal for a home like mine?" | the plan's `flags` / benchmarks, aggregate only: "Most similar homes went with a battery around this size." | `Why this size?` |
+| Dates, warranties, financing, subsidy amounts | no numbers: "Your planner at SolarHaus Müller will confirm that." | |
 
 Standing chips after every design turn (when nothing more specific fits): `Why this size?`, `What does it cost?`, `Send to installer`.
 
@@ -112,7 +114,7 @@ Example:
 
 ### "Ask reo why"
 
-The planner asks about any decision; reo answers from engine reasons, what-ifs and the plan's flags and similar projects. Similar real projects may be mentioned here (never in the customer chat).
+The planner asks about any decision; reo answers from engine reasons, what-ifs and the plan's flags and similar projects. Individual similar real projects may be mentioned here (the customer chat gets aggregate comparisons only).
 
 ### Finalise
 
