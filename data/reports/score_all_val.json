@@ -1,0 +1,179 @@
+{
+  "split": "val",
+  "model": "all",
+  "n": 238,
+  "components": {
+    "pv": {
+      "n_expert": 185,
+      "presence_acc": 0.782,
+      "f1": 0.877,
+      "size_n": 185,
+      "size_mae": 2.49,
+      "size_mdape": 0.208,
+      "within_tol": 0.465
+    },
+    "battery": {
+      "n_expert": 218,
+      "presence_acc": 0.916,
+      "f1": 0.956,
+      "size_n": 217,
+      "size_mae": 2.66,
+      "size_mdape": 0.3,
+      "within_tol": 0.336
+    },
+    "heatpump": {
+      "n_expert": 0,
+      "presence_acc": 1.0,
+      "f1": null,
+      "size_n": 0,
+      "size_mae": null,
+      "size_mdape": null,
+      "within_tol": null
+    },
+    "wallbox": {
+      "n_expert": 62,
+      "presence_acc": 0.744,
+      "f1": 0.141,
+      "size_n": 5,
+      "size_mae": 2.2,
+      "size_mdape": 0.0,
+      "within_tol": 0.8
+    }
+  },
+  "bundle_match": 0.559,
+  "missing_predictions": 0,
+  "by_installer": {
+    "23c108b7": {
+      "n": 51,
+      "components": {
+        "pv": {
+          "n_expert": 46,
+          "presence_acc": 0.902,
+          "f1": 0.948,
+          "size_n": 46,
+          "size_mae": 3.22,
+          "size_mdape": 0.239,
+          "within_tol": 0.348
+        },
+        "battery": {
+          "n_expert": 48,
+          "presence_acc": 0.922,
+          "f1": 0.959,
+          "size_n": 47,
+          "size_mae": 2.61,
+          "size_mdape": 0.222,
+          "within_tol": 0.404
+        },
+        "heatpump": {
+          "n_expert": 0,
+          "presence_acc": 1.0,
+          "f1": null,
+          "size_n": 0,
+          "size_mae": null,
+          "size_mdape": null,
+          "within_tol": null
+        },
+        "wallbox": {
+          "n_expert": 13,
+          "presence_acc": 0.765,
+          "f1": 0.25,
+          "size_n": 2,
+          "size_mae": 0.0,
+          "size_mdape": 0.0,
+          "within_tol": 1.0
+        }
+      },
+      "bundle_match": 0.686
+    },
+    "2a8ba8e2": {
+      "n": 187,
+      "components": {
+        "pv": {
+          "n_expert": 139,
+          "presence_acc": 0.749,
+          "f1": 0.855,
+          "size_n": 139,
+          "size_mae": 2.25,
+          "size_mdape": 0.199,
+          "within_tol": 0.504
+        },
+        "battery": {
+          "n_expert": 170,
+          "presence_acc": 0.914,
+          "f1": 0.955,
+          "size_n": 170,
+          "size_mae": 2.68,
+          "size_mdape": 0.3,
+          "within_tol": 0.318
+        },
+        "heatpump": {
+          "n_expert": 0,
+          "presence_acc": 1.0,
+          "f1": null,
+          "size_n": 0,
+          "size_mae": null,
+          "size_mdape": null,
+          "within_tol": null
+        },
+        "wallbox": {
+          "n_expert": 49,
+          "presence_acc": 0.738,
+          "f1": 0.109,
+          "size_n": 3,
+          "size_mae": 3.67,
+          "size_mdape": 0.0,
+          "within_tol": 0.667
+        }
+      },
+      "bundle_match": 0.524
+    }
+  },
+  "baseline": {
+    "n": 238,
+    "components": {
+      "pv": {
+        "n_expert": 185,
+        "presence_acc": 0.777,
+        "f1": 0.875,
+        "size_n": 185,
+        "size_mae": 2.71,
+        "size_mdape": 0.2,
+        "within_tol": 0.497
+      },
+      "battery": {
+        "n_expert": 218,
+        "presence_acc": 0.916,
+        "f1": 0.956,
+        "size_n": 218,
+        "size_mae": 2.99,
+        "size_mdape": 0.286,
+        "within_tol": 0.408
+      },
+      "heatpump": {
+        "n_expert": 0,
+        "presence_acc": 1.0,
+        "f1": null,
+        "size_n": 0,
+        "size_mae": null,
+        "size_mdape": null,
+        "within_tol": null
+      },
+      "wallbox": {
+        "n_expert": 62,
+        "presence_acc": 0.744,
+        "f1": 0.141,
+        "size_n": 5,
+        "size_mae": 2.2,
+        "size_mdape": 0.0,
+        "within_tol": 0.8
+      }
+    },
+    "bundle_match": 0.555
+  },
+  "tolerance": {
+    "pv": 0.2,
+    "battery": 0.2,
+    "heatpump": 0.2,
+    "wallbox": 0.05
+  }
+}

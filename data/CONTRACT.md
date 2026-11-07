@@ -60,7 +60,16 @@ Sizes are null when the component is absent.
 ## Score JSON (`data/reports/score_<name>_<split>.json`)
 
 ```json
-{"split": "val", "n": 240, "model": "<params_version>",
- "components": {"pv": {"presence_acc": 0.97, "f1": 0.98, "size_mae": 1.1, "size_mdape": 0.09, "within_tol": 0.71}, "...": {}},
- "bundle_match": 0.62, "baseline": {"...": {}}}
+{"split": "val", "model": "<file name after predictions_>", "n": 238, "missing_predictions": 0,
+ "components": {"pv": {"n_expert": 185, "presence_acc": 0.782, "f1": 0.877, "size_n": 185, "size_mae": 2.49,
+                       "size_mdape": 0.208, "within_tol": 0.465}, "...": {}},
+ "bundle_match": 0.559,
+ "by_installer": {"23c108b7": {"n": 51, "components": {}, "bundle_match": 0}, "2a8ba8e2": {"n": 187}},
+ "baseline": {"n": 238, "components": {}, "bundle_match": 0.55},
+ "tolerance": {"pv": 0.2, "battery": 0.2, "heatpump": 0.2, "wallbox": 0.05}}
 ```
+
+- `presence_acc`: share of homes where the yes/no matches the expert. `f1`: for "component recommended".
+- Size metrics only over homes where both expert and prediction have the component: `size_mae` (kWp / kWh / kW), `size_mdape` (median relative error), `within_tol` (share within the relative tolerance).
+- `bundle_match`: all four yes/no decisions match.
+- `baseline`: naive design from `train` (PV and battery always at the train median, no heat pump, wallbox iff `has_ev`).
