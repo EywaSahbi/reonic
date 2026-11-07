@@ -1,4 +1,4 @@
-import { COMPONENT_KEYS, type ComponentKey, type Plan } from "./types";
+import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
 import { House } from "./House";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -8,6 +8,16 @@ const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("e
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
 export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => void }) {
   const d = plan.design;
+  if (isOffline(d)) {
+    return (
+      <aside className="plan" aria-label="Your plan">
+        <div className="plan-offline">
+          <strong>Calculation paused</strong>
+          <p>reo can't reach its design engine right now, so there are no sizes or prices yet. Everything you've told reo is saved; the plan appears as soon as the engine is back.</p>
+        </div>
+      </aside>
+    );
+  }
   const quoted = plan.status === "quoted";
   const [lo, hi] = d.price.range_eur;
   const spreadPct = d.price.total_eur ? ((hi - lo) / d.price.total_eur) * 100 : 0;

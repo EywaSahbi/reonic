@@ -47,7 +47,7 @@ function comp(unit: Component["unit"], partial: Partial<Component>): Component {
 
 function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRICES): Design {
   const assumptions: Design["assumptions"] = [];
-  let demand = f.annual_demand_kwh;
+  let demand = f.total_demand_kwh ?? f.annual_demand_kwh;
   if (demand === undefined) {
     demand = f.num_inhabitants ? 1000 + f.num_inhabitants * 900 : 4000;
     assumptions.push({ field: "annual_demand_kwh", value: demand, note: f.num_inhabitants ? `estimated from ${f.num_inhabitants} people` : "typical home" });
@@ -58,7 +58,7 @@ function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRI
   const living = f.house_size_sqm ?? 140;
   const hpKw = Math.max(5, Math.round((living * (f.house_built_year && f.house_built_year > 2000 ? 0.04 : 0.065))));
   const hpKwh = hpWanted ? Math.round(hpKw * 2000 / 3.2) : 0;
-  const total = demand + evKwh + hpKwh;
+  const total = f.total_demand_kwh ?? demand + evKwh + hpKwh; // stated total already includes EV/heating
 
   let pv = Math.round((total / 600) * 2) / 2;
   const roofMax = Math.floor(((f.roof_area_sqm ?? 60) / 5.5) * 2) / 2;
@@ -136,7 +136,7 @@ function extract(text: string): Partial<HomeFacts> {
   const t = text.toLowerCase().replace(/(\d)[.,](\d{3})/g, "$1$2");
   const f: Partial<HomeFacts> = {};
   const kwh = t.match(/(\d{3,6})\s*kwh/);
-  if (kwh) f.annual_demand_kwh = Number(kwh[1]);
+  if (kwh) f.total_demand_kwh = Number(kwh[1]);
   const ppl = t.match(/(\d+)\s*(people|persons|of us)/);
   if (ppl) f.num_inhabitants = Number(ppl[1]);
   const roof = t.match(/(\d{2,3})\s*(m²|m2|sqm|square)/);
@@ -254,7 +254,7 @@ export const mockApi: Api = {
     if (t === "i know my yearly kwh") {
       const messages = [msg("Great, that's the most precise. What does your bill say per year?")];
       plan.transcript.push(...messages);
-      return delay({ messages, plan: save(plan), suggestions: ["About 3,000 kWh", "About 4,500 kWh"], ask: { field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number" } });
+      return delay({ messages, plan: save(plan), suggestions: ["About 3,000 kWh", "About 4,500 kWh"], ask: { field: "total_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number" } });
     }
     const why = answerWhy(plan, text);
     if (why) {
@@ -299,11 +299,11 @@ export const mockApi: Api = {
     plan.flags = plan.design.components.battery.recommended && (plan.design.components.battery.size ?? 0) >= 10
       ? [{ component: "battery", text: "Battery larger than 85% of similar homes (mock)", severity: "warn" }]
       : [];
-    const d = plan.facts.annual_demand_kwh ?? 4500;
+    const d = plan.facts.total_demand_kwh ?? 4500;
     plan.similar_projects = [
-      { project_id: "mock-p-1021", facts: { annual_demand_kwh: d - 300, heating_type: plan.facts.heating_type }, expert: { pv: 9.5, battery: 8, heatpump: plan.facts.heating_type === "gas" ? 9 : null, wallbox: 11 } },
-      { project_id: "mock-p-0877", facts: { annual_demand_kwh: d + 400, heating_type: plan.facts.heating_type }, expert: { pv: 11, battery: 10, heatpump: null, wallbox: 11 } },
-      { project_id: "mock-p-1302", facts: { annual_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
+      { project_id: "mock-p-1021", facts: { total_demand_kwh: d - 300, heating_type: plan.facts.heating_type }, expert: { pv: 9.5, battery: 8, heatpump: plan.facts.heating_type === "gas" ? 9 : null, wallbox: 11 } },
+      { project_id: "mock-p-0877", facts: { total_demand_kwh: d + 400, heating_type: plan.facts.heating_type }, expert: { pv: 11, battery: 10, heatpump: null, wallbox: 11 } },
+      { project_id: "mock-p-1302", facts: { total_demand_kwh: d, heating_type: plan.facts.heating_type }, expert: { pv: 10, battery: 7, heatpump: 8, wallbox: null } },
     ];
     plan.transcript.push(msg(`Done. Your plan is with SolarHaus Müller, ${name}. You'll see the final quote here once your planner has confirmed it.`));
     return delay(save(plan));

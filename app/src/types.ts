@@ -1,7 +1,8 @@
-// Mirrors engine/CONTRACT.md and reo/CONTRACT.md (v0). Keep in sync; never extend locally.
+// Mirrors engine/CONTRACT.md (336060e) and reo/CONTRACT.md v1 (2d6428f). Keep in sync; never extend locally.
 
 export type HomeFacts = {
-  annual_demand_kwh?: number;
+  total_demand_kwh?: number; // yearly use as the customer states it, incl. EV + electric heating
+  annual_demand_kwh?: number; // household only, without EV and heat pump
   num_inhabitants?: number;
   house_size_sqm?: number;
   house_built_year?: number;
@@ -10,6 +11,8 @@ export type HomeFacts = {
   has_ev?: boolean;
   ev_planned?: boolean;
   ev_km_per_year?: number;
+  ev_km_per_week?: number;
+  ev_km_per_day?: number;
   roof_area_sqm?: number;
   roof_orientation_deg?: number;
   roof_tilt_deg?: number;
@@ -67,6 +70,7 @@ export type Plan = {
   installer_edits: { at: string; change: string; before: unknown; after: unknown }[];
   history: { at: string; trigger: string; total_eur: number }[];
   updated_at: string;
+  summary?: string; // reo's installer paragraph, set once handed over
 };
 
 export type Ask = {
@@ -79,5 +83,10 @@ export type Ask = {
 export type Turn = { messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask };
 
 export type PlanSummary = Pick<Plan, "id" | "customer" | "status" | "updated_at"> & { total_eur: number };
+
+export type Health = { ok: boolean; llm: boolean; voice: boolean; engine: boolean };
+
+/** reo marks designs made while the engine was unreachable: no numbers, never show as a real design. */
+export const isOffline = (d: Design) => d.params_version === "engine-offline";
 
 export type Locks = Partial<Record<ComponentKey, { recommended: boolean; size?: number }>>;

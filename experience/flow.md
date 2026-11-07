@@ -23,12 +23,12 @@ Opening message (`POST /sessions`). If the engine accepts `facts: {}`, include t
 
 - `ask`: `{field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"]}` (the app renders `choice` asks as big tap cards; `5+` → `num_inhabitants: 5`)
 - `suggestions`: `["I know my yearly kWh"]`
-- `I know my yearly kWh` → `ask` `{field: "annual_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number"}`, chips `["About 3,000 kWh", "About 4,500 kWh"]`.
-- Free text works at any point: "we use about 4,500 kWh a year" → `annual_demand_kwh: 4500` (the demo opens this way).
+- `I know my yearly kWh` → `ask` `{field: "total_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number"}`, chips `["About 3,000 kWh", "About 4,500 kWh"]`.
+- Free text works at any point: "we use about 4,500 kWh a year" → `total_demand_kwh: 4500` (the demo opens this way). A yearly figure the customer states is the total incl. EV and electric heating (engine contract 336060e); `annual_demand_kwh` (household only) is not asked.
 
 ### Stage 2: First design, immediately
 
-As soon as there is `annual_demand_kwh` or `num_inhabitants` (or at once, if the engine designs from zero facts), call the engine and reply in this shape (2–4 sentences):
+As soon as there is `total_demand_kwh` or `num_inhabitants` (or at once, if the engine designs from zero facts), call the engine and reply in this shape (2–4 sentences):
 
 1. The headline: what reo recommends and the price range, as an estimate.
 2. One reason, from the engine.
@@ -132,7 +132,7 @@ These are the exact inputs in the demo; without an API key reo must still extrac
 
 | Customer types | Facts |
 |---|---|
-| "we use about 4,500 kWh a year" | `annual_demand_kwh: 4500` |
+| "we use about 4,500 kWh a year" | `total_demand_kwh: 4500` |
 | "we heat with gas" / chip `Gas` | `heating_type: "gas"` |
 | "we're buying an electric car next year" | `ev_planned: true` |
 | "4 people" | `num_inhabitants: 4` |

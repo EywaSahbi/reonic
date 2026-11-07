@@ -327,3 +327,8 @@ h1, h2, h3 { color: var(--ink); }
 .h-panel.on { opacity: 1; transform: none; }
 .h-part { opacity: 0; transform: translateY(8px) scale(0.92); transform-box: fill-box; transform-origin: center bottom; transition: opacity 0.4s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
 .h-part.on { opacity: 1; transform: none; }
+
+/* engine unreachable */
+.plan-offline { background: var(--white); border: 1px dashed var(--line-strong); border-radius: var(--radius); padding: 16px; }
+.plan-offline strong { display: block; color: var(--ink); margin-bottom: 4px; }
+.plan-offline p { margin: 0; font-size: 13px; color: var(--ink-500); }

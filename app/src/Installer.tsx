@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import { COMPONENT_KEYS, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
+import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
 const STEP: Record<ComponentKey, number> = { pv: 0.5, battery: 1, heatpump: 1, wallbox: 1 };
@@ -44,7 +44,7 @@ export function Installer() {
                 <button className={`inbox-item ${selected === p.id ? "active" : ""}`} onClick={() => setSelected(p.id)}>
                   <span className="inbox-name">{p.customer.name ?? "Unnamed"}</span>
                   <span className={`pill pill-${p.status}`}>{p.status === "quoted" ? "quoted" : "new"}</span>
-                  <span className="inbox-meta">{eur(p.total_eur)} · {when(p.updated_at)}</span>
+                  <span className="inbox-meta">{p.total_eur > 0 ? eur(p.total_eur) : "no price yet"} · {when(p.updated_at)}</span>
                 </button>
               </li>
             ))}
@@ -127,14 +127,16 @@ function PlanDetail({ id }: { id: string }) {
         </div>
         <div className={`detail-total ${hl("total")}`}>
           <span className="muted">Total</span>
-          <strong>{eur(d.price.total_eur)}</strong>
-          <span className="muted">range {eur(d.price.range_eur[0])}–{eur(d.price.range_eur[1]).slice(1)}</span>
+          {isOffline(d) ? <strong>–</strong> : <>
+            <strong>{eur(d.price.total_eur)}</strong>
+            <span className="muted">range {eur(d.price.range_eur[0])}–{eur(d.price.range_eur[1]).slice(1)}</span>
+          </>}
         </div>
       </div>
 
       <section className="card summary">
         <h3>Summary</h3>
-        <p>{summarize(plan)}</p>
+        <p>{plan.summary ?? summarize(plan)}</p>
       </section>
 
       {plan.flags.length > 0 && (
@@ -144,6 +146,8 @@ function PlanDetail({ id }: { id: string }) {
           ))}
         </section>
       )}
+
+      {isOffline(d) && <div className="flag flag-warn">⚠ Design engine unreachable: no sizes or prices in this plan yet. Edits and finalise need the engine.</div>}
 
       {change && (
         <div className="change-banner" role="status">
@@ -158,7 +162,7 @@ function PlanDetail({ id }: { id: string }) {
           <h3>Design</h3>
           <div className="comp-edit-list">
             {COMPONENT_KEYS.map((k) => (
-              <ComponentEditor key={k + d.components[k].size + d.components[k].recommended} k={k} design={d} disabled={quoted || busy} highlight={!!hl(k)}
+              <ComponentEditor key={k + d.components[k].size + d.components[k].recommended} k={k} design={d} disabled={quoted || busy || isOffline(d)} highlight={!!hl(k)}
                 onLock={(lock) => edit({ locks: { [k]: lock } })} />
             ))}
           </div>
@@ -172,7 +176,7 @@ function PlanDetail({ id }: { id: string }) {
 
         <section className="card">
           <h3>Home facts</h3>
-          <FactsEditor facts={plan.facts} assumed={new Set(d.assumptions.map((a) => String(a.field)))} disabled={quoted || busy} onSave={(facts) => edit({ facts })} />
+          <FactsEditor facts={plan.facts} assumed={new Set(d.assumptions.map((a) => String(a.field)))} disabled={quoted || busy || isOffline(d)} onSave={(facts) => edit({ facts })} />
           {d.missing_inputs.length > 0 && (
             <div className="assumptions">
               <span>Still open</span>
@@ -199,9 +203,9 @@ function PlanDetail({ id }: { id: string }) {
             <table className="price-table">
               <thead><tr><th>Project</th><th className="num">Demand</th>{COMPONENT_KEYS.map((k) => <th key={k} className="num">{NAMES[k]}</th>)}</tr></thead>
               <tbody>
-                <tr className="this-plan"><td>This plan</td><td className="num">{plan.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{d.components[k].recommended ? d.components[k].size : "–"}</td>)}</tr>
+                <tr className="this-plan"><td>This plan</td><td className="num">{plan.facts.total_demand_kwh ?? plan.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{d.components[k].recommended ? d.components[k].size : "–"}</td>)}</tr>
                 {plan.similar_projects.map((s) => (
-                  <tr key={s.project_id}><td>{s.project_id}</td><td className="num">{s.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{s.expert[k] ?? "–"}</td>)}</tr>
+                  <tr key={s.project_id}><td>{s.project_id}</td><td className="num">{s.facts.total_demand_kwh ?? s.facts.annual_demand_kwh ?? "–"}</td>{COMPONENT_KEYS.map((k) => <td key={k} className="num">{s.expert[k] ?? "–"}</td>)}</tr>
                 ))}
               </tbody>
             </table>
@@ -234,7 +238,7 @@ function PlanDetail({ id }: { id: string }) {
           <>
             <label htmlFor="note">Note to the customer <span className="muted">(optional, sent as written)</span></label>
             <textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. We checked your roof photos; 12 kWh fits your evening usage better." />
-            <button className="btn-primary" onClick={finalize} disabled={busy}>Finalise and send quote · {eur(d.price.total_eur)}</button>
+            <button className="btn-primary" onClick={finalize} disabled={busy || isOffline(d)}>Finalise and send quote · {eur(d.price.total_eur)}</button>
           </>
         )}
       </section>
@@ -242,12 +246,12 @@ function PlanDetail({ id }: { id: string }) {
   );
 }
 
-// shortcut: summary templated from plan data in the UI; switch to reo's text once reo adds Plan.summary (NEED sent).
+// shortcut: fallback summary templated from plan data, used only while reo has not set Plan.summary.
 function summarize(p: Plan): string {
   const f = p.facts, d = p.design, c = d.components;
   const home = [
     f.num_inhabitants ? `${f.num_inhabitants}-person home` : "Home",
-    `${(f.annual_demand_kwh ?? d.economics.total_demand_kwh).toLocaleString("en")} kWh/yr${f.annual_demand_kwh ? "" : " (estimated)"}`,
+    `${(f.total_demand_kwh ?? f.annual_demand_kwh ?? d.economics.total_demand_kwh).toLocaleString("en")} kWh/yr${f.total_demand_kwh ?? f.annual_demand_kwh ? "" : " (estimated)"}`,
     f.heating_type ? `${f.heating_type} heating` : "heating unknown",
     f.has_ev ? "has EV" : f.ev_planned ? "EV planned" : null,
   ].filter(Boolean).join(", ");
@@ -290,7 +294,7 @@ function ComponentEditor({ k, design, disabled, highlight, onLock }: {
 }
 
 const FACT_FIELDS: { key: keyof HomeFacts; label: string; type: "number" | "heating" | "bool" }[] = [
-  { key: "annual_demand_kwh", label: "Demand (kWh/yr)", type: "number" },
+  { key: "total_demand_kwh", label: "Total demand (kWh/yr)", type: "number" },
   { key: "num_inhabitants", label: "People", type: "number" },
   { key: "heating_type", label: "Heating", type: "heating" },
   { key: "ev_planned", label: "EV planned", type: "bool" },
