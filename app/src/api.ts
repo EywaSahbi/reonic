@@ -21,6 +21,7 @@ export type Api = {
   startSession(): Promise<Turn>;
   sendMessage(id: string, text: string): Promise<Turn>;
   sendFacts(id: string, facts: Partial<HomeFacts>): Promise<Turn>;
+  sendBill(id: string, image: File): Promise<Turn>;
   sendAddress(id: string, address: string): Promise<Turn>;
   handoff(id: string, name: string, email?: string): Promise<Plan>;
   getSession(id: string): Promise<Plan>;
@@ -29,7 +30,7 @@ export type Api = {
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
   askPlan(id: string, text: string): Promise<{ answer: string }>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
-  validation(): Promise<unknown>;
+  validation(split?: "test" | "val", view?: "profiles"): Promise<unknown>;
   preparePlan(id: string): Promise<Plan>;
   chooseVariant(id: string, name: VariantName): Promise<Plan>;
   approveAction(id: string, actionId: string, payload?: Record<string, unknown>): Promise<Plan>;
@@ -52,6 +53,13 @@ const httpApi: Api = {
   startSession: () => call("POST", "/sessions", {}),
   sendMessage: (id, text) => call("POST", `/sessions/${id}/messages`, { text }),
   sendFacts: (id, facts) => call("POST", `/sessions/${id}/facts`, { facts }),
+  async sendBill(id, image) {
+    const form = new FormData();
+    form.append("image", image);
+    const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/bill`, { method: "POST", body: form });
+    if (!res.ok) throw new Error(`POST /sessions/${id}/bill → ${res.status} ${await res.text()}`);
+    return res.json() as Promise<Turn>;
+  },
   sendAddress: (id, address) => call("POST", `/sessions/${id}/address`, { address }),
   handoff: (id, name, email) => call("POST", `/sessions/${id}/handoff`, { name, email }),
   getSession: (id) => call("GET", `/sessions/${id}`),
@@ -60,7 +68,7 @@ const httpApi: Api = {
   editPlan: (id, edit) => call("POST", `/plans/${id}/edit`, edit),
   askPlan: (id, text) => call("POST", `/plans/${id}/ask`, { text }),
   finalizePlan: (id, note) => call("POST", `/plans/${id}/finalize`, { note }),
-  validation: () => call("GET", "/validation"),
+  validation: (split = "test", view) => call("GET", `/validation?${view ? `view=${view}` : `split=${split}`}`),
   preparePlan: (id) => call("POST", `/plans/${id}/prepare`, {}),
   chooseVariant: (id, name) => call("POST", `/plans/${id}/variant`, { name }),
   approveAction: (id, actionId, payload) => call("POST", `/plans/${id}/actions/${actionId}/approve`, payload ? { payload } : {}),

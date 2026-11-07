@@ -24,15 +24,18 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
   const [lo, hi] = d.price.range_eur;
   const spreadPct = d.price.total_eur ? ((hi - lo) / d.price.total_eur) * 100 : 0;
   const prev = plan.history.length > 1 ? plan.history[plan.history.length - 2].total_eur : null;
+  const economics = d.economics as typeof d.economics & { bill_today_eur_per_month?: number; bill_after_eur_per_month?: number };
 
   return (
     <aside className="plan" aria-label="Your plan">
       <House design={d} />
       <div className="plan-head">
         <span className="plan-kicker">
-          {quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}
+          {economics.bill_today_eur_per_month != null && economics.bill_after_eur_per_month != null ? "Your monthly bill · before → after" : quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}
         </span>
-        {quoted ? (
+        {economics.bill_today_eur_per_month != null && economics.bill_after_eur_per_month != null ? (
+          <div className="plan-price">€{Math.round(economics.bill_today_eur_per_month).toLocaleString("en")} → {economics.bill_after_eur_per_month < 0 ? `€${Math.round(-economics.bill_after_eur_per_month).toLocaleString("en")} credit` : `€${Math.round(economics.bill_after_eur_per_month).toLocaleString("en")}`}<small>per month · estimate from your energy plan</small></div>
+        ) : quoted ? (
           <div className="plan-price">{eur(d.price.total_eur)}<small>confirmed by Sonnfeld</small></div>
         ) : (
           <div className="plan-price" key={`${lo}-${hi}`}>

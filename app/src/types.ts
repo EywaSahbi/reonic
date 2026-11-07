@@ -51,6 +51,8 @@ export type Design = {
     autarky_pct: number;
     annual_savings_eur: number;
     payback_years: number | null;
+    bill_today_eur_per_month?: number;
+    bill_after_eur_per_month?: number;
   };
   assumptions: { field: keyof HomeFacts; value: unknown; note: string }[];
   missing_inputs: { field: keyof HomeFacts; why: string; impact: "high" | "medium" | "low" }[];
@@ -78,16 +80,17 @@ export type Plan = {
 export type Ask = {
   field: keyof HomeFacts;
   prompt: string;
-  input: "number" | "boolean" | "choice" | "address";
+  input: "number" | "boolean" | "choice" | "address" | "dimensions";
   options?: string[];
 };
 
-export type Turn = { messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask };
+export type Turn = { messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask; bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false }; goal_result?: GoalResult };
 
 /** POST /sessions/{id}/voice: a normal turn plus what reo heard and its spoken reply (base64 mp3). */
 export type VoiceTurn = Turn & { heard: string; audio: string | null };
 
 export type PlanSummary = Pick<Plan, "id" | "customer" | "status" | "updated_at"> & { total_eur: number };
+export type GoalResult = { goal: "budget" | "independence" | "lowest_bill"; budget_eur?: number; recommendation: Variant; alternatives: Variant[]; trace: TraceStep[] };
 
 export type Health = { ok: boolean; llm: boolean; voice: boolean; engine: boolean };
 

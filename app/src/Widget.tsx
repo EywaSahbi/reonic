@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { Ask, HomeFacts, Message, Plan, Turn } from "./types";
+import type { Ask, GoalResult, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
 import { MicButton, useReoAudio, voiceForced } from "./Voice";
@@ -26,6 +26,9 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const bottom = useRef<HTMLDivElement>(null);
   const [voiceOn, setVoiceOn] = useState(voiceForced());
   const [notice, setNotice] = useState<string | null>(null);
+  const [billRead, setBillRead] = useState<Turn["bill"]>();
+  const [goalResult, setGoalResult] = useState<GoalResult>();
+  const billInput = useRef<HTMLInputElement>(null);
   const reoAudio = useReoAudio();
 
   // Mic only when reo can do voice (ElevenLabs key set in reo/.env), or forced with ?voice=1.
@@ -46,6 +49,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       setPlan(t.plan);
       setChips(t.suggestions);
       setAsk(t.ask);
+      setBillRead(t.bill);
+      setGoalResult(t.goal_result);
       if (t.audio) reoAudio.play(t.audio);
     } catch (e) {
       setError(errText(e));
@@ -66,6 +71,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       setPlan(t.plan);
       setChips(t.suggestions);
       setAsk(t.ask);
+      setBillRead(t.bill);
+      setGoalResult(t.goal_result);
     } catch (e) {
       setError(errText(e));
     } finally {
@@ -92,7 +99,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   function startOver() {
     writeSaved(null);
-    setMessages([]); setPlan(null); setChips([]); setAsk(undefined); setHandoffOpen(false); setError(null);
+    setMessages([]); setPlan(null); setChips([]); setAsk(undefined); setBillRead(undefined); setGoalResult(undefined); setHandoffOpen(false); setError(null);
     run(() => api.startSession());
   }
 
@@ -122,6 +129,13 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   function say(s: string) {
     if (!id || !s.trim()) return;
+    if (billRead && /^(yes, that's right|not quite)$/i.test(s.trim())) {
+      const read = billRead.read;
+      setBillRead(undefined);
+      if (/^yes/i.test(s.trim())) run(() => api.sendFacts(id, { total_demand_kwh: read.total_demand_kwh, electricity_price_eur_per_kwh: read.electricity_price_eur_per_kwh }), s);
+      else { setAsk({ field: "total_demand_kwh", prompt: "What yearly use does your bill show?", input: "number" }); setChips([]); setMessages((m) => [...m, { role: "customer", text: s, at: stamp() }, { role: "reo", text: "No problem. You can enter the correct yearly use here.", at: stamp() }]); }
+      return;
+    }
     if (/^(yes, send it|send to installer|send it)\b/i.test(s.trim())) {
       // Handoff is an app-side form posting to /handoff (experience/flow.md Stage 5).
       setMessages((m) => [...m, { role: "customer", text: s, at: stamp() }]);
@@ -132,6 +146,18 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     }
     setText("");
     run(() => api.sendMessage(id, s), s);
+  }
+
+  async function uploadBill(file?: File) {
+    if (!id || !file) return;
+    setBusy(true); setError(null); setChips([]); setAsk(undefined);
+    try {
+      const t = await api.sendBill(id, file);
+      setMessages((m) => [...m, { role: "customer", text: "Uploaded an electricity bill", at: stamp() }, ...t.messages]);
+      setPlan(t.plan); setChips(t.suggestions); setAsk(t.ask); setBillRead(t.bill);
+      setGoalResult(t.goal_result);
+    } catch (e) { setError(errText(e)); }
+    finally { setBusy(false); if (billInput.current) billInput.current.value = ""; }
   }
 
   async function handoff(name: string, email?: string) {
@@ -180,6 +206,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>
             ))}
             {busy && <div className="bubble bubble-reo typing"><span /><span /><span /></div>}
+            {goalResult && <div className="goal-result"><strong>Matched to your goal · {goalResult.goal.replace("_", " ")}</strong><GoalVariant variant={goalResult.recommendation} /><div className="goal-alternatives">{goalResult.alternatives.map((v) => <GoalVariant key={v.name} variant={v} />)}</div></div>}
             {error && <div className="chat-error">Something went wrong: {error}</div>}
             {handoffOpen && !handedOver && (
               <HandoffForm onSubmit={handoff} onCancel={() => { setHandoffOpen(false); setChips(["Send to installer", "Why this size?"]); }} />
@@ -201,6 +228,11 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                   {visibleChips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
                 </div>
               )}
+              {!billRead && !handedOver && <div className="customer-tools">
+                <button type="button" className="chip" onClick={() => billInput.current?.click()} disabled={busy}>▧ Add a bill photo</button>
+                <input ref={billInput} type="file" accept="image/*,.pdf" hidden onChange={(e) => uploadBill(e.target.files?.[0])} />
+                {[["Keep it under €20,000", "Keep it under €20,000"], ["As independent as possible", "As independent as possible"], ["Lowest monthly bill", "Lowest monthly bill"]].map(([label, value]) => <button key={value} type="button" className="chip" disabled={busy} onClick={() => say(value)}>{label}</button>)}
+              </div>}
               {notice && <div className="voice-hint">{notice}</div>}
               {reoAudio.speaking && (
                 <div className="speaking"><span className="mic-dot" /> Speaking <button type="button" onClick={reoAudio.stop}>Stop</button></div>
@@ -218,6 +250,11 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       </div>
     </div>
   );
+}
+
+function GoalVariant({ variant }: { variant: GoalResult["recommendation"] }) {
+  const d = variant.design;
+  return <div className="goal-variant"><strong>{variant.name}{variant.name === "Recommended" ? " · reo's pick" : ""}</strong><span>{d.components.pv.recommended ? `${d.components.pv.size} kWp solar` : "No solar"}{d.components.battery.recommended ? ` · ${d.components.battery.size} kWh battery` : ""} · €{Math.round(d.price.total_eur).toLocaleString("en")}</span><small>{variant.why}</small></div>;
 }
 
 const CHOICE_LABEL: Record<string, string> = { heatpump: "Heat pump", district: "District heating", semi: "Semi-detached", gable: "Gable roof", flat: "Flat roof", mono: "Mono-pitch", "1": "Just me", "5+": "5 or more" };
@@ -278,6 +315,12 @@ function AskInput({ ask, onFacts, onAddress }: {
         </div>
       </div>
     );
+  }
+
+  if (ask.input === "dimensions") {
+    return <form className="ask dimensions" onSubmit={(e) => { e.preventDefault(); const [w, h] = v.split("x").map((n) => Number(n.trim().replace(",", "."))); if (w > 0 && h > 0) onFacts({ roof_width_m: w, roof_length_m: h } as Partial<HomeFacts>, `${w} × ${h} m`); }}>
+      <label className="ask-label" htmlFor="ask-dimensions">{ask.prompt}</label><div className="ask-field"><input id="ask-dimensions" type="number" min="1" step="any" placeholder="Width (m)" onChange={(e) => setV(`${e.target.value}x${v.split("x")[1] ?? ""}`)} /><span>×</span><input type="number" min="1" step="any" placeholder="Length (m)" onChange={(e) => setV(`${v.split("x")[0] ?? ""}x${e.target.value}`)} /><button type="submit" className="btn-small">OK</button></div>
+    </form>;
   }
 
   const isAddress = ask.input === "address";

@@ -25,14 +25,23 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 
 ## Next (top = next)
 
-- [ ] Reality-check panel from `GET /validation` (default = test scores, `?split=val`, `?view=profiles` per installer); replace the PNGs in demo step 5. Honest where we lose (battery size, yes/no level with baseline). (M2)
-- [ ] Customer widget: **goal chips** ("Keep it under €20,000", "As independent as possible", "Lowest monthly bill") → reo `Turn.goal_result` (live since reo `6e9724b`), and **bill photo upload** (camera icon → `POST /sessions/{id}/bill`, then "Yes, that's right / Not quite" chips). Bill reader still needs a real-bill test.
-- [ ] Monthly bill before → after as the customer headline + bundle (engine v1 `economics.bill_*_per_month`, `bundle`); variant cards already show the bill.
+- [x] Offer pack with live run timeline, bill upload and confirmation, goal chips, monthly bill headline, and reality-check panel from `/validation`.
+- [x] Applied reo's NEED: roof address prompt, skip / width × length route and two-field dimensions input.
 - [ ] "Ask reo why" in the planner view: show the run trace (`run_id` from reo `ba790de`; the grounding retry is a nice demo moment).
+- [ ] Check the bill reader against a real bill.
 - [ ] Rehearse `pitch/demo-script.md` with qa; fix timings and wording.
 - [ ] Pick the advisor's voice (`ELEVENLABS_VOICE_ID`, placeholder "Jessica").
 - [ ] Check that "Sonnfeld" is not a real installer (web search) before the pitch.
 - [ ] `README.md`, deck, fallback recording (M3, Sun 12:00).
+
+## Codex continuation
+
+- Offer pack and SSE timeline were already present in `src/OfferPack.tsx`; retained and verified in the app build.
+- Bill upload posts multipart `image` to `/sessions/{id}/bill`; recognized facts are applied only after confirmation. The mock path mirrors this flow.
+- Goal chips render reo's returned `Turn.goal_result` variants; no UI-side design or price calculations were added.
+- Monthly bill headline displays the engine's before → after values, including a negative after-bill as a feed-in credit.
+- Reality-check panel reads the published `/validation` scores: test default, val selector and per-installer profiles.
+- `npm run build` passes.
 
 ## Published
 

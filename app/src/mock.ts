@@ -281,6 +281,14 @@ export const mockApi: Api = {
     return delay(respondToFacts(plan, facts, "facts", (skippedBySession[id] ??= new Set())));
   },
 
+  async sendBill(id, _image) {
+    const plan = get(id);
+    const read = { total_demand_kwh: 4500, electricity_price_eur_per_kwh: 0.34, provider: "Demo supplier" };
+    const messages = [msg("I read the yearly use and tariff from your bill. Please check these before I add them to your plan.")];
+    plan.transcript.push(...messages);
+    return delay({ messages, plan: save(plan), suggestions: ["Yes, that's right", "Not quite"], bill: { read, confirmed: false } });
+  },
+
   async sendAddress(id, address) {
     const plan = get(id);
     const known = /musterstra|hauptstra/i.test(address);
@@ -401,7 +409,7 @@ export const mockApi: Api = {
   async getRun(runId) { throw new Error(`mock: no run ${runId}`); },
   watchRun() { return () => {}; },
 
-  async validation() { return delay({ note: "mock: reality-check numbers arrive from data/score.py via reo" }); },
+  async validation() { return delay({ available: true, split: "test", n: 235, bundle_match: 0.523, components: { pv: { presence_acc: 0.783, size_mae: 3.22, within_tol: 0.492 }, battery: { presence_acc: 0.919, size_mae: 3.58, within_tol: 0.386 } }, note: "Local preview only; live values come from reo /validation." }); },
 
   // Mock voice: no speech-to-text in the browser, so "heard" is the next demo line the plan still needs.
   // shortcut: fake transcript + no audio; the real path is reo -> ElevenLabs (reo/VOICE.md).

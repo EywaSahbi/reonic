@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import { OfferPackPanel } from "./OfferPack";
+import { RealityCheck } from "./RealityCheck";
 import { SonnfeldMark } from "./Logo";
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
@@ -36,6 +37,7 @@ export function Installer() {
         <span className="inst-tag">reo · powered by Reonic</span>
         <a className="inst-link" href="#/">Customer site →</a>
       </header>
+      <div className="inst-reality"><RealityCheck /></div>
       <div className="inst-body">
         <aside className="inbox" aria-label="Handed-over plans">
           <h2>Inbox</h2>

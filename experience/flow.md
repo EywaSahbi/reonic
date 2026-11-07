@@ -47,7 +47,7 @@ Ask for the open fields in this order. If the engine's `missing_inputs` ranks a 
 | 2 | `has_ev` / `ev_planned` | "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." | `choice`, field `has_ev`, options `Yes, already`, `Planned`, `No` | same as options |
 | 2b | `has_existing_pv` | "Is there solar on the roof already? Then I'd plan around it." | `choice`, options `Yes, I have solar`, `No solar yet` (→ `true` / `false`) | none (cards) |
 | 2c | `existing_pv_kwp` | only after "Yes, I have solar": "How big is it, roughly? Then I only add what's missing." | `number` | `About 5 kWp`, `About 10 kWp`, `Not sure` |
-| 3 | `roof_area_sqm` | "How big is the roof area that faces the sun? Or give me your address and I'll look it up." | `address` (falls back to `number` if lookup fails) | `Use my address`, `About 40 m²`, `Not sure` |
+| 3 | `roof_area_sqm` | "What's your address? I'll measure your roof from the map. You can also enter the roof's width and length, or skip." | `address` | `Enter width × length`, `Skip` |
 | 3b | `region` | "Which federal state do you live in? That sets how much sun your panels get." | `choice`, options the 16 codes `BW, BY, BE, BB, HB, HH, HE, MV, NI, NW, RP, SL, SN, ST, SH, TH` (app shows state names, sends the code) | none (cards) |
 | 4 | `house_size_sqm` (+ `house_built_year`) | only if a heat pump is in play: "How big is the living space, and roughly when was the house built? That sizes the heat pump." | `number` | `About 120 m²`, `About 160 m²` |
 | 5 | `electricity_price_eur_per_kwh` | "What do you pay per kWh? I've assumed a typical rate so far." | `number` | `About 35 ct`, `About 40 ct`, `Not sure` |
@@ -56,6 +56,8 @@ Ask for the open fields in this order. If the engine's `missing_inputs` ranks a 
 **Heating (row 1), EV (row 2) and existing solar (row 2b) are always asked while unknown**, even though the engine does not list them in `missing_inputs` (it only assumes them). After those, follow the engine's `high` / `medium` inputs (roof, region, …).
 
 Prefer `choice` asks wherever the answer has a few options: the app shows them as picture cards and every tap updates the plan live. `roof_type` (`gable, flat, mono, other`) can join row 3 once the engine ships it. Stop asking once the engine has no `high`-impact `missing_inputs` left, and offer the handoff (Stage 5).
+
+If address lookup does not find a roof, reo asks for `dimensions`; the app renders width and length fields and sends `{roof_width_m, roof_length_m}` to `/sessions/{id}/facts`. `Enter width × length` requests that input directly. `Skip` leaves the roof assumed and moves on.
 
 Mapping notes for reo:
 - EV chip `Yes, already` → `has_ev: true`; `Planned` → `ev_planned: true`; `No` → both `false`. Free text like "we're buying an electric car next year" → `ev_planned: true`.
