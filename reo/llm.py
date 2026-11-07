@@ -34,8 +34,9 @@ FACT_TYPES = {
     "ev_km_per_year": float, "ev_km_per_week": float, "ev_km_per_day": float,
     "roof_area_sqm": float, "roof_orientation_deg": float, "roof_tilt_deg": float,
     "electricity_price_eur_per_kwh": float, "has_existing_pv": bool, "existing_pv_kwp": float,
-    "has_existing_battery": bool, "budget_eur": float,
+    "has_existing_battery": bool, "budget_eur": float, "region": str,
 }
+REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]
 EXTRACT_SCHEMA = {
     "type": "object",
     "properties": {
@@ -51,7 +52,8 @@ EXTRACT_SCHEMA = {
 }
 EXTRACT_SYSTEM = f"""You read one message from a homeowner chatting with a solar installer's assistant and return JSON.
 - facts: one {{field, value}} per fact this message states or clearly corrects; nothing else. Never guess or fill defaults.
-  value is text: a plain number ("4500", "0.35"), "true"/"false", or for heating_type one of {", ".join(HEATING)}.
+  value is text: a plain number ("4500", "0.35"), "true"/"false", for heating_type one of {", ".join(HEATING)},
+  for region the German federal state code ({", ".join(REGIONS)}), e.g. Bavaria/Bayern -> BY, a city -> its state.
   Yearly electricity use as the customer states it (e.g. from the bill) -> total_demand_kwh; annual_demand_kwh only if
   they say it excludes the car and heating.
   Units: kWh per year, m², euros, EUR per kWh (35 ct -> 0.35), degrees with 180 = south.
@@ -72,6 +74,9 @@ def _typed_facts(pairs: list[dict]) -> dict:
             if kind is bool:
                 if raw in ("true", "false"):
                     facts[field] = raw == "true"
+            elif field == "region":
+                if raw.upper() in REGIONS:
+                    facts[field] = raw.upper()
             elif kind is str:
                 if raw in HEATING:
                     facts[field] = raw

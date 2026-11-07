@@ -5,6 +5,13 @@ Templates only round and phrase engine numbers (persona rounding rules); they ne
 """
 import re
 
+STATE_NAMES = [("baden-württemberg|baden-wuerttemberg", "BW"), ("bayern|bavaria|münchen|munich|nürnberg", "BY"),
+               ("berlin", "BE"), ("brandenburg|potsdam", "BB"), ("bremen", "HB"), ("hamburg", "HH"), ("hessen|hesse|frankfurt", "HE"),
+               ("mecklenburg", "MV"), ("niedersachsen|lower saxony|hannover", "NI"),
+               ("nordrhein-westfalen|north rhine|nrw|köln|cologne|düsseldorf", "NW"), ("rheinland-pfalz|mainz", "RP"),
+               ("saarland", "SL"), ("sachsen-anhalt|magdeburg", "ST"), ("sachsen|saxony|dresden|leipzig", "SN"),
+               ("schleswig-holstein|kiel", "SH"), ("thüringen|thuringia|erfurt", "TH")]
+
 # Exact chip / option texts -> facts (flow.md). Lower-cased.
 CHIP_FACTS = {
     "1": {"num_inhabitants": 1}, "2": {"num_inhabitants": 2}, "3": {"num_inhabitants": 3},
@@ -18,6 +25,7 @@ CHIP_FACTS = {
     "about 120 m²": {"house_size_sqm": 120}, "about 160 m²": {"house_size_sqm": 160},
     "about 35 ct": {"electricity_price_eur_per_kwh": 0.35}, "about 40 ct": {"electricity_price_eur_per_kwh": 0.40},
     "under €15,000": {"budget_eur": 15000}, "€15,000–25,000": {"budget_eur": 25000},
+    **{c.lower(): {"region": c} for c in ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]},
     "detached": {"building_type": "detached"}, "semi": {"building_type": "semi"}, "terraced": {"building_type": "terraced"},
 }
 CHIP_INTENTS = {
@@ -71,6 +79,10 @@ def extract(text: str, last_field: str | None = None) -> dict:
             facts.update(has_ev=False, ev_planned=False)
         else:
             facts["ev_planned" if planned else "has_ev"] = True
+    for names, code in STATE_NAMES:
+        if re.search(rf"({names})", t):
+            facts["region"] = code
+            break
     if not facts and last_field and (m := re.fullmatch(r"\s*(\d[\d.,]*)\s*", t)):
         facts[last_field] = _num(m.group(1))
     intent = "facts" if facts else "other"

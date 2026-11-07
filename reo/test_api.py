@@ -44,11 +44,12 @@ def test_demo_flow(tmp_path, monkeypatch):
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Gas"}).json()  # chip
     assert t["plan"]["facts"]["heating_type"] == "gas"
-    assert t["suggestions"][0] == "Yes, send it"  # no high-impact input left -> offer handoff once
+    assert t["ask"]["field"] == "has_ev"  # EV is always asked, the engine only assumes it
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we're buying an electric car next year"}).json()
     assert t["plan"]["facts"]["ev_planned"] is True
     assert "added a wallbox" in t["messages"][0]["text"]
+    assert t["suggestions"][0] == "Yes, send it"  # heating + EV known -> offer the handoff once
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "why a battery?"}).json()
     assert "evening use" in t["messages"][0]["text"]

@@ -106,7 +106,7 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     changed = scripted.changes(before, d) if new and had_numbers else None
 
     ask = flow.next_question(plan["facts"], d if ok else None, set(st["skipped"]))
-    offer = ok and not st["offered"] and flow.offer_handoff(plan["facts"], d)
+    offer = ok and not st["offered"] and flow.offer_handoff(plan["facts"], d, set(st["skipped"]))
     if offer:
         st["offered"], ask = True, None
     st["last_ask"] = ask["field"] if ask else None
