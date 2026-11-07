@@ -65,6 +65,22 @@ Built by `uv run python benchmarks.py` from `train` only.
 - **Lookup:** take the segment with the highest level whose key matches the home and `n >= min_n`. Level 0 always exists. EV homes are rare (~4 %), so their level-2/3 segments are mostly below `min_n` and fall back to level 1.
 - `values`: every expert size in the segment, sorted, so "larger than X % of similar homes" = share of `values` below the size. Sizes only over homes that have the component; `attach_rate` is the share of all homes in the segment.
 - The example is the real level-2 segment at the time of writing; read the file for current values.
+- Percentile fields: `p10`, `p25`, `p50`, `p75`, `p90` (p25 / p75 added for variant anchors).
+
+## Lookups for reo (spec; reference code `data/lookup.py`, tested in `test_lookup.py`)
+
+reo reads the files and implements these itself (no imports across folders). Only `train` homes are used or shown.
+
+| Lookup | Rule |
+|---|---|
+| `demand_band(kwh)` | `annual_demand_kwh` (household only, WITHOUT EV / heat pump) → the `demand_bands` label with `lo <= kwh < hi` (`6000+` open); none → `"unknown"`. Do not band a customer's `total_demand_kwh`: the data's bands are household-only, so a total puts the home 1–2 bands too high. If only a total is known, use level 0 or ask for the household figure. |
+| `home_key(home)` | `{demand_band, has_ev: has_ev or ev_planned, heating_type or "unknown"}` |
+| `segment(home)` | segments with `n >= min_n` whose `key` fields all equal the home's; take the highest `level`. Level 0 always matches. |
+| `percentile_of(home, c, size)` | `c ∈ {pv, battery}`: share of `segment[c_size].values` strictly below `size` (bisect left), 0..1. Flag when ≥ 0.85 or ≤ 0.15. |
+| `size_at(home, c, q)` | `segment[c_size]["p" + q]` for q ∈ 10/25/50/75/90. Suggested variant anchors, to pass as locks to the engine (numbers still come from the engine): **Basic** battery at p25 (or none if `attach_rate.battery < 0.5`), **Recommended** = engine's own design, **Independence** PV and battery at p75. |
+| `similar_projects(home, k=3)` | train homes, filtered step by step, each filter kept only if ≥ k homes remain: same EV group → same `has_existing_pv` → same `heating_type`. Then nearest `annual_demand_kwh`, ties by `installer`, `project_id`. Returns inputs + expert design per home. Installer view only, never to the customer or the LLM (hard rule 5). |
+
+Retrofits: homes the expert sold no PV are mostly retrofits with unrecorded existing PV (`reports/reality_check_test.md`). PV size percentiles already exclude them (only homes with PV); `attach_rate.pv` does not.
 
 ## Predictions CSV (input to `score.py`)
 

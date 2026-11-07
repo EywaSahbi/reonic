@@ -32,7 +32,7 @@ def stats(g: pd.DataFrame) -> dict:
         s = s.dropna()
         if s.empty:
             return None
-        return {"p10": round(s.quantile(.1), 1), "p50": round(s.median(), 1), "p90": round(s.quantile(.9), 1),
+        return {**{f"p{q}": round(s.quantile(q / 100), 1) for q in (10, 25, 50, 75, 90)},
                 "values": sorted(round(float(v), 2) for v in s)}  # full sorted list so reo can say "larger than 85 %"
 
     def typical(s: pd.Series) -> list:
