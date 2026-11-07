@@ -28,6 +28,7 @@ import scripted
 import voice
 from harness import tools as htools
 from harness.runner import RUNS, Runner
+from harness import skills as hskills
 from harness.skills import SKILLS
 
 HERE = Path(__file__).parent
@@ -615,9 +616,14 @@ def choose_variant(pid: str, body: VariantName):
         st["locks"] = dict(v["locks"])
         plan["design"] = d
         pack["chosen"] = body.name
+        # the draft must describe the chosen variant: regenerate it from that design (template, grounded by construction)
+        slot = next((a["payload"].get("slot") for a in pack.get("actions", []) if a["kind"] == "book_visit"), None)             or htools.free_slots(db.get("calendar", []))[0]
+        pack["customer_message_draft"] = hskills._draft(plan["customer"].get("name", ""), d, slot)
+        pack["draft_for"] = body.name
         for act in pack.get("actions", []):
             if act["kind"] == "send_quote" and act["status"] == "proposed":
                 act["label"], act["payload"]["variant"] = f"Send quote ({body.name} variant)", body.name
+                act["payload"]["message"] = pack["customer_message_draft"]
         plan["installer_edits"].append({"at": now(), "change": f"variant {body.name} chosen", "before": before,
                                         "after": d["price"]["total_eur"]})
         plan["history"].append({"at": now(), "trigger": f"variant {body.name}", "total_eur": d["price"]["total_eur"]})

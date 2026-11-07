@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 import api
 import engine
+import scripted
 from harness import guards
 from harness.runner import Runner
 from harness.skills import OFFER_PREP
@@ -55,6 +56,8 @@ def test_offer_pack_and_approvals(tmp_path, monkeypatch):
     basic_total = p["design"]["price"]["total_eur"]
     quote = next(a for a in p["offer_pack"]["actions"] if a["kind"] == "send_quote")
     assert "Basic" in quote["label"] and quote["payload"]["variant"] == "Basic"
+    bat = round(p["design"]["components"]["battery"]["size"])
+    assert p["offer_pack"]["draft_for"] == "Basic" and f"{bat} kWh battery" in p["offer_pack"]["customer_message_draft"]
     p = c.post(f"/plans/{pid}/actions/{ids['send_quote']}/approve", json={"payload": {"message": "See you soon."}}).json()
     assert p["status"] == "quoted" and "See you soon." in p["transcript"][-1]["text"]
     assert p["design"]["price"]["total_eur"] == basic_total  # the chosen variant is quoted, not the proposal

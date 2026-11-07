@@ -84,7 +84,8 @@ type OfferPack = { status: "preparing" | "ready" | "failed"; variants: Variant[]
                    flags: Plan["flags"]; site_visit_checklist: string[]; open_questions: string[];
                    customer_message_draft: string; actions: Action[]; trace: TraceStep[];
                    duration_s: number; model: string; prepared_at: string;   // model: "claude-opus-5-5" or "scripted"
-                   chosen?: Variant["name"] };                               // set by POST /variant
+                   chosen?: Variant["name"];                                 // set by POST /variant
+                   draft_for?: Variant["name"] };                            // which variant customer_message_draft describes; /variant regenerates the draft
 type GoalResult = { goal: "budget" | "independence" | "lowest_bill"; budget_eur?: number;
                     recommendation: Variant; alternatives: Variant[]; trace: TraceStep[] };
 

@@ -153,7 +153,7 @@ def offer_output(ctx: Ctx, run: dict) -> dict:
     ready = offer_missing(ctx) is None
     return {"status": "ready" if ready else "failed", "variants": [ctx.variants[n] for n in NAMES if n in ctx.variants],
             "recommended": rec, "flags": ctx.flags, "site_visit_checklist": ctx.checklist, "open_questions": ctx.questions,
-            "customer_message_draft": ctx.draft, "actions": ctx.actions, "trace": trace, "run_id": run["id"],
+            "customer_message_draft": ctx.draft, "draft_for": rec, "actions": ctx.actions, "trace": trace, "run_id": run["id"],
             "model": run["model"], "summary": (ctx.finish or {}).get("summary", "")}
 
 
