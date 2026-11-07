@@ -178,3 +178,26 @@ def test_roof_sides_and_locked_pv_above_the_cap():
     assert pv["max_modules"] == 6 and pv["quantity"] == 6 and pv["size"] == 2.58 and pv["locked"]
     assert "cut to" in pv["reasons"][0]
     assert post({"total_demand_kwh": 9000})["components"]["pv"].get("max_modules") is None
+
+
+def test_roof_without_room_says_so():
+    d = post({"total_demand_kwh": 4500, "roof_width_m": 1, "roof_length_m": 1})
+    pv = d["components"]["pv"]
+    assert pv["size"] is None and pv["max_modules"] == 0 and "no new PV fits" in pv["reasons"][0]
+    assert "existing" not in pv["reasons"][0]
+
+
+def test_planned_ev_grows_pv_and_adds_wallbox():
+    base, ev = post({"total_demand_kwh": 4500}), post({"total_demand_kwh": 4500, "ev_planned": True})
+    assert ev["components"]["wallbox"]["recommended"] and ev["components"]["pv"]["size"] > base["components"]["pv"]["size"]
+    assert ev["economics"]["total_demand_kwh"] > 4500
+
+
+def test_existing_pv_size_not_asked_again():
+    d = post({"total_demand_kwh": 4500, "existing_pv_kwp": 8})
+    assert "has_existing_pv" not in [m["field"] for m in d["missing_inputs"]]
+    assert d["components"]["pv"]["size"] is None
+
+
+def test_invalid_demand_is_422():
+    assert client.post("/design", json={"facts": {"total_demand_kwh": -5}}).status_code == 422

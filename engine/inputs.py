@@ -94,11 +94,17 @@ def read_inputs(facts: dict) -> Home:
         if facts.get(name) is not None and facts[name] not in allowed:
             raise ValueError(f"{name} must be one of {sorted(allowed)}")
 
+    for name in ("total_demand_kwh", "annual_demand_kwh", "roof_area_sqm"):
+        if facts.get(name) is not None and facts[name] <= 0:
+            raise ValueError(f"{name} must be positive")
+
     ev_planned = bool(facts.get("ev_planned"))
     has_ev = given_or_default("has_ev", False, "no EV today, one is planned" if ev_planned
                               else "no EV unless the customer says so")
+    # a planned EV is not in today's stated bill: its charging comes on top (a stated total only includes a present EV)
+    planned_only = ev_planned and not has_ev
     km = 0
-    if has_ev:
+    if has_ev or planned_only:
         if facts.get("ev_km_per_year") is None and facts.get("ev_km_per_week") is not None:
             km = facts["ev_km_per_week"] * 52
         elif facts.get("ev_km_per_year") is None and facts.get("ev_km_per_day") is not None:
@@ -115,6 +121,10 @@ def read_inputs(facts: dict) -> Home:
 
     if facts.get("total_demand_kwh") is not None:
         demand = facts["total_demand_kwh"]
+        if planned_only:
+            demand += ev_kwh
+            assumptions.append({"field": "total_demand_kwh", "value": round(demand),
+                                "note": f"stated {facts['total_demand_kwh']:,.0f} kWh plus ~{ev_kwh:,.0f} kWh for the planned EV"})
     elif facts.get("annual_demand_kwh") is not None:
         demand = facts["annual_demand_kwh"] + ev_kwh + hp_kwh
         assumptions.append({"field": "total_demand_kwh", "value": round(demand),
@@ -127,9 +137,11 @@ def read_inputs(facts: dict) -> Home:
                             "note": f"typical demand for {facts['num_inhabitants']} inhabitants (Stromspiegel)"})
     else:
         demand = given_or_default("total_demand_kwh", d["total_demand_kwh"], "typical total demand")
-    ev_kwh = min(ev_kwh, 0.6 * demand)                 # the EV part cannot exceed what the customer stated
+    ev_kwh = min(ev_kwh, 0.6 * demand)                 # the EV part cannot exceed the total
     hp_kwh = max(0.0, min(hp_kwh, 0.6 * demand - ev_kwh))
 
+    if facts.get("has_existing_pv") is None and (facts.get("existing_pv_kwp") or 0) > 0:
+        facts = {**facts, "has_existing_pv": True}      # a stated size means there is PV
     has_pv = given_or_default("has_existing_pv", False, "no existing PV")
     existing_kwp = 0.0
     if has_pv:

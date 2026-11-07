@@ -180,7 +180,7 @@ def missing_fields(facts: dict, base: dict) -> list[str]:
     out = []
     if all(facts.get(k) is None for k in ("total_demand_kwh", "annual_demand_kwh", "num_inhabitants")):
         out.append("total_demand_kwh")
-    if facts.get("has_existing_pv") is None:
+    if facts.get("has_existing_pv") is None and not (facts.get("existing_pv_kwp") or 0) > 0:
         out.append("has_existing_pv")
     roof_measured = facts.get("roof_width_m") is not None and facts.get("roof_length_m") is not None
     for k in ("region", "roof_area_sqm", "roof_orientation_deg", "heating_type", "electricity_price_eur_per_kwh"):
@@ -213,6 +213,9 @@ def reasons_for(key, r, no_battery_autarky):
         if r["retrofit"] and not size:
             return [f"you already have {h.existing_pv_kwp:g} kWp; in retrofits experts add storage or a wallbox, "
                     "not more panels"]
+        if not size and s.roof == "too_small":
+            return [f"the usable roof holds no whole module{' beyond your existing panels' if h.existing_pv_kwp else ''}, "
+                    f"so no new PV fits ({s.capped_from} would match your demand)"]
         if not size:
             return [f"your existing {h.existing_pv_kwp:g} kWp already covers what experts install for this demand"]
         if r["retrofit"]:
@@ -223,12 +226,12 @@ def reasons_for(key, r, no_battery_autarky):
                f"{h.total_demand_kwh:,.0f} kWh/yr: installer {r['profile']['installer']} most often sells the "
                f"{size:g} kWp package to homes with this demand"]
         gen = size * h.y_kwh_per_kwp
-        out.append(f"{r['modules']} new modules produce ~{gen:,.0f} kWh/yr ({h.y_kwh_per_kwp:,.0f} kWh per kWp"
+        out.append(f"{r['modules']} new module{'s produce' if r['modules'] != 1 else ' produces'} ~{gen:,.0f} kWh/yr ({h.y_kwh_per_kwp:,.0f} kWh per kWp"
                    + (f" in {h.region}" if h.region else ", German average") + ")"
                    + (f", plus ~{h.existing_pv_kwp * h.y_kwh_per_kwp:,.0f} from your existing {h.existing_pv_kwp:g} kWp"
                       if h.existing_pv_kwp else ""))
         if s.roof == "too_small":
-            out.append(f"the roof is the limit: it holds only {s.modules_fitting} modules "
+            out.append(f"the roof is the limit: it holds only {s.modules_fitting} module{'s' if s.modules_fitting != 1 else ''} "
                        f"({s.capped_from} would match your demand)")
         elif s.heatpump_suggested and r["sizes"]["heatpump"]:
             out.append(f"includes {s.heatpump_extra_modules} modules for the heat pump on the spare roof")

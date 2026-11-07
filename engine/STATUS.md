@@ -19,6 +19,16 @@ Plan and what each item became: [PLAN.md](PLAN.md). Method: [METHOD.md](METHOD.m
 - [x] Phase 2: battery by expert bands, installer profiles, retrofit rule, /explain deltas + step what-ifs
 - [x] Phase 2: H0 optimism calibrated on 74 measured homes; sourced price list; placeholders replaced by published values (two left, PLAN.md)
 
+## Customer-backend cleanup (2026-11-08)
+
+Fixed (tests in `tests/test_inputs.py`, `tests/test_api.py`):
+- Planned EV (`ev_planned`, no `has_ev`) now adds its charging (km × 0.18, default 13,000 km) on top of the stated total demand, with an assumption line; before, only the wallbox appeared and PV/bills ignored the EV. A present EV is still assumed to be in the stated total.
+- `existing_pv_kwp > 0` without `has_existing_pv` counts as existing PV and is no longer asked again.
+- `total_demand_kwh`, `annual_demand_kwh`, `roof_area_sqm` <= 0 are rejected (422), like the roof sides were; before, 0 m² silently dropped all PV and negative demand produced a design.
+- A roof that holds no module no longer says "your existing 0 kWp already covers…"; reason now states the roof limit. "1 new modules" grammar.
+
+Remaining (not changed): `bill_today_eur_per_month` with a planned EV includes the EV's charging (baseline = same home with the EV, no new system), so it is above the stated bill; a 1-module roof still gets the smallest battery band (5 kWh); `roof_area_sqm` stays in `missing_inputs` after a too-small area is given (intended: asks for exact sides). Predictions (`predict.py` val) unchanged: the dataset path never sets `ev_planned`.
+
 ## Published
 
 - `CONTRACT.md` v1: `ev_km_per_week`, `ev_km_per_day` (f38af8a), `total_demand_kwh` (336060e), `region` (718cd3f); `building_type`, `roof_type`, `bundle`, monthly bills, `_low` / `_high` prices, `/explain` live (7055607)

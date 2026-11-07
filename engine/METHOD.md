@@ -27,7 +27,7 @@ reo asks the customer; field names are the contract's. Missing values get a defa
 | Input | `HomeFacts` field | Default if not given |
 |---|---|---|
 | Total electricity per year D, incl. EV and electric heating | `total_demand_kwh` | `annual_demand_kwh` + EV (+ existing heat pump), else Stromspiegel 2025 by `num_inhabitants` (1,800 … 4,500 kWh), else 4,500 kWh |
-| EV, km | `has_ev`, `ev_planned`, `ev_km_per_year` / `_week` (×52) / `_day` (×365) | no EV; 13,000 km/yr if EV without km |
+| EV, km | `has_ev`, `ev_planned`, `ev_km_per_year` / `_week` (×52) / `_day` (×365) | no EV; 13,000 km/yr if EV without km; a planned EV (no `has_ev`) adds its kWh on top of the stated total |
 | Existing PV / battery | `has_existing_pv`, `existing_pv_kwp`, `has_existing_battery` | none; 5 kWp if PV of unknown size |
 | Heating | `heating_type` (gas, oil, heatpump, electric, district, other), `heating_demand_kwh` | unknown; heat demand from `house_size_sqm` × kWh/m² by `house_built_year` (200 / 150 / 100 / 60), else 15,800 kWh (train median) |
 | Roof | `roof_area_sqm`, `roof_orientation_deg` (180 = south), `roof_tilt_deg`, `roof_type` | unknown area; south; flat roof = east-west 15° |

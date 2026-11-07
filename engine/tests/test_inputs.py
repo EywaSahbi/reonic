@@ -143,3 +143,20 @@ def test_area_roof_caps_pv_instead_of_exceeding_it():
 def test_pv_lock_above_the_roof_is_cut():
     s = size_pv(read_inputs({"total_demand_kwh": 4500, "roof_area_sqm": 20}), pv_kwp_locked=12.0)
     assert s.modules == 7 and s.capped_from == 28
+
+
+def test_planned_ev_adds_to_stated_demand():
+    h = read_inputs({"total_demand_kwh": 4500, "ev_planned": True})
+    assert (h.total_demand_kwh, h.ev_km_per_year) == (4500 + 13000 * 0.18, 13000) and h.ev_kwh == 13000 * 0.18
+    assert any(a["field"] == "total_demand_kwh" and "planned EV" in a["note"] for a in h.assumptions)
+    assert read_inputs({"total_demand_kwh": 4500, "ev_planned": True, "has_ev": True}).total_demand_kwh == 4500   # EV already in the bill
+
+
+def test_existing_pv_size_implies_existing_pv():
+    assert read_inputs({"total_demand_kwh": 4500, "existing_pv_kwp": 8}).existing_pv_kwp == 8
+
+
+def test_nonpositive_demand_or_roof_area_rejected():
+    for f in ({"total_demand_kwh": 0}, {"total_demand_kwh": -5}, {"annual_demand_kwh": 0}, {"roof_area_sqm": 0}):
+        with pytest.raises(ValueError):
+            read_inputs(f)
