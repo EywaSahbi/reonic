@@ -20,4 +20,4 @@
 
 (one line each: what, why)
 - Installer brand in demo is "SolarHaus Müller"; persona and flow use it verbatim.
-- Handoff asks for name via `ask.input: "text"`, needs additive contract change from reo (NEED sent).
+- Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).

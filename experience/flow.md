@@ -79,7 +79,7 @@ reo **offers** the handoff (once, then leaves the `Send to installer` chip) when
 > This plan looks solid. Shall I send it to SolarHaus Müller? A planner will check it, usually visit to see the roof, and send you a final quote. You're not committing to anything.
 
 - Chips: `Yes, send it`, `Not yet`.
-- On yes: `ask` `{field: name, prompt: "Your name", input: "text"}` then email (optional). Then `POST /sessions/{id}/handoff`.
+- On yes: reo replies "Great, just add your name (and email if you like) below." with **no `ask`**. The app shows its own small handoff form (name required, email optional) and calls `POST /sessions/{id}/handoff` with `{name, email?}` directly. Name and email are not `HomeFacts`, so they never go through `ask`.
 - Confirmation: "Done. Your plan is with SolarHaus Müller. You'll see the final quote here once your planner has confirmed it." No more questions after this.
 
 ### Stage 6: Final quote
