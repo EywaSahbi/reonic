@@ -2,6 +2,11 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — engine EV distance contract update (commit f38af8a)
+
+- Added smoke requests that submit `ev_km_per_week` and `ev_km_per_day` separately alongside an EV design, validating the returned Design shape. Syntax check passes; runtime acceptance awaits the engine service delivery.
+- Contract says yearly distance takes precedence, otherwise weekly ×52, otherwise daily ×365, otherwise a 13,000 km/year default recorded as an assumption. Numeric conversion verification remains pending the live engine M1 implementation.
+
 ## 2026-11-07 — Reonic brand pass (commit e0b56cf)
 
 - `cd app && npm run build`: passed.

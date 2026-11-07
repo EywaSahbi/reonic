@@ -12,7 +12,7 @@
 
 ## Published
 
-- `qa/smoke.py` v1: current engine + reo contract checks and optional processed-data/split integrity checks; later milestone endpoints skip on 404/405.
+- `qa/smoke.py` v1: engine + reo route/shape checks, including weekly/daily EV distance inputs, and optional processed-data/split checks; later milestone endpoints skip on 404/405.
 - Verified app mock flow at `0e16e40`, tap-first opening at `9ac9490`, and Reonic branding at `e0b56cf`: production builds pass; customer design → handoff → installer edit/re-derive → rationale → finalise → confirmed quote; both views reviewed.
 
 ## Decisions
