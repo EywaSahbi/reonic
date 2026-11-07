@@ -272,4 +272,32 @@ BILL_READER = Skill(
     loop=False, label=lambda ctx: f"{llm.MODEL} (vision)" if llm.client() else "scripted",
 )
 
-SKILLS = {s.name: s for s in [OFFER_PREP, GOAL_PLANNER, BILL_READER]}
+# ---------- installer_qa: the planner's "why ...?" / "what if ...?" ----------
+
+def qa_scripted(ctx: Ctx, call) -> None:
+    q = ctx.inputs.get("question", "")
+    topic = scripted.extract(q)["topic"] or "pv"
+    d = call("engine.design", {})
+    if "error" in d:
+        return
+    comp = topic if topic in ("pv", "battery", "heatpump", "wallbox") else "pv"
+    ex = call("engine.explain", {"component": comp})
+    c = d["components"][comp]
+    head = (f"{comp}: {c['size']:g} {c['unit']} because " if c["recommended"] and c["size"] else f"{comp}: not recommended because ") \
+        + "; ".join(c["reasons"]) + "."
+    whatifs = [f"{w['change']}: {w.get('effect', '')}".rstrip(': ') for w in ex.get('what_if', [])[:2]] if 'error' not in ex else []
+    call("finish", {"summary": head + (" What-ifs: " + " | ".join(whatifs) + "." if whatifs else "")})
+
+
+INSTALLER_QA = Skill(
+    name="installer_qa", model=lambda: llm.AGENT_MODEL,
+    tools=["plan.read", "engine.design", "engine.explain", "evidence.percentile", "finish"],
+    max_steps=6, max_seconds=45, effort="low",
+    prompt=lambda: (PROMPTS / "installer_qa.md").read_text(encoding="utf-8"),
+    context=lambda ctx: json.dumps({"planner_question": ctx.inputs.get("question"), "plan_id": ctx.plan["id"]}, ensure_ascii=False),
+    scripted=qa_scripted, texts=lambda ctx: [(ctx.finish or {}).get("summary", "")],
+    missing=lambda ctx: None if (ctx.finish or {}).get("summary") else "no answer",
+    output=lambda ctx, run: {"answer": (ctx.finish or {}).get("summary", ""), "run_id": run["id"]},
+)
+
+SKILLS = {s.name: s for s in [OFFER_PREP, GOAL_PLANNER, BILL_READER, INSTALLER_QA]}

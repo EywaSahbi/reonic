@@ -109,3 +109,11 @@ def test_goal_and_bill(tmp_path, monkeypatch):
     assert run["skill"] == "goal_planner" and any(s["tool"] == "grounding" and s["ok"] for s in run["steps"])
     skills = [r["skill"] for r in c.get(f"/plans/{pid}/runs").json()]
     assert skills.count("bill_reader") == 1 and skills.count("goal_planner") == 1
+
+
+def test_installer_qa(tmp_path, monkeypatch):
+    c, pid, p = setup(tmp_path, monkeypatch)
+    r = c.post(f"/plans/{pid}/ask", json={"text": "why this battery?"}).json()
+    assert "battery" in r["answer"] and r["run_id"]
+    run = c.get(f"/runs/{r['run_id']}").json()
+    assert run["skill"] == "installer_qa" and any(s["tool"] == "grounding" and s["ok"] for s in run["steps"])

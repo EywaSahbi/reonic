@@ -181,6 +181,22 @@ def run_skill(db: dict, skill: str, plan: dict, st: dict, trigger: str, inputs: 
     return run
 
 
+def run_skill_unlocked(pid: str, skill: str, trigger: str, inputs: dict) -> dict:
+    """Like run_skill, but the (possibly slow) model loop runs outside the store lock."""
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
+    ctx.inputs = inputs
+    run = Runner(SKILLS[skill], ctx, trigger).go()
+    with _lock:
+        db = _load()
+        db.setdefault("runs", {})[run["id"]] = run
+        RUNS.pop(run["id"], None)
+        _save(db)
+    return run
+
+
 def goal_turn(db: dict, plan: dict, st: dict, new: dict, goal: str) -> dict:
     """Trigger: goal message -> goal_planner. The best variant becomes the plan (customer's choice), two alternatives shown."""
     plan["facts"].update(new)
@@ -470,9 +486,9 @@ def ask_plan(pid: str, body: Ask):
         res = run["output"] or {}
         lines = [res["recommendation"]["why"]] + [a["why"] for a in res.get("alternatives", [])] if res.get("recommendation") else []
         return {"answer": " ".join(lines) or "No variant found.", "goal_result": res}
-    answer = llm.reply(audience="installer", latest_message=body.text, facts=plan["facts"], engine_result=d,
-                       transcript=plan["transcript"], flags=evidence.flags(plan["facts"], d))  # aggregate only, no other homes
-    return {"answer": answer or scripted.answer(d, scripted.extract(body.text)["topic"])}
+    run = run_skill_unlocked(pid, "installer_qa", "installer question", {"question": body.text})  # traced, grounded
+    res = run["output"] or {}
+    return {"answer": res.get("answer") or scripted.answer(d, scripted.extract(body.text)["topic"]), "run_id": run["id"]}
 
 
 @app.post("/plans/{pid}/finalize")

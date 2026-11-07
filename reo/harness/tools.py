@@ -176,9 +176,9 @@ REGISTRY: dict[str, Tool] = {t.name: t for t in [
     Tool("plan.add_question", "propose", "Add an open question for the planner, or a site-visit checklist item (kind site_visit).",
          {"type": "object", "properties": {"text": {"type": "string"}, "kind": {"type": "string", "enum": ["open_question", "site_visit"]}},
           "required": ["text"]}, _question),
-    Tool("finish", "propose", "Finish the run: which variant you recommend and a one-line summary for the planner.",
+    Tool("finish", "propose", "Finish the run: a one-line summary (or your answer) for the planner, and for offer packs the variant you recommend.",
          {"type": "object", "properties": {"recommended": {"type": "string", "enum": ["Basic", "Recommended", "Independence"]},
-                                           "summary": {"type": "string"}}, "required": ["recommended", "summary"]}, _finish),
+                                           "summary": {"type": "string"}}, "required": ["summary"]}, _finish),
 ]}
 
 
