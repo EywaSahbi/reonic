@@ -47,7 +47,7 @@ Behaviour notes (v1):
 | POST | `/sessions` | `{}` → `Turn` (greeting; zero-fact design once engine allows `facts: {}`) | done |
 | POST | `/sessions/{id}/messages` | `{text}` → `Turn` | done |
 | POST | `/sessions/{id}/facts` | `{facts: Partial<HomeFacts>}` → `Turn` (no LLM) | done |
-| POST | `/sessions/{id}/address` | `{address}` → `Turn` (mocked roof lookup; until M2: asks for roof m²) | M2 |
+| POST | `/sessions/{id}/address` | `{address}` → `Turn` (mocked roof lookup for the demo addresses in `reo/addresses.json`: roof area, orientation, tilt, roof type, region; any other address → asks for roof m²) | done |
 | POST | `/sessions/{id}/handoff` | `{name, email?}` → `Plan` (status `handed_over`) | done |
 | GET | `/sessions/{id}` | → `Plan` (customer sees the final quote once `quoted`) | done |
 

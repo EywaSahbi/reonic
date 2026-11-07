@@ -380,15 +380,23 @@ def send_bill(pid: str, image: UploadFile = File(...)):
 
 @app.post("/sessions/{pid}/address")
 def send_address(pid: str, body: Address):
-    # shortcut: address lookup mock lands in M2; until then ask for the roof size directly
+    """Mocked roof lookup for the demo addresses (addresses.json); anything else asks for the roof size."""
+    hit = next((a for a in json.loads((HERE / "addresses.json").read_text(encoding="utf-8"))["addresses"]
+                if a["match"] in body.address.lower().replace("ß", "ss").replace("strasse", "str")), None)
     with _lock:
         db = _load()
         plan, st = _get(db, pid)
-        st["last_ask"] = "roof_area_sqm"
-        m = reo_msg(plan, "I can't look up that address yet. Could you tell me roughly how big the sunny side of your roof is, in m²?")
+        plan["transcript"].append({"role": "customer", "text": body.address, "at": now()})
+        if hit is None:
+            st["last_ask"] = "roof_area_sqm"
+            m = reo_msg(plan, "I can't look up that address. Could you tell me roughly how big the sunny side of your roof is, in m²?")
+            _save(db)
+            return {"messages": [m], "plan": out(plan), "suggestions": ["About 40 m²", "About 60 m²", "Not sure"],
+                    "ask": {"field": "roof_area_sqm", "prompt": "Roof area (m²)", "input": "number"}}
+        turn = customer_turn(db, pid, {"facts": dict(hit["facts"]), "intent": "facts", "topic": None}, f"address: {hit['label']}", False)
+        turn["messages"][0]["text"] = f"I looked up your address: {hit['say']}. " + turn["messages"][0]["text"]
         _save(db)
-        return {"messages": [m], "plan": out(plan), "suggestions": ["About 40 m²", "About 60 m²"],
-                "ask": {"field": "roof_area_sqm", "prompt": "Roof area (m²)", "input": "number"}}
+        return turn
 
 
 @app.post("/sessions/{pid}/handoff")

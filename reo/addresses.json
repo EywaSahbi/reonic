@@ -1,0 +1,14 @@
+{
+  "_note": "Mock roof lookup for the demo (hard rule 6). Matched by street name; anything else falls back to asking for the roof size. Values are invented demo data, not a real roof survey.",
+  "addresses": [
+    {"match": "musterstr", "label": "Musterstraße 12, 80331 München",
+     "facts": {"roof_area_sqm": 48, "roof_orientation_deg": 180, "roof_tilt_deg": 35, "roof_type": "gable", "region": "BY"},
+     "say": "about 48 m² of roof facing south"},
+    {"match": "hauptstr", "label": "Hauptstraße 5, 20095 Hamburg",
+     "facts": {"roof_area_sqm": 36, "roof_orientation_deg": 225, "roof_tilt_deg": 30, "roof_type": "gable", "region": "HH"},
+     "say": "about 36 m² of roof facing south-west"},
+    {"match": "lindenweg", "label": "Lindenweg 3, 01067 Dresden",
+     "facts": {"roof_area_sqm": 70, "roof_type": "flat", "region": "SN"},
+     "say": "a flat roof with about 70 m² of usable area"}
+  ]
+}

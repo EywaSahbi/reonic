@@ -5,7 +5,8 @@
 - [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
 - [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [x] installer_qa on the harness (Sonnet 5.5 / scripted)
-- [ ] chat_turn onto the harness; mocked address lookup (M2); German scripted replies; follow_up (stretch)
+- [x] Mocked address lookup (`addresses.json`: Musterstraße München, Hauptstraße Hamburg, Lindenweg Dresden)
+- [ ] chat_turn onto the harness; German scripted replies; follow_up (stretch)
 
 - [x] `CONTRACT.md` v1; API (`api.py`) with plan store, all customer + installer endpoints, Claude loop, scripted fallback, engine-offline mode (M0/M1)
 - [x] Verified live against engine stub 3c0b18b: full demo (kWh, Gas, EV, why battery, Bavaria, handoff, installer edit + ask, finalise) works
@@ -13,7 +14,6 @@
 - [ ] Offline/scripted replies in German when the customer writes German (now English only)
 - [x] Flags + similar projects from data's benchmarks (`evidence.py`); `/plans/{id}/ask`; `/validation` (M2)
 - [x] Voice via ElevenLabs (`voice.py`, `/sessions/{id}/voice`, `/tts`, `/health.voice`)
-- [ ] Mocked address lookup for the demo addresses (M2)
 
 ## Published
 

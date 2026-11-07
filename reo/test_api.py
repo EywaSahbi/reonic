@@ -104,3 +104,13 @@ def test_voice_turn(tmp_path, monkeypatch):
 def test_articles():
     import scripted
     assert [scripted.a_n(n) for n in ["8", "11", "18", "80", "10", "12", "1"]] == ["an", "an", "an", "an", "a", "a", "a"]
+
+
+def test_address_lookup(tmp_path, monkeypatch):
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Musterstraße 12, München"}).json()
+    assert t["plan"]["facts"]["roof_area_sqm"] == 48 and t["plan"]["facts"]["region"] == "BY"
+    assert t["messages"][0]["text"].startswith("I looked up your address")
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Irgendwo 1"}).json()
+    assert t["ask"]["field"] == "roof_area_sqm"
