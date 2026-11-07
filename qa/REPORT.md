@@ -2,6 +2,12 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — app installer mock handoff (commit 0e16e40)
+
+- `cd app && npm run build`: passed after pulling the installer view.
+- Browser mock walk passed end to end: created a plan using 4,500 kWh, gas heating, and a planned EV; handed it over; the installer inbox displayed it; reduced the battery from 12 to 11 kWh and applied the edit; the UI showed the re-derived total and payback plus an edit log; “Why this battery size?” returned a reason; finalisation disabled edit controls and marked the plan “Quote sent”; the customer view showed “Confirmed quote” and the updated 11 kWh battery.
+- These are mock values and the mock API is visibly labelled. The live reo/engine endpoints and `/validation` remain unverified.
+
 ## 2026-11-07 — app customer mock skeleton (commit 8ce3904)
 
 - `cd app && npm install`: passed; npm reported two dependency advisories (one moderate, one high).

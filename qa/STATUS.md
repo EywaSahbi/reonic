@@ -13,7 +13,7 @@
 ## Published
 
 - `qa/smoke.py` v1: current engine + reo contract checks and optional processed-data/split integrity checks; later milestone endpoints skip on 404/405.
-- Verified app customer mock skeleton at `8ce3904`: install/build pass; 4,500 kWh → gas → planned EV → mock handoff flow completes.
+- Verified app customer + installer mock flow at `0e16e40`: build passes; handoff → inbox → battery edit/re-derive → rationale → finalise → customer confirmed quote.
 
 ## Decisions
 
