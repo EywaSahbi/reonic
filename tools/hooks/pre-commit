@@ -20,7 +20,7 @@ esac
 bad=$(git diff --cached --name-only --no-renames | while IFS= read -r f; do
   ok=0
   for p in $allowed; do
-    case "$f" in "$p"*) ok=1 ;; esac
+    case "$f" in ("$p"*) ok=1 ;; esac
   done
   [ $ok -eq 0 ] && echo "  $f"
 done)
