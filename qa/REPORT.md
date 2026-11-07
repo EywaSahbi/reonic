@@ -2,6 +2,12 @@
 
 Newest first. Only build, contract, metric, and demo findings are tracked.
 
+## 2026-11-07 — engine M0 stub (`3c0b18b`, contract addition `718cd3f`)
+
+- `cd engine && uv run pytest`: passed, 25 tests. One upstream Starlette `TestClient` deprecation warning was reported.
+- Started the engine API locally and ran `python qa/smoke.py` against live engine and reo services: passed `/health`, `/prices`, no-demand/total-demand/household-demand design, weekly and daily EV inputs, regional PV sizing, reo customer flow, handoff, installer edit, and finalize. The regional check confirms the same 4,500 kWh demand sizes larger in Schleswig-Holstein than Bavaria and stops requesting region once known.
+- `/explain` correctly skips as a later milestone. `/validation` and processed data/split checks skip because data outputs are not published. The engine's battery, wallbox, prices, and economics are documented placeholders; this verifies M0 contract only, not M1 accuracy or the `val` score.
+
 ## 2026-11-07 — reo voice API (`2756583`)
 
 - `cd reo && uv run pytest`: passed, 5 tests. `test_voice_turn` verifies mocked transcription updates `total_demand_kwh`, mocked speech is returned as base64 audio, and empty audio produces a “didn't catch” response without changing state.
