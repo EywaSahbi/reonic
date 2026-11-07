@@ -67,42 +67,58 @@ Phase 1 delivered the customer flow end to end (reo + app on the engine stub, da
 4. **`/explain` what-ifs** (component off/on, size ±1 step: Δ price, Δ savings, Δ payback): the offer agent and goal planning use it.
 5. Use existing PV / retrofit inputs (`has_existing_pv`) so retrofits get no new PV.
 
-### reo (Eywa): the agent
+### reo (Eywa): the reo agent harness
 
-1. **Model split:** Sonnet 5.5 for chat turns, Opus 5.5 for the offer agent (env-overridable).
-2. **Offer agent** (`POST /plans/{id}/prepare`, runs automatically on handoff): tool loop over engine `/design` (with locks) + `/explain` + benchmarks → `Plan.offer_pack`:
-   `{status: "preparing" | "ready", variants: [{name: "Basic" | "Recommended" | "Independence", locks, design, why}], flags, site_visit_checklist: string[], open_questions: string[], customer_message_draft, actions: [{id, kind: "book_visit" | "send_quote" | "create_crm_task" | "request_document", label, payload, status: "proposed" | "approved" | "done"}], trace: [{step, tool, summary}], duration_s}`.
-3. **Approval-gated actions:** `POST /plans/{id}/actions/{action_id}/approve` executes a mocked tool (calendar slots / CRM log in JSON under `reo/`) and records it; `send_quote` = finalise.
-4. **Bill photo:** `POST /sessions/{id}/bill` (image) → Claude vision reads yearly kWh, ct/kWh, provider → facts → `Turn` with "I read this from your bill: … correct?" chips.
-5. **Goal planning:** goals like "under €20,000", "as independent as possible", "lowest monthly bill" (customer `/messages`, installer `/plans/{id}/ask`) → tool loop over engine variants → recommendation + 2 alternatives + trace.
-6. Ask "do you already have solar?" early (fixes the retrofit misses).
-7. Stretch: follow-up nudge for abandoned sessions (draft only, approval-gated).
+**Goal:** not a set of one-off LLM endpoints, but **one small agent harness** that every reo capability runs on. This is the technical centrepiece of the pitch: "reo is an agent runtime for installers: skills, tools, guardrails, traces". reo's phase-2 contract draft (4263518: offer pack, actions, bill, goals) stays; those features become **skills on the harness**.
 
-Post the new types and endpoints as a `CONTRACT` to app and qa **before** building, so app can mock them.
+Built in `reo/harness/` (a few files, no agent framework: the Anthropic SDK tool-use loop plus our own code):
+
+1. **Tool registry** (`tools.py`). Each tool = name, JSON schema, handler, and a declared **effect class**:
+   - `read`: no side effects (`engine.design`, `engine.explain`, `evidence.similar`, `evidence.percentile`, `plan.read`, `calendar.slots`, `bill.read` (vision)),
+   - `propose`: writes only a proposal to the plan (`plan.propose_variant`, `plan.propose_action`, `plan.draft_message`, `plan.add_question`),
+   - `execute`: real side effect (`calendar.book`, `crm.create_task`, `quote.send`). **Never callable by a model.** Only the approve endpoint runs them, after a human click.
+2. **Skills** (`skills/*.md` + one entry each in `skills.py`): a skill = system prompt + allowed tools + budget (max steps, max seconds) + output schema. Start with:
+   `chat_turn` (Sonnet 5.5, today's loop), `offer_prep` (Opus 5.5, on handoff), `goal_planner` (Opus 5.5, budget / independence / lowest bill), `bill_reader` (vision), `installer_qa` ("why …?", "what if …?"), stretch `follow_up` (draft only).
+3. **Runner** (`runner.py`): one loop for all skills: model call → tool calls → results → repeat until the output schema is filled or the budget runs out. Every step is appended to a **Run** `{id, skill, plan_id, trigger, status: running|done|failed|needs_approval, steps: [{n, kind: think|tool|guard, tool?, args_summary, result_summary, ms}], output, model, started_at, duration_s}` stored with the plan.
+4. **Guardrails in code, not in the prompt** (`guards.py`), each logged as a `guard` step:
+   - **Grounding check:** every number in any text the skill outputs must appear in a tool result of the same run (rounding tolerance as in persona.md). Fail → one retry with the violation listed → else fall back to the scripted output.
+   - **Effect gate:** a skill can only call tools its definition allows; `execute` tools are not in any skill's list.
+   - **Budget:** max steps and seconds per skill; on timeout return the best partial output, marked.
+   - **Scope:** a run only sees its own plan's facts (hard rule 5).
+5. **Triggers** (`triggers.py`): handoff → `offer_prep`; goal message → `goal_planner`; bill upload → `bill_reader`; installer edit → re-run the guard checks on the pack and mark stale variants; stretch: idle session → `follow_up`.
+6. **Live trace:** `GET /runs/{id}` and `GET /runs/{id}/events` (Server-Sent Events, one event per step) so the installer view can show reo working in real time; `GET /plans/{id}/runs` lists runs. `OfferPack` and `GoalResult` carry `run_id`; `OfferPack.trace` stays as the summary.
+7. **Approvals:** `POST /plans/{id}/actions/{action_id}/approve` and `/reject`; approving runs the matching `execute` tool and appends a step to the run.
+8. **Scripted mode:** the same skills run without a key via a scripted planner (fixed tool sequence per skill), so runs, traces and guards look identical in the demo, with `model: "scripted"`.
+9. **Harness evals** (`reo/evals/`, run by `uv run python -m evals`): 6–10 scenarios from `val` homes + demo homes; per run assert: grounded numbers, no `execute` without approval, three variants that differ, budget respected, trace present. Print a table; qa runs it after every reo `DONE`.
+10. Keep from before: model split (Sonnet 5.5 chat / Opus 5.5 agents), ask "already have solar?" early.
+
+**Order:** (a) post the harness types + run/approve/SSE endpoints as a `CONTRACT` to app and qa first; (b) registry + runner + guards with `offer_prep` scripted end to end; (c) `offer_prep` on Opus; (d) `bill_reader`, `goal_planner`; (e) evals; (f) `installer_qa` moves onto the harness; (g) `follow_up` if time.
 
 ### data (Eywa): keep the evidence current
 
 1. Re-score `val` whenever the engine posts `DONE`; per-installer scores once `installer_profile` exists.
-2. For the offer agent: a `similar_projects(home, k)` helper output or documented lookup over `projects.parquet` + percentile lookup over `benchmarks.json` (reo reads files, no imports).
+2. For the offer agent: a `similar_projects(home, k)` helper output or documented lookup over `projects.parquet` + percentile lookup over `benchmarks.json` (reo reads files, no imports). (Done: c0cb87e.)
+4. **Harness eval scenarios:** `data/processed/scenarios.json`, 6–10 `val` homes covering the hard cases (retrofit with existing PV, EV planned, gas → heat pump, tiny demand, big demand, tight budget) with the expert design attached, for reo's `evals`.
 3. Final frozen `test` numbers and charts at M3 for the deck.
 
 ### app (Raneem): polish + installer agent UI
 
 1. Clean up the demo site (less "vibe coded"): one type scale, spacing system and component set from `experience/brand.md`, real copy, no decorative noise. (Raneem steering directly.)
-2. Installer **offer pack** view: three variant cards side by side, "reo prepared this in 38 s" trace timeline, flags, site-visit checklist, editable draft message, approve buttons per action.
+2. Installer **offer pack** view: three variant cards side by side, a **live run timeline** fed by `GET /runs/{id}/events` ("reo is checking 12 similar homes…", guard steps shown as small ✓ "numbers verified"), flags, site-visit checklist, editable draft message, approve / reject buttons per action.
 3. Customer widget: bill photo upload (camera icon), goal chips ("Keep it under €20,000", "As independent as possible").
 4. Reality-check panel from `/validation` (test numbers, per installer, honest where we lose).
 5. `pitch/demo-script.md`, deck, README.
 
 ### qa (Raneem's Codex)
 
-Verify every phase-2 `DONE`; check hard rule 2 on offer packs (every number in variants, drafts and summaries appears in an engine design of that run); check nothing executes without approval; check the offer pack also works without an API key; from Sun 09:00 rehearse the demo script daily-driver style; M3 clean-clone run.
+Run reo's harness evals (`cd reo && uv run python -m evals`) after every reo `DONE` and report regressions; additionally try to break the guards (prompted to invent a number, to call an `execute` tool, to read another plan). Verify every phase-2 `DONE`; check hard rule 2 on offer packs (every number in variants, drafts and summaries appears in an engine design of that run); check nothing executes without approval; check the offer pack also works without an API key; from Sun 09:00 rehearse the demo script daily-driver style; M3 clean-clone run.
 
 ### Timing
 
 | When | Done |
 |---|---|
-| Sat 23:30 (M1) | engine core real numbers live; reo phase-2 contract posted; app clean-up underway |
-| Sun 03:00 | offer agent + approvals working on mocks; bill photo; offer-pack UI against mock |
-| Sun 09:00 (M2) | everything live end to end, goal planning, reality-check panel, installer style if engine has it |
+| Sat 21:00 | engine core real numbers live (done); reo harness `CONTRACT` posted |
+| Sat 23:30 (M1) | harness registry + runner + guards; `offer_prep` scripted end to end with approvals; app offer-pack view on mock; data scenario set |
+| Sun 03:00 | `offer_prep` on Opus with live SSE trace in the installer view; `bill_reader`; harness evals green |
+| Sun 09:00 (M2) | `goal_planner`, `installer_qa` on the harness, reality-check panel, installer style if engine has it |
 | Sun 12:00 (M3) | freeze, final test numbers, rehearsal, recording |
