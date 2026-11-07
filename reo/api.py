@@ -33,7 +33,7 @@ from harness.skills import SKILLS
 HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
 REPORTS = HERE.parent / "data" / "reports"  # data/CONTRACT.md: score_<name>_<split>.json
-GREETING = ("Hi, I'm reo, the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
+GREETING = ("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
             "with a price estimate. To start: how many people live in your home?")
 HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit "
                  "to see the roof, and send you a final quote. You're not committing to anything.")
