@@ -150,3 +150,9 @@ def test_installer_profile_changes_style():
     assert a["installer_profile"] == "23c108b7" and a["components"]["pv"]["size"] != b["components"]["pv"]["size"]
     assert post({"total_demand_kwh": 4500}, installer="unknown")["installer_profile"] is None
     assert set(client.get("/installers").json()) == {"23c108b7", "2a8ba8e2"}
+
+
+def test_subsidy_share_zero_hides_grant_line():
+    d = post(GAS_HOME, prices={"heatpump_subsidy_share": 0})
+    assert not any(i["label"].startswith("KfW") for i in d["price"]["items"])
+    assert d["price"]["total_eur"] > post(GAS_HOME)["price"]["total_eur"]

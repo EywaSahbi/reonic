@@ -127,11 +127,12 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         share = price_of("heatpump_subsidy_share", overrides)[0]
         cap = price_of("heatpump_subsidy_max_eligible_eur", overrides)[0]
         mid, lo, hi = (hp_kw * per_kw + base for per_kw, base in zip(*device))
-        grant = round(share * min(mid, cap), 2)
-        items.append({"label": f"KfW 458 base grant {share:.0%} (estimate, eligible up to €{cap:,.0f})", "qty": 1,
-                      "unit": "flat", "unit_price_eur": -grant, "total_eur": -grant})
-        cost["heatpump"][0] -= share * min(lo, cap)
-        cost["heatpump"][1] -= share * min(hi, cap)
+        if share:                                # share 0 = no grant line (reo's customer view, persona rule)
+            grant = round(share * min(mid, cap), 2)
+            items.append({"label": f"KfW 458 base grant {share:.0%} (estimate, eligible up to €{cap:,.0f})", "qty": 1,
+                          "unit": "flat", "unit_price_eur": -grant, "total_eur": -grant})
+            cost["heatpump"][0] -= share * min(lo, cap)
+            cost["heatpump"][1] -= share * min(hi, cap)
     total = round(sum(i["total_eur"] for i in items), 2)
 
     # economics: one year before and after
