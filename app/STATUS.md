@@ -25,6 +25,7 @@ Done in phase 1: persona + flow (incl. tap-first opening, region, existing solar
 ## Decisions
 
 (one line each: what, why)
+- Hero photo `app/src/assets/house-hero.jpg`: usage cleared by Raneem (2026-11-07).
 - Installer brand in demo is "Sonnfeld" (was SolarHaus Müller, renamed by Raneem 2026-11-07); persona and flow use it verbatim. Site copy in English.
 - Handoff collects name/email in an app-side form posting to `/handoff` (contract-valid; qa BLOCKED on the `ask` version).
 - Persona: reo may mention heat pump funding in general (never amounts), and aggregate "similar homes" comparisons from attached benchmarks in the customer chat; individual projects stay installer-only. Raneem's call.
