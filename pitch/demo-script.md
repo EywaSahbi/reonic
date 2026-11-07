@@ -24,8 +24,8 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 
 ### 0:20 — Sonnfeld's website (window A)
 
-- Show the homepage: a normal installer site. "This is Sonnfeld, an installer. reo lives on their website."
-- Click **Plan my home with reo**. The page pulls back, reo's sheet slides down.
+- Show the homepage: a normal installer site. "This is Sonnfeld, an installer. reo runs on their website under their own name: white-label, no Reonic branding for their customers."
+- Click **Plan my home** (the character in the middle). The page pulls back, the advisor sheet slides down.
 
 ### 0:40 — Minimal facts → instant first design
 
