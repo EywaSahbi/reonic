@@ -81,6 +81,7 @@ def run(pred_path: Path, split: str) -> dict:
               "missing_predictions": len(missing),
               "by_installer": {inst: metrics(g, pred) for inst, g in truth.groupby("installer")},
               "baseline": metrics(truth, baseline(truth)),
+              "baseline_by_installer": {inst: metrics(g, baseline(g)) for inst, g in truth.groupby("installer")},
               "tolerance": TOL}
     out = ROOT / "reports" / f"score_{name}_{split}.json"
     out.parent.mkdir(exist_ok=True)

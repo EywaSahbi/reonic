@@ -10,7 +10,8 @@
 - [x] Test-set report, deviation analysis, charts → `DONE` to reo, app (M2): `reports/reality_check_test.md` + 3 PNGs
 - [x] Phase 2 #2: lookup spec for reo's offer agent in `CONTRACT.md` + reference `lookup.py` (similar projects, segment, percentile, variant anchors p25/p75)
 - [x] Phase 2 #4: `processed/scenarios.json` (9 hard-case homes) for reo's harness evals → `DONE` to reo, qa
-- [ ] Phase 2 #1: re-score `val` on every engine `DONE`; per-installer scores once `installer_profile` exists
+- [x] Per-installer val scores with vs without `installer_profile` (engine b99a3f5) → `reports/installer_style_val.md`
+- [ ] Phase 2 #1: re-score `val` on every engine `DONE`; at M3 run `installers.py` on test once
 - [ ] Phase 2 #3 / M3 (Sun 12:00): final frozen `test` numbers + charts for the deck (`report.py --split test` once, then freeze)
 
 ## Published
