@@ -68,7 +68,8 @@ def ui_ask(ask: dict) -> dict:
 
 def next_question(facts: dict, design: dict | None = None, skipped: set[str] = frozenset()) -> dict | None:
     """The one ask for this turn, or None when the flow is done. Fixed order, skips branch:
-    kWh (skipped: people) -> address (skipped: state; state skipped too: roof width x length) -> EV -> heating -> existing solar."""
+    kWh (skipped: people) -> address (skipped: roof width x length) -> EV -> heating (-> heat pump option).
+    No federal-state and no existing-solar questions (EywaSahbi, 2026-11-08); volunteered facts still count."""
     def known(*names):
         return any(facts.get(n) is not None for n in names)
     roof = known("roof_area_sqm", "roof_width_m")
@@ -80,19 +81,13 @@ def next_question(facts: dict, design: dict | None = None, skipped: set[str] = f
     if not roof:
         if "roof_area_sqm" not in skipped and "roof_dims" not in skipped:
             return ASK["roof_area_sqm"]
-        if not known("region") and "region" not in skipped:
-            return ASK["region"]
-        if "region" in skipped and "roof_dims" not in skipped:
+        if "roof_dims" not in skipped:
             return ASK["roof_dims"]
     for field in ("has_ev", "heating_type"):
         if not known(*next(k for k, a in QUESTIONS if a["field"] == field)) and field not in skipped:
             return ASK[field]
     if facts.get("heating_type") in FOSSIL and "heatpump_option" not in skipped:   # "skipped" also holds closed asks
         return ASK["heatpump_option"]
-    if not known("has_existing_pv") and "has_existing_pv" not in skipped:
-        return ASK["has_existing_pv"]
-    if facts.get("has_existing_pv") and not known("existing_pv_kwp") and "existing_pv_kwp" not in skipped:
-        return ASK["existing_pv_kwp"]
     return None
 
 

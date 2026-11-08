@@ -57,9 +57,9 @@ def test_demo_flow(tmp_path, monkeypatch):
     assert t["ask"]["field"] == "roof_area_sqm" and t["ask"]["input"] == "address"  # location right after kWh
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Skip"}).json()
-    assert t["ask"]["field"] == "region"
-    t = c.post(f"/sessions/{pid}/messages", json={"text": "BY"}).json()  # state given: no dimensions
-    assert t["plan"]["facts"]["region"] == "BY" and t["ask"]["field"] == "has_ev"
+    assert t["ask"]["field"] == "roof_dims"                              # no federal-state question
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Skip"}).json()
+    assert t["ask"]["field"] == "has_ev"
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we're buying an electric car next year"}).json()
     assert t["plan"]["facts"]["ev_planned"] is True
@@ -75,11 +75,8 @@ def test_demo_flow(tmp_path, monkeypatch):
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "No, keep my plan"}).json()   # chip
     assert "without a heat pump" in t["messages"][0]["text"] and not t["plan"]["design"]["components"]["heatpump"]["recommended"]
-    assert t["ask"]["field"] == "has_existing_pv" and "heatpump_option" not in t
-
-    t = c.post(f"/sessions/{pid}/messages", json={"text": "No solar yet"}).json()  # chip
-    assert t["plan"]["facts"]["has_existing_pv"] is False
-    assert t["suggestions"][0] == "Yes, send it"  # heating + EV + existing solar known -> offer the handoff once
+    assert "ask" not in t and "heatpump_option" not in t
+    assert t["suggestions"][0] == "Yes, send it"  # heating + EV known (no existing-solar ask) -> offer the handoff once
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Not yet"}).json()
     assert "only here to help" not in t["messages"][0]["text"]
@@ -186,21 +183,20 @@ def test_roof_geometry():
     assert roof.sunny_area(100, "flat") == 100 and round(roof.sunny_area(100, "gable")) == 61 and round(roof.sunny_area(100, "mono")) == 122
 
 
-def test_kwh_skip_goes_through_people_then_state_then_dimensions(tmp_path, monkeypatch):
+def test_kwh_skip_goes_through_people_then_dimensions(tmp_path, monkeypatch):
     c = client(tmp_path, monkeypatch)
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     say = lambda text: c.post(f"/sessions/{pid}/messages", json={"text": text}).json()
     assert say("Skip")["ask"]["field"] == "num_inhabitants"
     t = say("3")
     assert t["plan"]["facts"]["num_inhabitants"] == 3 and t["ask"]["field"] == "roof_area_sqm"
-    assert say("Skip")["ask"]["field"] == "region"
     t = say("Skip")
     assert t["ask"]["field"] == "roof_dims" and t["ask"]["input"] == "dimensions"
     t = say("Skip")
     assert t["ask"]["field"] == "has_ev"                                       # nothing known about the roof: assumed, on to EV
     assert say("No")["ask"]["field"] == "heating_type"
     t = say("electric")
-    assert "heat pump would be worth" not in t["messages"][0]["text"] and t["ask"]["field"] == "has_existing_pv"
+    assert "heat pump would be worth" not in t["messages"][0]["text"] and "ask" not in t   # flow done: handoff offer
 
 
 def test_address_sets_roof_location_for_the_satellite_view(tmp_path, monkeypatch):
@@ -247,11 +243,11 @@ def test_heatpump_option_yes_by_typing_and_by_tap(tmp_path, monkeypatch):
         assert t["ask"]["field"] == "heatpump_option"
         t = answer(pid)
         assert t["plan"]["design"]["components"]["heatpump"]["recommended"] and "now includes the heat pump" in t["messages"][0]["text"]
-        assert "heatpump_option" not in t["plan"]["facts"] and t["ask"]["field"] == "has_existing_pv"
+        assert "heatpump_option" not in t["plan"]["facts"] and "ask" not in t
 
 
 def test_electric_heating_has_no_heatpump_step(tmp_path, monkeypatch):
     c = client(tmp_path, monkeypatch)
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     t = c.post(f"/sessions/{pid}/facts", json={"facts": {"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric"}}).json()
-    assert t["ask"]["field"] == "has_existing_pv" and "heatpump_option" not in t
+    assert "ask" not in t and "heatpump_option" not in t

@@ -17,11 +17,7 @@ def test_question_order_kwh_known():
     assert fields(f) == "heating_type"
     f["heating_type"] = "gas"
     assert fields(f) == "heatpump_option"                                   # fossil heating: heat pump is offered as an option
-    assert fields(f, {"heatpump_option"}) == "has_existing_pv"              # retrofit handling stays (app ACK)
-    f["has_existing_pv"] = True
-    assert fields(f, {"heatpump_option"}) == "existing_pv_kwp"
-    f["existing_pv_kwp"] = 5
-    assert fields(f, {"heatpump_option"}) is None and flow.offer_handoff(f, None, {"heatpump_option"})
+    assert fields(f, {"heatpump_option"}) is None and flow.offer_handoff(f, None, {"heatpump_option"})  # no existing-solar ask
 
 
 def test_kwh_skipped_asks_people_then_location():
@@ -32,19 +28,17 @@ def test_kwh_skipped_asks_people_then_location():
 
 def test_location_fallbacks():
     base = {"total_demand_kwh": 4500}
-    assert fields(base, {"roof_area_sqm"}) == "region"                      # address skipped -> federal state
-    assert fields({**base, "region": "BY"}, {"roof_area_sqm"}) == "has_ev"  # state given -> EV
-    assert fields(base, {"roof_area_sqm", "region"}) == "roof_dims"         # state skipped -> roof width x length
+    assert fields(base, {"roof_area_sqm"}) == "roof_dims"                   # address skipped -> roof width x length (no state ask)
     assert flow.ASK["roof_dims"]["input"] == "dimensions"
-    assert fields({**base, "roof_width_m": 8, "roof_length_m": 6}, {"roof_area_sqm", "region"}) == "has_ev"
-    assert fields(base, {"roof_area_sqm", "region", "roof_dims"}) == "has_ev"        # dimensions skipped -> EV anyway
-    assert fields(base, {"roof_dims"}) == "region"                          # address not found, dimensions skipped -> state
+    assert fields({**base, "roof_width_m": 8, "roof_length_m": 6}, {"roof_area_sqm"}) == "has_ev"
+    assert fields(base, {"roof_area_sqm", "roof_dims"}) == "has_ev"         # dimensions skipped -> EV anyway
+    assert fields(base, {"roof_dims"}) == "has_ev"                          # address not found, dimensions skipped -> EV
 
 
 def test_ev_and_heating_are_always_asked_in_that_order():
     base = {"total_demand_kwh": 4500, "roof_area_sqm": 40}
     assert fields(base) == "has_ev" and fields({**base, "has_ev": False}) == "heating_type"
-    assert fields({**base, "has_ev": False, "heating_type": "electric", "has_existing_pv": False}) is None
+    assert fields({**base, "has_ev": False, "heating_type": "electric"}) is None
 
 
 def test_no_key_means_fallback(monkeypatch):
@@ -83,7 +77,7 @@ def test_heatpump_option_only_for_fossil_heating():
     for h in ("gas", "oil", "district", "other"):
         assert fields({**base, "heating_type": h}) == "heatpump_option"
     for h in ("heatpump", "electric"):
-        assert fields({**base, "heating_type": h}) == "has_existing_pv"
+        assert fields({**base, "heating_type": h}) is None
     import scripted
     assert [scripted.heatpump_answer(x) for x in ("Yes, show me the heat pump option", "yes please", "No, keep my plan", "no", "maybe")] \
         == [True, True, False, False, None]
