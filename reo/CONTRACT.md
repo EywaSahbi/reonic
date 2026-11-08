@@ -20,7 +20,7 @@ type Plan = {
   installer_edits: { at: string; change: string; before: unknown; after: unknown }[];
   history: { at: string; trigger: string; total_eur: number }[];   // how the design evolved
   updated_at: string;
-  roof_location?: { label: string; lat: number; lon: number; outline: [number, number][] };  // last address lookup that found the building (OSM, [lat, lon] outline); none for demo addresses; app shows a satellite view
+  roof_location?: { label: string; lat: number; lon: number; outline: [number, number][]; checked?: boolean };  // last address lookup that found the building (OSM, [lat, lon] outline); none for demo addresses; app shows a satellite view. checked = Claude Opus 5.5 corrected the outline on the satellite photo a few seconds after /address (background, reo/roof_vision.py); the facts then carry its roof_area_sqm (computed in code from the outline + pitch), roof_type, roof_tilt_deg, roof_orientation_deg, and the design is re-derived; visible with the next Turn or GET /sessions/{id}
   customer_estimate?: { total_eur: number; range_eur: [number, number] };  // installer endpoints only: the estimate the customer was given at handoff
   summary?: string;                      // installer paragraph (flow.md 'Plan summary'), set once handed over
 };

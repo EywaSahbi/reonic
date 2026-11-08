@@ -27,6 +27,7 @@ import evidence
 import flow
 import llm
 import roof
+import roof_vision
 import scripted
 import voice
 from harness import tools as htools
@@ -605,7 +606,33 @@ def send_address(pid: str, body: Address):
         turn["messages"][0]["text"] = f"I looked up your address: {hit['say']}. " + turn["messages"][0]["text"]
         turn["roof"] = {"source": hit["source"], "label": hit["label"], **({"footprint_sqm": hit["footprint_sqm"]} if "footprint_sqm" in hit else {})}
         _save(db)
-        return turn
+    if hit.get("outline") and plan["status"] == "drafting":   # a real OSM building: Opus checks it on the photo meanwhile
+        threading.Thread(target=check_roof, args=(pid, hit), daemon=True).start()
+    return turn
+
+
+def check_roof(pid: str, hit: dict) -> None:
+    """Background (EywaSahbi): Claude Opus 5.5 checks the roof on the satellite photo (roof_vision). A confident answer
+    near the OSM building replaces the OSM estimate: outline, sunny area (computed in code), roof type, pitch, facing.
+    Skipped when the customer has since entered other roof facts or handed over."""
+    res = roof_vision.measure(hit["lat"], hit["lon"], hit["outline"])
+    if not res:
+        return
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        loc = plan.get("roof_location") or {}
+        if plan["status"] != "drafting" or loc.get("label") != hit["label"] or plan["facts"].get("roof_width_m"):
+            return
+        plan["facts"].update(res["facts"])
+        loc.update(outline=res["outline"], checked=True)
+        d, ok = _design(plan, st)
+        if ok:
+            plan["design"] = d
+            attach_evidence(plan)
+            plan["history"].append({"at": now(), "trigger": "roof checked on the satellite photo", "total_eur": d["price"]["total_eur"]})
+        plan["updated_at"] = now()
+        _save(db)
 
 
 @app.post("/sessions/{pid}/handoff")

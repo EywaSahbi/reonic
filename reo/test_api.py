@@ -305,3 +305,25 @@ def test_wallbox_toggle_and_heating_use_skip(tmp_path, monkeypatch):
     wb = lambda t: t["plan"]["design"]["components"]["wallbox"]["recommended"]
     assert not wb(facts({"wallbox_option": False})) and wb(facts({"wallbox_option": True}))
     assert "wallbox_option" not in c.get(f"/sessions/{pid}").json()["facts"]
+
+
+def test_roof_vision_result_replaces_the_osm_estimate(tmp_path, monkeypatch):
+    import roof, roof_vision
+    assert roof_vision.facing(90, "gable") == 180 and roof_vision.facing(0, "gable") in (90, 270)   # ridge E-W -> faces south
+    assert roof_vision.facing(None, "flat") is None
+    assert round(roof.sunny_area(100, "gable", 45)) == 71 and round(roof.sunny_area(100, "gable")) == 61
+    c = client(tmp_path, monkeypatch)
+    hit = {"label": "Teststraße 1, 01069 Dresden", "facts": {"roof_area_sqm": 60, "region": "SN"}, "say": "x", "source": "OpenStreetMap",
+           "lat": 51.0, "lon": 13.7, "outline": [[51.0, 13.7], [51.0, 13.7001], [51.0001, 13.7001]]}
+    monkeypatch.setattr(roof, "lookup", lambda a, p=None: hit)
+    started = []
+    monkeypatch.setattr(api.threading, "Thread", lambda target, args, daemon: type("T", (), {"start": lambda self: started.append(args)})())
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    c.post(f"/sessions/{pid}/address", json={"address": "Teststraße 1, 01069 Dresden"})
+    assert started and started[0][0] == pid                                          # the photo check runs in the background
+    better = {"outline": [[51.0, 13.7], [51.0, 13.70012], [51.00011, 13.70012]], "footprint_sqm": 90.0,
+              "facts": {"roof_area_sqm": 64, "roof_type": "gable", "roof_tilt_deg": 40, "roof_orientation_deg": 180}, "confidence": "high"}
+    monkeypatch.setattr(roof_vision, "measure", lambda lat, lon, outline: better)
+    api.check_roof(pid, hit)
+    p = c.get(f"/sessions/{pid}").json()
+    assert p["facts"]["roof_area_sqm"] == 64 and p["facts"]["roof_tilt_deg"] == 40 and p["roof_location"]["checked"]

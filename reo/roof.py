@@ -62,10 +62,11 @@ def _inside(lat: float, lon: float, poly: list[tuple[float, float]]) -> bool:
     return inside
 
 
-def sunny_area(footprint: float, roof_type: str | None) -> float:
+def sunny_area(footprint: float, roof_type: str | None, tilt: float | None = None) -> float:
+    """Sunny roof face from the footprint; tilt = measured pitch (roof_vision), else the assumed TILT."""
     if roof_type == "flat":
         return footprint
-    slope = footprint / math.cos(math.radians(TILT))
+    slope = footprint / math.cos(math.radians(TILT if tilt is None else tilt))
     return slope if roof_type == "mono" else slope / 2
 
 
