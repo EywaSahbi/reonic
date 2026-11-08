@@ -2,19 +2,18 @@
 
 # reo — an AI companion that designs home energy systems like an expert installer
 
+> [!IMPORTANT]
+> ### Start here: watch, read, try
+> | | |
+> |---|---|
+> | **Product video (YouTube)** | [**Watch our demo on YouTube**](https://www.youtube.com/watch?v=SOqbP6YISW8) |
+> | **Presentation (PDF)** | [**reo-presentation.pdf**](pitch/presentation/reo-presentation.pdf) |
+> | **Presentation (HTML, animated)** | [**pitch/presentation/index.html**](pitch/presentation/index.html): open in a browser, click or press → to advance, `F` for fullscreen |
+> | **Live app** | [**sonnfeld-reo.vercel.app**](https://sonnfeld-reo.vercel.app) (access code below) |
+
 **Give reo one number from your electricity bill and it answers in seconds: a complete system (solar, battery, heat pump, wallbox), a price range, and a reason for every number. The installer's planner then receives a ready offer, not a lead, and can change anything while the rest of the design re-derives.**
 
 *Built for the Reonic Hackathon (Munich, 7–8 Nov 2026) — challenge "AI-designed home energy systems".*
-
----
-
-## Watch and read
-
-| | |
-|---|---|
-| **Product video (YouTube)** | [**Watch our demo on YouTube**](https://www.youtube.com/watch?v=SOqbP6YISW8) |
-| **Presentation (PDF)** | [**pitch/presentation/reo-presentation.pdf**](pitch/presentation/reo-presentation.pdf) |
-| **Presentation (HTML, animated)** | [**pitch/presentation/index.html**](pitch/presentation/index.html): open it in a browser, click or press → to advance, `F` for fullscreen ([how it works](pitch/presentation/README.md)) |
 
 ---
 
