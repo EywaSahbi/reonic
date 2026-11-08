@@ -45,6 +45,10 @@
 .is-reo .pull-back { opacity: 0; transform: translateY(-28px) scale(0.98); pointer-events: none; }
 .is-reo .home-bg { transform: scale(1.1); filter: blur(2px) brightness(0.8); }
 
+/* the page behind the open sheet is softly blurred and dimmed */
+.home-page::after { content: ""; position: fixed; inset: 0; z-index: 29; background: rgba(12, 20, 40, 0.22); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity 0.45s ease; }
+.home-page.is-reo::after { opacity: 1; }
+
 /* ---------- reo's sheet ---------- */
 .reo-sheet { position: fixed; inset: 0; z-index: 30; padding: 12px; transform: translateY(-102%); transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1); pointer-events: none; }
 .reo-sheet.is-open { transform: none; pointer-events: auto; transition-delay: 0.12s; }
