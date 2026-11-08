@@ -174,8 +174,6 @@ function PlanDetail({ id }: { id: string }) {
           <span className="muted">Total</span>
           {isOffline(d) ? <strong>–</strong> : <>
             <strong>{eur(d.price.total_eur)}</strong>
-            {(() => { const r = plan.customer_estimate?.range_eur ?? d.price.range_eur; /* the range the customer was given (EywaSahbi) */
-              return <span className="muted">{plan.customer_estimate ? "customer's estimate" : "range"} {eur(r[0])}–{eur(r[1]).slice(1)}</span>; })()}
           </>}
         </div>
       </div>
