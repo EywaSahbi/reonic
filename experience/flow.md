@@ -19,7 +19,10 @@
 > 2. **Your address** + Find roof · not found or "Enter width × length" → **Roof size** (width × length) · Skip.
 > 3. **Electric car?** tiles: Yes, already / Planned / No.
 > 4. **Current heating** tiles (gas, oil, heat pump, electric, district heating, other). Any heating but a heat pump puts a heat pump in the quote by default (aa6c20c); the plan card has a toggle to remove it.
+> 4b. **Heating use** (number, skippable, "Don't know"), right after heating: gas / district / other → `heating_fuel_kwh` (kWh from the bill), oil → `heating_oil_litres` (litres), electric → `heating_fuel_kwh` as "Yearly heating electricity (kWh)". The engine derives the heat demand from it (4cfb339 / a0b314d); skipped → the engine estimates it.
 > 5. **Results screen:** full-width plan card (price range as estimate, savings / payback / own power, components, 3D house + "Your roof" photo, price breakdown) → **Send plan to Sonnfeld** → name + email → sent banner; the confirmed quote appears on the same screen once the planner sends it.
+>
+> Results: the heat pump and the wallbox each have an on/off switch on the plan card (`/facts {heatpump_option}`, `/facts {wallbox_option}`); the engine re-derives the plan.
 >
 > Back link on every step. The stages below describe reo's conversation rules (still used for the transcript, the scripted fallback and the planner's "Ask reo why"); their chat-only parts (chips, typed questions, handoff offer text) are historical.
 
@@ -51,11 +54,12 @@ Follow the approved order, without re-asking known or skipped facts:
 | Address skipped or lookup failed | roof_width_m, roof_length_m | dimensions input in metres; Skip keeps the roof assumed |
 | EV | has_ev / ev_planned | Yes, already -> has_ev true; Planned -> ev_planned true; No -> both false |
 | Heating | heating_type | gas, oil, heatpump, electric, district, other |
+| Heating use | heating_fuel_kwh (gas, district, other, electric) or heating_oil_litres (oil) | number from the bill, skippable; not asked for heatpump |
 | Heat pump option | heatpump_option (gas/oil/district/other only) | side-by-side without / with heat pump; Yes shows the with-heat-pump plan, No keeps the plan; then handoff |
 
 Region and existing solar are no longer asked (customer 65f377f); volunteered facts still count and the address lookup sets region. Successful address lookup proceeds to EV, without asking dimensions already derived. Manual dimensions can bypass lookup. Never invent skipped facts.
 
-For gas/oil/district/other use Design.heating_comparison only when present. Compare a heat pump, not generic electric heating. Show annual cost estimates; claim a cost benefit only with heatpump_cheaper true. energy_factor is efficiency, not a cost factor. Null CO2 is unavailable, not zero. Electric/heatpump needs no conversion claim. Optional living-space, tariff and budget refinements must not block the main handoff flow.
+For gas/oil/district/other use Design.heating_comparison only when present. Compare a heat pump, not generic electric heating. Show annual cost estimates; claim a cost benefit only with heatpump_cheaper true. energy_factor is efficiency, not a cost factor. Null CO2 is unavailable, not zero. An existing heat pump needs no conversion claim. Electric heating now also gets the heat pump in the quote, with a same-tariff comparison: heat from 1 kWh of electricity is 1 for direct electric heating vs the heat pump's COP (engine `heating_comparison`), still claiming a cost benefit only when heatpump_cheaper is true. Optional living-space, tariff and budget refinements must not block the main handoff flow.
 
 When a design changes, explain the change from current engine reasons before the next question. Estimates remain estimates; the planner checks suitability.
 
