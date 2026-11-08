@@ -200,16 +200,6 @@ function PlanDetail({ id }: { id: string }) {
       </Suspense>
 
       <div className="detail-grid">
-        <section className="card">
-          <h3>Home facts</h3>
-          <FactsEditor facts={plan.facts} assumed={new Set(d.assumptions.map((a) => String(a.field)))} disabled={quoted || busy || isOffline(d)} onSave={(facts) => edit({ facts })} />
-          {d.missing_inputs.length > 0 && (
-            <div className="assumptions">
-              <span>Still open</span>
-              <ul>{d.missing_inputs.map((m) => <li key={String(m.field)}><b>{String(m.field)}</b> ({m.impact}): {m.why}</li>)}</ul>
-            </div>
-          )}
-        </section>
 
         <section className="card">
           <h3>Price breakdown <span className="muted small">(estimate from the engine's price list)</span></h3>
@@ -279,43 +269,6 @@ const FACT_FIELDS: { key: keyof HomeFacts; label: string; type: "number" | "heat
   { key: "electricity_price_eur_per_kwh", label: "Tariff (€/kWh)", type: "number" },
 ];
 
-function FactsEditor({ facts, assumed, disabled, onSave }: { facts: HomeFacts; assumed: Set<string>; disabled: boolean; onSave: (f: Partial<HomeFacts>) => void }) {
-  const [draft, setDraft] = useState<Partial<HomeFacts>>({});
-  const dirty = Object.keys(draft).length > 0;
-  const val = <K extends keyof HomeFacts>(k: K) => (k in draft ? draft[k] : facts[k]);
-  const set = (k: keyof HomeFacts, v: unknown) => setDraft((d) => ({ ...d, [k]: v }));
-  return (
-    <form className="facts" onSubmit={(e) => { e.preventDefault(); if (dirty) { onSave(draft); setDraft({}); } }}>
-      {FACT_FIELDS.map(({ key, label, type }) => (
-        <label key={key} className={key in draft ? "dirty" : ""}>
-          <span>{label}{assumed.has(key) && <em className="assumed">assumed</em>}</span>
-          {type === "number" && (
-            <input type="number" step="any" value={(val(key) as number | undefined) ?? ""} disabled={disabled}
-              onChange={(e) => set(key, e.target.value === "" ? undefined : Number(e.target.value))} />
-          )}
-          {type === "heating" && (
-            <select value={(val(key) as string | undefined) ?? ""} disabled={disabled} onChange={(e) => set(key, e.target.value || undefined)}>
-              <option value="">unknown</option>
-              {["gas", "oil", "heatpump", "electric", "district", "other"].map((h) => <option key={h}>{h}</option>)}
-            </select>
-          )}
-          {type === "region" && (
-            <select value={(val(key) as string | undefined) ?? ""} disabled={disabled} onChange={(e) => set(key, e.target.value || undefined)}>
-              <option value="">unknown</option>
-              {REGIONS.map((r) => <option key={r}>{r}</option>)}
-            </select>
-          )}
-          {type === "bool" && (
-            <select value={val(key) === undefined ? "" : String(val(key))} disabled={disabled} onChange={(e) => set(key, e.target.value === "" ? undefined : e.target.value === "true")}>
-              <option value="">unknown</option><option value="true">yes</option><option value="false">no</option>
-            </select>
-          )}
-        </label>
-      ))}
-      {dirty && <button className="btn-small facts-save" disabled={disabled}>Re-derive with new facts</button>}
-    </form>
-  );
-}
 
 function AskReo({ id }: { id: string }) {
   const [q, setQ] = useState("");
