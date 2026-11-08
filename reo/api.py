@@ -181,6 +181,9 @@ def _design(plan: dict, st: dict) -> tuple[dict, bool]:
     reveal = reveal_locks(plan["facts"], set(st.get("skipped", [])))
     d = engine.design(plan["facts"], {**reveal, **(st.get("locks") or {})}, customer_prices(st))  # customer's own locks win
     d = waiting_reasons(d, reveal, st.get("locks"))
+    if d and st.get("hp_flow") and d["components"]["heatpump"]["reasons"] == ["set by the installer"]:   # reo's default lock, not an installer
+        d["components"]["heatpump"]["reasons"] = (["included because you don't heat with a heat pump yet; switch it off if you don't want it"]
+                                                  if d["components"]["heatpump"]["recommended"] else ["switched off by you"])
     return (d, True) if d else (engine.offline_design(), False)
 
 
