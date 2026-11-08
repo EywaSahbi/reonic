@@ -8,6 +8,16 @@
 
 ---
 
+## Watch and read
+
+| | |
+|---|---|
+| **Product video (YouTube)** | [**Watch our demo on YouTube**](https://www.youtube.com/watch?v=SOqbP6YISW8) |
+| **Presentation (PDF)** | [**pitch/presentation/reo-presentation.pdf**](pitch/presentation/reo-presentation.pdf) |
+| **Presentation (HTML, animated)** | [**pitch/presentation/index.html**](pitch/presentation/index.html): open it in a browser, click or press → to advance, `F` for fullscreen ([how it works](pitch/presentation/README.md)) |
+
+---
+
 ## Try it live
 
 | | |

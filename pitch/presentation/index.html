@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>reo — presentation, parts 1–5</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="vendor/gsap.min.js"></script>
+<style>
+@font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2"); font-weight: 400; }
+@font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2"); font-weight: 500; }
+@font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2"); font-weight: 600; }
+@font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2"); font-weight: 700; }
+
+:root {
+  --paper:#FDFDFB; --ink:#1B1D20; --grey:#71717A; --hair:#E4E4E7;
+  --coral:#E8643C; --coral-soft:#FFF3EB; --coral-line:#F6C9B2;
+  --em:#0F9F7A; --em-deep:#0B7A5E; --em-soft:#EAF8F3; --em-line:#BDE5D8;
+  --sun: linear-gradient(100deg,#F7A35C 0%,#F2784B 55%,#EE6A5B 100%);
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; background:#EFEFEA; overflow:hidden; font-family:"Geist",system-ui,sans-serif; color:var(--ink); }
+#viewport { position:fixed; inset:0; display:flex; align-items:center; justify-content:center; }
+#stage { position:relative; width:1920px; height:1080px; flex:none; background:var(--paper); overflow:hidden; transform-origin:center center; }
+.slide { position:absolute; inset:0; display:none; background:var(--paper); overflow:hidden; }
+.slide.on { display:block; }
+.abs { position:absolute; }
+.hide { opacity:0; }
+.part { position:absolute; left:96px; top:60px; font-size:26px; font-weight:600; color:var(--grey); letter-spacing:.01em; z-index:20; display:flex; gap:16px; align-items:center; }
+.part b { font-weight:700; color:var(--ink); }
+.part i { width:36px; height:2px; background:var(--hair); display:block; }
+.foot { position:absolute; right:96px; bottom:52px; font-size:22px; font-weight:500; color:#A1A1AA; z-index:20; }
+.grad { background:var(--sun); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+.card { background:#fff; border-radius:28px; box-shadow:0 24px 60px rgba(27,29,32,.08); }
+
+/* ================= PART 1 ================= */
+#s1 .big { left:0; top:270px; width:1920px; height:320px; display:flex; justify-content:center; align-items:center; font-size:300px; font-weight:700; letter-spacing:-.03em; line-height:1; }
+#s1 .big i { font-style:normal; opacity:0; display:inline-block; }
+#s1 .caret { display:inline-block; width:10px; height:230px; background:var(--ink); margin-left:14px; animation:blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity:0; } }
+#s1 .unit { left:0; top:610px; width:1920px; text-align:center; font-size:64px; font-weight:600; color:var(--coral); }
+#s1 .cap { left:0; top:840px; width:1920px; text-align:center; font-size:48px; font-weight:500; line-height:1.25; }
+#s1 .cap b { color:var(--coral); font-weight:700; }
+#s1 .form { left:580px; top:250px; width:760px; height:520px; border:2px solid var(--coral-line); box-shadow:0 24px 60px rgba(232,100,60,.12); }
+#s1 .form .in { position:absolute; inset:0; }
+#s1 .ft { left:48px; top:44px; font-size:36px; font-weight:600; }
+#s1 .fl { left:48px; top:120px; font-size:28px; font-weight:500; color:var(--coral); }
+#s1 .ff { left:48px; top:168px; width:664px; height:88px; border:2px solid var(--coral-line); border-radius:16px; background:#FFF8F3; }
+#s1 .fv { left:28px; top:0; line-height:84px; font-size:38px; font-weight:500; }
+#s1 .fb { left:48px; top:312px; width:664px; height:92px; border-radius:16px; background:var(--coral); color:#fff; font-size:34px; font-weight:600; text-align:center; line-height:92px; }
+#s1 .fg { left:48px; height:12px; border-radius:6px; background:#FBE3D6; }
+#s1 .thanks, #s1 .clock { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:26px; }
+#s1 .msg { font-size:44px; font-weight:600; }
+#s1 .wait { font-size:44px; font-weight:600; color:var(--coral); }
+#s1 .cur { left:1130px; top:900px; width:56px; z-index:9; }
+
+/* ================= PART 2 ================= */
+.ttl { font-size:56px; font-weight:700; text-align:center; width:700px; }
+#s2 .hl { left:70px; top:150px; color:var(--coral); }
+#s2 .hr { left:1150px; top:150px; color:var(--em); }
+#s2 .hcard { left:170px; top:350px; width:520px; height:380px; background:var(--coral-soft); border:2px solid var(--coral-line); box-shadow:0 24px 60px rgba(232,100,60,.12); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+#s2 .hcard .w { font-size:36px; font-weight:600; color:var(--coral); }
+#s2 .gapline { left:958px; top:270px; width:0; height:620px; border-left:3px dashed #D4D4D8; }
+#s2 .leads { left:1110px; top:270px; width:690px; }
+#s2 .leads h4 { font-size:30px; font-weight:600; color:var(--em); margin-bottom:18px; }
+#s2 .row { height:84px; border:2px solid var(--em-line); background:var(--em-soft); border-radius:18px; margin-bottom:14px; display:flex; align-items:center; padding:0 28px; font-size:30px; font-weight:500; justify-content:space-between; }
+#s2 .row .tag { font-size:22px; font-weight:700; color:#fff; background:var(--em); border-radius:999px; padding:6px 16px; }
+#s2 .row.mine { background:#fff; border-color:var(--em); font-weight:600; }
+#s2 .prof { left:1070px; top:240px; width:770px; height:640px; border:2px solid var(--em-line); box-shadow:0 30px 70px rgba(15,159,122,.16); padding:36px 40px; }
+#s2 .prof h3 { font-size:36px; font-weight:700; }
+#s2 .qs { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:26px; }
+#s2 .q { height:76px; border:2px solid var(--em-line); background:var(--em-soft); border-radius:16px; padding:0 24px; display:flex; justify-content:space-between; align-items:center; font-size:30px; font-weight:600; color:var(--em-deep); }
+#s2 .q span { color:#D98A00; font-size:38px; font-weight:700; }
+#s2 .chk { margin-top:28px; font-size:30px; font-weight:500; line-height:1; }
+#s2 .chk div { display:flex; gap:16px; align-items:center; height:48px; }
+#s2 .chk div:before { content:""; width:22px; height:22px; border:3px solid var(--em); border-radius:5px; flex:none; }
+#s2 .bl { margin-top:26px; font-size:28px; font-weight:700; color:var(--em-deep); }
+#s2 .bar { margin-top:12px; height:22px; border-radius:11px; background:#D7F0E8; overflow:hidden; }
+#s2 .bar i { display:block; height:100%; width:0; background:var(--em); border-radius:11px; }
+#s2 .bub { left:740px; top:505px; padding:18px 34px; border-radius:999px; background:var(--em-soft); border:2px solid var(--em); color:var(--em-deep); font-size:30px; font-weight:600; white-space:nowrap; z-index:6; }
+#s2 .note { left:0; top:930px; width:1920px; text-align:center; font-size:44px; font-weight:500; }
+#s2 .note b { font-weight:700; }
+
+/* ================= PART 3 ================= */
+#s3 .ghost { top:400px; width:420px; height:300px; border-radius:28px; opacity:.13; filter:blur(5px); }
+#s3 .gl { left:190px; background:var(--coral); }
+#s3 .gr { left:1310px; background:var(--em); }
+#s3 .link { left:610px; top:548px; width:700px; height:5px; background:var(--ink); border-radius:3px; transform-origin:left center; }
+#s3 .dot { left:604px; top:540px; width:20px; height:20px; border-radius:50%; background:var(--ink); }
+#s3 .t { left:0; width:1920px; text-align:center; font-size:104px; font-weight:600; letter-spacing:-.02em; top:230px; line-height:1.1; }
+#s3 .t2 { position:absolute; left:0; top:0; width:100%; }
+#s3 .t2 .ov { position:absolute; left:0; top:0; width:100%; clip-path:inset(0 100% 0 0); }
+#s3 .sub { left:0; top:780px; width:1920px; text-align:center; font-size:44px; font-weight:500; color:var(--grey); }
+#s3 .sub b { color:var(--ink); font-weight:700; }
+
+/* ================= PART 4 (meet composition from the video, unchanged) ================= */
+#s4 .abs{position:absolute}
+
+                
+    
+
+    /* installer website (real Sonnfeld hero photo) */
+    #m-site { left: 480px; top: 170px; width: 960px; height: 700px; border-radius: 22px; overflow: hidden; background: #fff;
+      border: 2px solid #e4e4e7; box-shadow: 0 24px 60px rgba(9, 9, 11, 0.12); z-index: 1; opacity: 0; }
+    #m-chrome { left: 0; top: 0; width: 960px; height: 56px; background: #fff; border-bottom: 1px solid #e4e4e7; }
+    .m-dot { top: 20px; width: 16px; height: 16px; border-radius: 8px; background: #e4e4e7; }
+    #m-url { left: 150px; top: 12px; width: 660px; height: 32px; border-radius: 16px; background: #f4f4f5; }
+    #m-hero { left: 0; top: 56px; width: 960px; height: 644px; background: url("assets/house-hero.jpg") center / cover no-repeat; }
+    #m-shade { left: 0; top: 56px; width: 960px; height: 644px; background: linear-gradient(180deg, rgba(9,9,11,.38), rgba(9,9,11,.18) 55%, rgba(9,9,11,.30)); }
+    #m-logo { left: 36px; top: 76px; display: flex; align-items: center; gap: 12px; color: #fff; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+    .m-nav { top: 92px; height: 12px; border-radius: 6px; background: rgba(255,255,255,.7); }
+    #m-h1 { left: 0; top: 108px; width: 960px; text-align: center; color: #fff; font-size: 66px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+    #m-pill { left: 345px; top: 292px; width: 270px; height: 74px; border-radius: 37px; background: #1b1d20; color: #fff; font-size: 28px; font-weight: 600;
+      text-align: center; line-height: 74px; }
+
+    /* three generic installer sites (fictional, flat colour, one theme each) */
+    .m-gsite { left: 480px; top: 170px; width: 960px; height: 700px; border-radius: 22px; overflow: hidden; border: 2px solid #e4e4e7;
+      box-shadow: 0 24px 60px rgba(9, 9, 11, 0.12); z-index: 1; opacity: 0; background: var(--bg); }
+    .gs-hero { left: 0; top: 56px; width: 960px; height: 644px; background: var(--bg); }
+    .gs-bar { left: 0; top: 0; width: 960px; height: 56px; background: #fff; border-bottom: 1px solid #e4e4e7; }
+    .gs-logo { left: 36px; top: 76px; display: flex; align-items: center; gap: 12px; color: var(--fg); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+    .gs-mark { display: inline-block; width: 36px; height: 36px; background: var(--ac); }
+    .gs-nav { top: 92px; height: 12px; border-radius: 6px; background: var(--fg); opacity: 0.45; }
+    .gs-h1 { left: 0; top: 108px; width: 960px; text-align: center; color: var(--fg); font-size: 66px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+    .gs-cta { left: 335px; top: 292px; width: 290px; height: 74px; background: var(--ac); color: var(--acfg); font-size: 28px; font-weight: 600; text-align: center; line-height: 74px; }
+
+    /* the two sides, back in the gap */
+    .m-side { z-index: 2; background: #fff; border: 2px solid #e4e4e7; box-shadow: 0 18px 44px rgba(9,9,11,.08); opacity: 0; }
+    .m-edge { position: absolute; inset: -4px; border-radius: inherit; border: 4px solid transparent; opacity: 0;
+      background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #f7a35c, #f2784b 50%, #ee6a5b) border-box;
+      -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); }
+    #m-bub { left: 140px; top: 576px; width: 500px; height: 100px; border-radius: 50px; font-size: 28px; font-weight: 500; color: #1b1d20; white-space: nowrap;
+      display: flex; align-items: center; justify-content: center; padding: 0 30px 0 22px; line-height: 1; }
+    #m-card { left: 1280px; top: 526px; width: 430px; height: 200px; border-radius: 24px; padding: 28px 32px; }
+    #m-card .t { font-size: 30px; font-weight: 600; color: #1b1d20; margin-bottom: 22px; }
+    #m-card .b { height: 14px; border-radius: 7px; background: #e4e4e7; margin-bottom: 14px; }
+
+    /* reo */
+    #m-reo { left: 240px; top: 276px; width: 1440px; height: 528px; z-index: 5; opacity: 0; }
+    #m-sq { position: absolute; inset: 0; transform-origin: 50% 85%; }
+    #m-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+    #m-sub { left: 0; top: 850px; width: 1920px; text-align: center; font-size: 56px; font-weight: 500; letter-spacing: -0.01em; color: #3f3f46; opacity: 0; z-index: 6; }
+    #m-sub .gr { background: linear-gradient(90deg, #f7a35c, #f2784b 55%, #ee6a5b); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  
+/* ================= PART 5 ================= */
+#s5 .lab { left:100px; top:112px; font-size:40px; font-weight:700; color:var(--coral); }
+#s5 .pills { left:560px; top:106px; width:660px; display:flex; gap:10px; justify-content:flex-end; }
+#s5 .pills span { font-size:24px; font-weight:600; color:var(--coral); border:2px solid var(--coral-line); border-radius:999px; padding:7px 20px; background:#fff; }
+#s5 .pills span.act { background:var(--coral); color:#fff; border-color:var(--coral); }
+#s5 .win { left:100px; top:170px; width:1120px; height:860px; border:3px solid var(--coral); border-radius:22px; overflow:hidden; background:#18181B; box-shadow:0 30px 70px rgba(232,100,60,.16); }
+#s5 .win .bar2 { height:40px; background:#F4F4F5; display:flex; gap:9px; align-items:center; padding:0 18px; position:relative; z-index:3; }
+#s5 .win .bar2 u { width:12px; height:12px; border-radius:50%; background:#D4D4D8; display:block; }
+#s5 .shots { position:absolute; left:0; top:40px; right:0; bottom:0; }
+#s5 .shots img { position:absolute; left:0; top:-16px; width:100%; height:calc(100% + 16px); object-fit:cover; object-position:top center; }
+#s5 .shots img.home { object-position:center center; }
+#s5 .cur { left:0; top:0; width:64px; z-index:9; filter:drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+#s5 .rt { left:1290px; width:540px; top:300px; }
+#s5 .rt .k { font-size:26px; font-weight:700; color:var(--coral); letter-spacing:.06em; text-transform:uppercase; }
+#s5 .rt h3 { font-size:64px; line-height:1.05; font-weight:700; letter-spacing:-.025em; margin-top:16px; }
+#s5 .rt p { font-size:32px; line-height:1.35; color:var(--grey); margin-top:22px; font-weight:500; }
+#s5 .rt p b { color:var(--ink); font-weight:600; }
+#s5 .rt .price { font-size:76px; font-weight:700; letter-spacing:-.03em; margin-top:26px; line-height:1; }
+#s5 .rt .est { font-size:26px; color:var(--grey); font-weight:500; margin-top:6px; }
+
+
+/* ================= PARTS 6-7 (planner) ================= */
+.lt { position:absolute; left:96px; width:500px; top:300px; }
+.lt .k { font-size:26px; font-weight:700; color:var(--em); letter-spacing:.06em; text-transform:uppercase; }
+.lt h3 { font-size:60px; line-height:1.05; font-weight:700; letter-spacing:-.025em; margin-top:16px; }
+.lt p { font-size:30px; line-height:1.35; color:var(--grey); margin-top:22px; font-weight:500; }
+.lt p b { color:var(--ink); font-weight:600; }
+.plab { left:640px; top:104px; font-size:40px; font-weight:700; color:var(--em); }
+.pwin { left:640px; top:170px; width:1184px; height:790px; border:3px solid var(--em); border-radius:22px; overflow:hidden; background:#fff; box-shadow:0 30px 70px rgba(15,159,122,.16); }
+.pwin .bar2 { height:40px; background:#F4F4F5; display:flex; gap:9px; align-items:center; padding:0 18px; position:relative; z-index:3; }
+.pwin .bar2 u { width:12px; height:12px; border-radius:50%; background:#D4D4D8; display:block; }
+.pview { position:absolute; left:0; top:40px; right:0; bottom:0; overflow:hidden; }
+.zoomer { position:absolute; left:0; top:0; width:1178px; height:736px; transform-origin:0 0; }
+.zoomer img { position:absolute; left:0; top:0; width:100%; height:100%; object-fit:cover; object-position:top left; }
+.pcur { position:absolute; left:0; top:0; width:64px; z-index:9; filter:drop-shadow(0 6px 10px rgba(0,0,0,.35)); }
+.op { position:absolute; right:30px; top:70px; width:520px; padding:30px 34px; background:#fff; border:2px solid var(--em-line); border-radius:24px; box-shadow:0 30px 70px rgba(15,159,122,.22); z-index:5; }
+.op h4 { font-size:34px; font-weight:700; margin-bottom:8px; }
+.op .st { display:flex; align-items:center; gap:16px; font-size:28px; font-weight:500; min-height:64px; border-bottom:1px solid var(--hair); }
+.op .st:last-child { border-bottom:0; }
+.op .st i { width:30px; height:30px; border-radius:50%; background:var(--em); flex:none; display:flex; align-items:center; justify-content:center; }
+.op .st i:after { content:""; width:9px; height:15px; border:solid #fff; border-width:0 4px 4px 0; transform:rotate(45deg) translate(-1px,-1px); }
+.op .st small { display:block; font-size:21px; color:var(--grey); font-weight:500; margin-top:2px; }
+.op .st.v { color:var(--em-deep); font-weight:700; }
+.vestreo { position:absolute; left:96px; top:130px; }
+.fly { left:96px; top:760px; width:420px; padding:22px 28px; border-radius:20px; background:#fff; border:3px solid var(--coral); font-size:30px; font-weight:600; box-shadow:0 20px 50px rgba(232,100,60,.18); z-index:8; }
+.fly small { display:block; font-size:20px; color:var(--coral); letter-spacing:.06em; text-transform:uppercase; margin-bottom:6px; font-weight:700; }
+.gc { top:330px; width:640px; padding:44px 48px; border-radius:30px; background:#fff; border:4px solid; font-size:36px; font-weight:600; line-height:1.25; box-shadow:0 24px 60px rgba(27,29,32,.1); }
+.gc small { display:block; font-size:24px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:14px; font-weight:700; }
+.gc span { display:block; font-size:28px; color:var(--grey); font-weight:500; margin-top:12px; }
+.gcl { left:150px; border-color:var(--coral); } .gcl small { color:var(--coral); }
+.gcr { left:1130px; border-color:var(--em); } .gcr small { color:var(--em); }
+.gc .qrow { margin-top:26px; font-size:30px; display:flex; flex-direction:column; gap:8px; }
+.gc .qrow s { color:#A1A1AA; font-weight:500; } .gc .qrow strong { color:var(--ink); font-size:44px; }
+#gcbar { left:955px; top:330px; width:10px; height:300px; border-radius:5px; background:var(--sun); }
+#s7end { left:0; top:800px; width:1920px; text-align:center; font-size:52px; font-weight:600; letter-spacing:-.02em; line-height:1.2; }
+
+
+/* ================= INTERLUDE + PARTS 8-9 ================= */
+#sM .meme { left:410px; top:140px; width:1100px; height:820px; border-radius:20px; overflow:hidden; box-shadow:0 30px 80px rgba(27,29,32,.22); background:#ddd; }
+#sM .meme img { width:100%; height:100%; object-fit:cover; display:block; }
+#sM .mt { left:1330px; top:380px; width:520px; font-size:64px; font-weight:700; line-height:1.08; letter-spacing:-.025em; }
+#sM .mt small { display:block; font-size:26px; font-weight:700; color:var(--grey); letter-spacing:.06em; text-transform:uppercase; margin-bottom:18px; }
+.shape9 { top:300px; width:520px; height:420px; border-radius:34px; border:4px solid; display:flex; align-items:flex-end; padding:34px 40px; font-size:48px; font-weight:700; }
+#s9 .sl { left:150px; border-color:var(--coral); background:var(--coral-soft); color:var(--coral); }
+#s9 .sr { left:1250px; border-color:var(--em); background:var(--em-soft); color:var(--em); }
+#s9 .reo9 { left:638px; top:160px; width:1200px; height:440px; overflow:visible; }
+#s9 .t9 { left:0; top:800px; width:1920px; text-align:center; font-size:84px; font-weight:700; letter-spacing:-.03em; line-height:1.05; }
+#s9 .t9b { left:0; top:790px; width:1920px; text-align:center; font-size:64px; font-weight:600; letter-spacing:-.02em; }
+
+
+/* ================= TEAM + LIVE DEMO ================= */
+#sT .tt { left:0; top:170px; width:1920px; text-align:center; font-size:150px; font-weight:700; letter-spacing:-.04em; line-height:1; }
+#sT .ts { left:0; top:350px; width:1920px; text-align:center; font-size:40px; font-weight:500; color:var(--grey); }
+#sT .mem { top:490px; width:480px; height:400px; padding:44px 44px; border-radius:30px; background:#fff; box-shadow:0 24px 60px rgba(27,29,32,.08); border:2px solid var(--hair); }
+#sT .av { width:120px; height:120px; border-radius:50%; background:linear-gradient(135deg,#FF6B7A,#FF9A3C); color:#fff; font-size:48px; font-weight:700; display:flex; align-items:center; justify-content:center; letter-spacing:-.02em; }
+#sT .mem h4 { font-size:44px; font-weight:700; letter-spacing:-.02em; line-height:1.1; margin-top:34px; }
+#sT .mem p { font-size:32px; font-weight:600; margin-top:14px; }
+#sT .mem p.r1 { color:var(--coral); } #sT .mem p.r2 { color:var(--em); } #sT .mem p.r3 { color:#C77700; }
+#sD .dt { left:140px; top:100px; width:1200px; font-size:112px; font-weight:700; letter-spacing:-.04em; line-height:1; }
+#sD .ds { left:140px; top:236px; width:1500px; font-size:36px; font-weight:500; line-height:1.3; color:var(--grey); }
+#sD .ds b { color:var(--ink); font-weight:600; }
+#sD .qc { top:330px; width:520px; height:690px; border-radius:36px; background:#fff; border:2px solid var(--hair); box-shadow:0 30px 80px rgba(27,29,32,.12); padding:36px 40px; }
+#sD .qa { left:290px; } #sD .qb { left:1110px; }
+#sD .qc .h { font-size:25px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; height:72px; display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.15; margin-bottom:10px; }
+#sD .qa .h { color:var(--coral); } #sD .qb .h { color:#D93025; }
+#sD .qc img { width:100%; display:block; border-radius:8px; }
+#sD .qc .u { margin-top:22px; font-size:30px; font-weight:700; text-align:center; letter-spacing:-.01em; }
+#sD .qb .u { font-size:21px; white-space:nowrap; letter-spacing:-.02em; }
+#sD .qc .n { margin-top:8px; font-size:24px; font-weight:500; text-align:center; color:var(--grey); }
+
+
+/* ================= BUSINESS IMPACT + ENVIRONMENT ================= */
+.kick { position:absolute; left:96px; top:130px; font-size:26px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--grey); }
+.big8 { position:absolute; left:96px; top:180px; width:1500px; font-size:84px; font-weight:700; letter-spacing:-.035em; line-height:1.02; }
+#sB .col { top:385px; width:800px; border-radius:30px; padding:40px 46px; border:3px solid; background:#fff; box-shadow:0 24px 60px rgba(27,29,32,.07); }
+#sB .col h4 { font-size:36px; font-weight:700; margin-bottom:18px; letter-spacing:-.01em; }
+#sB .col li { list-style:none; font-size:29px; font-weight:500; line-height:1.28; padding:11px 0 11px 44px; position:relative; }
+#sB .col li:before { content:""; position:absolute; left:4px; top:20px; width:22px; height:22px; border-radius:50%; background:currentColor; opacity:.9; }
+#sB .col li span { color:var(--ink); }
+#sB .c1 { left:96px; border-color:var(--em-line); color:var(--em); } #sB .c1 h4 { color:var(--em); }
+#sB .c2 { left:1024px; border-color:var(--coral-line); color:var(--coral); } #sB .c2 h4 { color:var(--coral); }
+#sB .mt { left:96px; top:900px; width:1728px; display:flex; align-items:center; gap:20px; font-size:28px; font-weight:600; color:var(--grey); }
+#sB .mt span.p { border:2px dashed #C4C4CA; border-radius:999px; padding:12px 28px; color:var(--ink); font-weight:600; }
+#sB .mt em { font-style:normal; font-size:24px; font-weight:500; color:#A1A1AA; }
+#sE .card { top:370px; width:800px; height:580px; border:2px solid var(--hair); padding:48px 52px; }
+#sE .e1 { left:96px; } #sE .e2 { left:1024px; }
+#sE .card h4 { font-size:30px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--grey); }
+#sE .num { font-size:150px; font-weight:700; letter-spacing:-.045em; line-height:1; margin-top:30px; }
+#sE .num small { font-size:50px; letter-spacing:-.02em; font-weight:600; margin-left:10px; }
+#sE .lbl { font-size:34px; font-weight:500; line-height:1.3; margin-top:14px; }
+#sE .lbl b { font-weight:700; }
+#sE .fm { font-size:25px; color:var(--grey); font-weight:500; margin-top:26px; line-height:1.35; }
+#sE .hb { display:flex; align-items:center; gap:24px; height:96px; }
+#sE .hb .n { width:190px; font-size:30px; font-weight:600; color:var(--grey); }
+#sE .hb .tr { flex:1; height:50px; border-radius:25px; background:#F0F0F2; position:relative; }
+#sE .hb .fl { position:absolute; left:0; top:0; height:100%; width:0; border-radius:25px; }
+#sE .hb .v { width:200px; font-size:36px; white-space:nowrap; font-weight:700; text-align:right; letter-spacing:-.02em; }
+#sE .red { font-size:120px; font-weight:700; letter-spacing:-.04em; line-height:1; margin-top:22px; color:var(--em); }
+#sE .foot2 { left:96px; top:985px; width:1728px; font-size:24px; color:#8C8C93; font-weight:500; }
+
+/* ================= UI chrome ================= */
+#hud { position:fixed; left:50%; bottom:14px; transform:translateX(-50%); display:flex; gap:8px; z-index:99; opacity:.0; transition:opacity .3s; }
+body:hover #hud { opacity:.9; }
+#hud i { width:9px; height:9px; border-radius:50%; background:#C9C9CF; display:block; }
+#hud i.on { background:var(--coral); }
+
+/* ================= PRINT / PDF ================= */
+@page { size:1920px 1080px; margin:0; }
+body.print { overflow:visible; background:#fff; }
+body.print html, body.print { height:auto; }
+body.print #viewport { position:static; display:block; }
+body.print #stage { width:1920px; height:auto; overflow:visible; transform:none !important; }
+body.print .slide { display:block; position:relative; width:1920px; height:1080px; page-break-after:always; break-after:page; overflow:hidden; }
+body.print .slide:last-child { page-break-after:auto; break-after:auto; }
+body.print #hud { display:none; }
+@media print { html,body { background:#fff; } }
+</style>
+</head>
+<body>
+<div id="viewport"><div id="stage">
+
+<!-- ================= PART 1 — One number ================= -->
+<section class="slide" id="s1">
+  <div class="part"><b>01</b><i></i>One number · the homeowner</div>
+  <div class="abs big" id="s1big"><i>4</i><i>,</i><i>5</i><i>0</i><i>0</i><span class="caret"></span></div>
+  <div class="abs unit hide">kWh a year</div>
+  <div class="abs cap hide" id="s1cap1">A homeowner wants solar. <b>This is all they know.</b></div>
+
+  <div class="abs card form hide" id="s1form">
+    <div class="in" id="s1in">
+      <div class="abs ft">Get your free solar quote</div>
+      <div class="abs fl">Electricity use</div>
+      <div class="abs ff"><div class="abs fv hide" id="s1fv">4,500 kWh</div></div>
+      <div class="abs fb" id="s1btn">Get quote</div>
+      <div class="abs fg" style="top:448px;width:420px"></div>
+      <div class="abs fg" style="top:474px;width:300px"></div>
+    </div>
+    <div class="thanks hide" id="s1thanks">
+      <svg width="150" height="150" viewBox="0 0 150 150"><circle cx="75" cy="75" r="66" fill="none" stroke="#D4D4D8" stroke-width="8"/><path id="s1chk" d="M44 78 L66 100 L108 52" fill="none" stroke="#71717A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="130" stroke-dashoffset="130"/></svg>
+      <div class="msg">Thanks! We'll call you back.</div>
+    </div>
+    <div class="clock hide" id="s1clock">
+      <svg width="260" height="260" viewBox="0 0 200 200">
+        <circle cx="100" cy="100" r="86" fill="none" stroke="#E8643C" stroke-width="8"/>
+        <g stroke="#F6C9B2" stroke-width="5" stroke-linecap="round"><path d="M100 24v12M100 164v12M24 100h12M164 100h12"/></g>
+        <line id="s1hh" x1="100" y1="100" x2="100" y2="58" stroke="#1B1D20" stroke-width="9" stroke-linecap="round"/>
+        <line id="s1mh" x1="100" y1="100" x2="100" y2="38" stroke="#E8643C" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="100" cy="100" r="8" fill="#1B1D20"/>
+      </svg>
+      <div class="wait">Waiting…</div>
+    </div>
+  </div>
+  <div class="abs cap hide" id="s1end" style="top:880px">One number. One form. <b>Then they wait.</b></div>
+  <svg class="abs cur hide" id="s1cur" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.6 15 L11.6 21.6 L14.4 20.4 L11.5 14 L17.5 14 Z" fill="#1B1D20" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+<!-- ================= PART 2 — Same questions, every time ================= -->
+<section class="slide" id="s2">
+  <div class="part"><b>02</b><i></i>Same questions, every time · the installer</div>
+  <div class="abs ttl hl hide">The homeowner.</div>
+  <div class="abs ttl hr hide">The installer.</div>
+  <div class="abs card hcard hide" id="s2hc">
+    <svg width="200" height="200" viewBox="0 0 200 200">
+      <circle cx="100" cy="100" r="86" fill="none" stroke="#E8643C" stroke-width="8"/>
+      <g stroke="#F6C9B2" stroke-width="5" stroke-linecap="round"><path d="M100 24v12M100 164v12M24 100h12M164 100h12"/></g>
+      <line x1="100" y1="100" x2="116" y2="62" stroke="#1B1D20" stroke-width="9" stroke-linecap="round"/>
+      <line x1="100" y1="100" x2="76" y2="136" stroke="#E8643C" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="100" cy="100" r="8" fill="#1B1D20"/>
+    </svg>
+    <div class="w">Waiting…</div>
+  </div>
+  <div class="abs gapline hide" id="s2gap"></div>
+  <div class="abs leads" id="s2leads">
+    <h4 class="hide">New leads</h4>
+    <div class="row mine hide"><span>Homeowner · 4,500 kWh</span><span class="tag">NEW</span></div>
+    <div class="row hide"><span>Lead · 7,200 kWh</span><span style="color:#8C8C93">2 d</span></div>
+    <div class="row hide"><span>Lead · 3,900 kWh</span><span style="color:#8C8C93">3 d</span></div>
+    <div class="row hide"><span>Lead · 5,100 kWh</span><span style="color:#8C8C93">3 d</span></div>
+    <div class="row hide"><span>Lead · 6,000 kWh</span><span style="color:#8C8C93">5 d</span></div>
+  </div>
+  <div class="abs card prof hide" id="s2prof">
+    <h3>Homeowner · 4,500 kWh</h3>
+    <div class="qs">
+      <div class="q hide">Roof <span>?</span></div><div class="q hide">Heating <span>?</span></div>
+      <div class="q hide">EV <span>?</span></div><div class="q hide">Budget <span>?</span></div>
+    </div>
+    <div class="chk">
+      <div class="hide">Call back</div><div class="hide">Ask roof size</div><div class="hide">Ask heating</div><div class="hide">Ask about the car…</div>
+    </div>
+    <div class="bl hide">Design and price: hours</div>
+    <div class="bar"><i id="s2fill"></i></div>
+  </div>
+  <div class="abs bub hide" id="s2bub">We'll call you back</div>
+  <div class="abs note hide" id="s2note">Neither side is at fault. <b>The gap is.</b></div>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+<!-- ================= PART 3 — We wanted to go further ================= -->
+<section class="slide" id="s3">
+  <div class="part"><b>03</b><i></i>The turn</div>
+  <div class="abs ghost gl hide"></div><div class="abs ghost gr hide"></div>
+  <div class="abs link" id="s3link" style="transform:scaleX(0)"></div>
+  <div class="abs dot hide" id="s3dot"></div>
+  <div class="abs t" style="height:230px">
+    <div class="t2 hide" id="s3a">Reonic already connects the two.</div>
+    <div class="t2 hide" id="s3b">We wanted to go further<span class="ov" id="s3ov"><span style="visibility:hidden">We wanted to go </span><span class="grad">further</span></span></div>
+  </div>
+  <div class="abs sub hide" id="s3sub">The line only <b>carries</b> messages. reo does the <b>work</b>.</div>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+<!-- ================= PART 4 — Meet reo ================= -->
+<section class="slide" id="s4">
+  <div class="part"><b>04</b><i></i>Meet reo</div>
+  <div id="m4root" style="position:absolute;inset:0">
+    <!-- A: Greenleaf Solar (green, rounded) -->
+    <div id="m-siteA" class="abs m-gsite" style="--bg:#14532D;--fg:#ffffff;--ac:#86EFAC;--acfg:#052E16" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:540px;top:330px;width:560px;height:560px;border-radius:50%;background:var(--ac);opacity:.16"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="border-radius:50% 0 50% 0"></span>Greenleaf Solar</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" data-layout-allow-overlap data-layout-allow-occlusion>Power your home<br />with the sun</div>
+      <div class="abs gs-cta" style="border-radius:37px" data-layout-allow-overlap>Get a free quote</div>
+    </div>
+    <!-- B: Bluepeak Energy (light, blue, square) -->
+    <div id="m-siteB" class="abs m-gsite" style="--bg:#EAF1FF;--fg:#0B1F4B;--ac:#2563EB;--acfg:#ffffff" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:-40px;top:420px;width:420px;height:210px;border-radius:24px;background:var(--ac);opacity:.12;transform:rotate(-10deg)"></div>
+      <div class="abs" style="left:640px;top:460px;width:380px;height:190px;border-radius:24px;background:var(--ac);opacity:.12;transform:rotate(8deg)"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="border-radius:8px"></span>Bluepeak Energy</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" data-layout-allow-overlap data-layout-allow-occlusion>Clean power,<br />priced clearly</div>
+      <div class="abs gs-cta" style="border-radius:12px" data-layout-allow-overlap>Request a quote</div>
+    </div>
+    <!-- C: Amberline Power (dark, amber, sharp) -->
+    <div id="m-siteC" class="abs m-gsite" style="--bg:#111113;--fg:#ffffff;--ac:#FACC15;--acfg:#111113" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:-80px;top:560px;width:1120px;height:70px;background:var(--ac);transform:rotate(-7deg)"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="transform:rotate(45deg) scale(.8)"></span>Amberline Power</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" style="text-transform:uppercase;font-size:58px;letter-spacing:-0.01em" data-layout-allow-overlap data-layout-allow-occlusion>Solar that<br />pays you back</div>
+      <div class="abs gs-cta" style="border-radius:4px;text-transform:uppercase;letter-spacing:.06em;font-size:24px" data-layout-allow-overlap>Plan my roof</div>
+    </div>
+
+    <div id="m-site" class="abs" data-layout-allow-overflow>
+      <div id="m-hero" class="abs"></div>
+      <div id="m-shade" class="abs"></div>
+      <div id="m-chrome" class="abs">
+        <div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div>
+        <div id="m-url" class="abs"></div>
+      </div>
+      <div id="m-logo" class="abs">
+        <svg viewBox="0 0 32 32" width="38" height="38" aria-hidden="true"><defs><linearGradient id="m-sun" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#f7a35c"/><stop offset="1" stop-color="#ee6a5b"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#m-sun)"/><path d="M8 19a8 8 0 0 1 16 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M6 23h20" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M16 7v2.5M9.5 9.8l1.6 1.8M22.5 9.8l-1.6 1.8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        Sonnfeld
+      </div>
+      <div class="abs m-nav" style="left:560px; width:70px"></div><div class="abs m-nav" style="left:650px; width:90px"></div><div class="abs m-nav" style="left:760px; width:60px"></div>
+      <div id="m-h1" class="abs" data-layout-allow-overlap data-layout-allow-occlusion>Clean energy<br />for your home</div>
+      <div id="m-pill" class="abs">Plan my home →</div>
+    </div>
+
+    <div id="m-bub" class="abs m-side"><div class="m-edge" id="m-edge1"></div>How much would solar cost me?</div>
+    <div id="m-card" class="abs m-side"><div class="m-edge" id="m-edge2"></div><div class="t">Ready offer</div><div class="b" style="width:300px"></div><div class="b" style="width:240px"></div><div class="b" style="width:270px"></div></div>
+
+    <div id="m-reo" class="abs" data-layout-allow-overflow>
+      <div id="m-sq"><svg id="m-svg" viewBox="0 0 600 220" width="1440" height="528" role="img" aria-label="Reonic becomes reo"></svg></div>
+    </div>
+
+    <div id="m-sub" class="abs">An <span class="gr">agentic</span> companion for installers.</div>
+  </div>
+</section>
+
+
+<!-- ================= TEAM ================= -->
+<section class="slide" id="sT">
+  <div class="part"><b>·</b><i></i>The team</div>
+  <div class="abs tt hide" id="sTt">Team <span class="grad">Fener</span></div>
+  <div class="abs ts hide" id="sTs">The people behind reo</div>
+  <div class="abs mem hide" style="left:200px"><div class="av">RK</div><h4>Raneem Kolakkaden</h4><p class="r1">Product Lead</p></div>
+  <div class="abs mem hide" style="left:720px"><div class="av">YA</div><h4>Yassir Ahmadi</h4><p class="r2">Tech Lead</p></div>
+  <div class="abs mem hide" style="left:1240px"><div class="av">EÜ</div><h4>Ege Ünlüer</h4><p class="r3">Business Lead</p></div>
+</section>
+
+<!-- ================= PART 5 — A few taps ================= -->
+<section class="slide" id="s5">
+  <div class="part"><b>05</b><i></i>A few taps · the homeowner</div>
+  <div class="abs lab hide" style="top:104px;left:100px">Homeowner</div>
+  <div class="abs pills hide" id="s5pills"><span>Usage</span><span>Address</span><span>Car</span><span>Heating</span></div>
+  <div class="abs win hide" id="s5win">
+    <div class="bar2"><u></u><u></u><u></u></div>
+    <div class="shots" id="s5shots">
+      <img class="home" src="assets/shots/home.jpg" alt="">
+      <img class="hide" src="assets/shots/step1.jpg" alt="">
+      <img class="hide" src="assets/shots/step2.jpg" alt="">
+      <img class="hide" src="assets/shots/step3.jpg" alt="">
+      <img class="hide" src="assets/shots/step4.jpg" alt="">
+      <img class="hide" src="assets/shots/results.jpg" alt="">
+      <img class="hide" src="assets/shots/explain.jpg" alt="">
+    </div>
+    <svg class="abs cur hide" id="s5cur" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.6 15 L11.6 21.6 L14.4 20.4 L11.5 14 L17.5 14 Z" fill="#1B1D20" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+  </div>
+  <div id="s5texts">
+    <div class="abs rt hide"><div class="k">On Sonnfeld's website</div><h3>An energy advisor talks to the homeowner.</h3><p>In the <b>installer's name</b>, right under the call-to-action.</p></div>
+    <div class="abs rt hide"><div class="k">Tap 1 · Usage</div><h3>Yearly electricity use</h3><p>The one number they know: <b>4,500 kWh</b>.</p></div>
+    <div class="abs rt hide"><div class="k">Tap 2 · Address</div><h3>Where the home is</h3><p><b>Musterstraße 12, 80331 München</b>. The roof is found and glows.</p></div>
+    <div class="abs rt hide"><div class="k">Tap 3 · Car</div><h3>Electric car?</h3><p><b>Planned</b>. The car and wallbox appear on the 3D house.</p></div>
+    <div class="abs rt hide"><div class="k">Tap 4 · Heating</div><h3>Current heating</h3><p>Gas, oil, heat pump, electric… <b>one tap</b>.</p></div>
+    <div class="abs rt hide"><div class="k">The result</div><h3>A design, a price range, a reason for every number.</h3><p>System sized by the engine, price marked <b>estimate</b>.</p></div>
+    <div class="abs rt hide"><div class="k">Tap any number</div><h3>…and the advisor <span class="grad">explains</span> it.</h3><p>Savings, ROI, own power: each one answers <b>“why?”</b></p></div>
+  </div>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+
+<!-- ================= PART 6 — Already working ================= -->
+<section class="slide" id="s6">
+  <div class="part"><b>06</b><i></i>Already working · the planner</div>
+  <div class="abs vestreo hide" id="s6reo"></div>
+  <div id="s6texts">
+    <div class="lt hide" style="top:360px"><div class="k">Meanwhile</div><h3>reo is already working <span class="grad">for the planner</span>.</h3><p>The plan lands in the planner's inbox. reo wears the <b>vest</b> on this side.</p></div>
+    <div class="lt hide" style="top:360px"><div class="k">The offer pack</div><h3>Similar homes, three designs, a draft offer.</h3><p>And every number <b>checked against the engine</b> before the planner sees it.</p></div>
+    <div class="lt hide" style="top:360px"><div class="k">Then it asks</div><h3>Nothing happens until the planner says <span class="grad">yes</span>.</h3><p>Book the site visit, ask for the bill, create the CRM task: <b>each one waits for Approve</b>.</p></div>
+  </div>
+  <div class="abs plab hide" id="s6lab">Planner</div>
+  <div class="abs fly hide" id="s6fly"><small>Homeowner</small>Anna Demo · plan sent</div>
+  <div class="abs pwin hide" id="s6win">
+    <div class="bar2"><u></u><u></u><u></u></div>
+    <div class="pview">
+      <div class="zoomer" id="s6zoom"><img src="assets/shots/pl_inbox.jpg" alt=""><img class="hide" src="assets/shots/pl_ask.jpg" alt=""></div>
+      <div class="op hide" id="s6op">
+        <h4>Offer pack</h4>
+        <div class="st hide"><i></i><span>Read the plan</span></div>
+        <div class="st hide"><i></i><span>Compared with similar homes</span></div>
+        <div class="st hide"><i></i><span>Built three engine designs</span></div>
+        <div class="st hide"><i></i><span>Drafted the message</span></div>
+        <div class="st v hide"><i></i><span>Numbers verified<small>every number matches an engine result</small></span></div>
+      </div>
+      <svg class="pcur hide" id="s6cur" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.6 15 L11.6 21.6 L14.4 20.4 L11.5 14 L17.5 14 Z" fill="#1B1D20" stroke="#fff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    </div>
+  </div>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+<!-- ================= PART 7 — The planner stays in charge ================= -->
+<section class="slide" id="s7">
+  <div class="part"><b>07</b><i></i>The planner stays in charge</div>
+  <div id="s7texts">
+    <div class="lt hide" style="top:360px"><div class="k">Change anything</div><h3>The planner stays <span class="grad">in charge</span>.</h3><p>Move, add or remove solar modules in the <b>design studio</b>.</p></div>
+    <div class="lt hide" style="top:360px"><div class="k">Edit the roof</div><h3>Add, rotate, remove.</h3><p>Changing the number of modules <b>re-derives the price and savings</b>.</p></div>
+    <div class="lt hide" style="top:360px"><div class="k">Every number re-derives</div><h3>PV 11.61 → 11.18 kWp.</h3><p>Total <b>€47,226 → €46,852</b>, recomputed by the engine, not typed in.</p></div>
+    <div class="lt hide" style="top:360px"><div class="k">Finalise</div><h3>One click sends the quote.</h3><p>An optional note to the customer, <b>sent as written</b>.</p></div>
+  </div>
+  <div class="abs plab hide" id="s7lab">Planner</div>
+  <div class="abs pwin hide" id="s7win">
+    <div class="bar2"><u></u><u></u><u></u></div>
+    <div class="pview">
+      <div class="zoomer" id="s7zoom"><img src="assets/shots/pl_roof.jpg" alt=""><img class="hide" src="assets/shots/pl_edit.jpg" alt=""><img class="hide" src="assets/shots/pl_rederive.jpg" alt=""><img class="hide" src="assets/shots/pl_note.jpg" alt=""></div>
+    </div>
+  </div>
+  <div class="abs gc gcl hide" id="gcl"><small>Homeowner</small>Your planner has confirmed your plan<span>Confirmed by Sonnfeld</span><div class="qrow"><s>Estimate €40,000–45,100</s><strong>Confirmed quote €46,852</strong></div></div>
+  <div class="abs gc gcr hide" id="gcr"><small>Planner</small>Quote sent<span>The customer now sees the confirmed plan and price on the website.</span></div>
+  <div class="abs hide" id="gcbar"></div>
+  <div class="abs hide" id="s7end">The estimate becomes a <span class="grad">confirmed quote</span>,<br>in the installer's own words.</div>
+  <div class="foot">reo · by Reonic</div>
+</section>
+
+
+<!-- ================= INTERLUDE — the meme ================= -->
+<section class="slide" id="sM">
+  <div class="part"><b>·</b><i></i>Interlude</div>
+  <div class="abs meme hide" id="sMimg"><img src="assets/meme.jpg" alt="Ever since we were children our goal in life was to increase shareholder value"></div>
+  <div class="abs mt hide" id="sMtxt"><small>Which brings us to</small>the <span class="grad">business facts</span>.</div>
+</section>
+
+<!-- ================= PART 8 — Business impact ================= -->
+<section class="slide" id="sB">
+  <div class="part"><b>08</b><i></i>Business impact</div>
+  <div class="kick hide" id="sBk" style="top:118px">The business case</div>
+  <div class="big8 hide" id="sBh">The planner starts from a <span class="grad">ready offer</span>, not a blank lead.</div>
+  <div class="abs col c1 hide" id="sBc1"><h4>For the installer</h4><ul>
+    <li><span>Each lead arrives with a design, a price range and a draft message</span></li>
+    <li><span>The planner handles exceptions; every edit re-derives the numbers</span></li>
+    <li><span>Nothing is sent until the planner approves</span></li>
+    <li><span>White-label: customers see the installer's brand</span></li></ul></div>
+  <div class="abs col c2 hide" id="sBc2"><h4>For the homeowner</h4><ul>
+    <li><span>An answer today, not a callback</span></li>
+    <li><span>A reason for every number, one tap away</span></li>
+    <li><span>Prices marked <b>estimate</b> until the installer confirms</span></li>
+    <li><span>Nothing sold to them; they choose to hand over</span></li></ul></div>
+  <div class="abs mt hide" id="sBm">What we will measure with installers: <span class="p">Time per offer</span><span class="p">Win rate</span><span class="p">Design quality</span><em>baselines to be measured with Reonic</em></div>
+</section>
+
+<!-- ================= PART 9 — Environmental impact ================= -->
+<section class="slide" id="sE">
+  <div class="part"><b>09</b><i></i>Environmental impact</div>
+  <div class="kick hide" id="sEk" style="top:118px">Environmental impact</div>
+  <div class="big8 hide" id="sEh">Every plan comes with its <span class="grad">CO₂ saving</span>.</div>
+  <div class="abs card e1 hide" id="sE1"><h4>Rooftop solar</h4>
+    <div class="num"><span id="sEn1">0</span><small>kWh a year</small></div>
+    <div class="lbl">generated by the engine's design, avoiding about <b id="sEt1" class="grad">3.9 t of CO₂</b> a year</div>
+    <div class="fm">11,260 kWh × 344 g CO₂ per kWh (German grid mix, UBA 2025)</div></div>
+  <div class="abs card e2 hide" id="sE2"><h4>Heat pump instead of gas</h4>
+    <div class="hb"><div class="n">Gas boiler</div><div class="tr"><div class="fl" id="sEb1" style="background:#E8643C"></div></div><div class="v" id="sEv1" style="color:#E8643C">0 kg</div></div>
+    <div class="hb"><div class="n">Heat pump</div><div class="tr"><div class="fl" id="sEb2" style="background:#0F9F7A"></div></div><div class="v" id="sEv2" style="color:#0F9F7A">0 kg</div></div>
+    <div class="red"><span id="sEr">0</span> % <span style="font-size:40px;letter-spacing:0;font-weight:600;color:var(--ink)">less CO₂</span></div>
+    <div class="fm">CO₂ per year for the same heat. Heat pump on grid power; own solar improves it.</div></div>
+  <div class="abs foot2 hide" id="sEf">A typical demo home: 4,500 kWh a year, electric car planned, gas heating, Bavaria. Estimates from the reo engine; emission factors from UBA.</div>
+</section>
+
+<!-- ================= LIVE DEMO ================= -->
+<section class="slide" id="sD">
+  <div class="part"><b>·</b><i></i>Live demo</div>
+  <div class="abs dt hide" id="sDt">Now, <span class="grad">live</span>.</div>
+  <div class="abs ds hide" id="sDs">Plan <b>your own home</b> with reo on Sonnfeld's website, or watch the demo first.</div>
+  <div class="abs qc qa hide" id="sDq"><div class="h">Try it live</div><img src="assets/qr-live-app.svg" alt="QR code to sonnfeld-reo.vercel.app"><div class="u">sonnfeld-reo.vercel.app</div><div class="n">The demo code is given at the demo</div></div>
+  <div class="abs qc qb hide" id="sDy"><div class="h">Watch our demo on YouTube</div><img src="assets/qr-youtube-demo.svg" alt="QR code to the demo video on YouTube"><div class="u">youtube.com/watch?v=SOqbP6YISW8</div><div class="n">The full product video</div></div>
+</section>
+
+<!-- ================= PART 9 — Two sides, one gap ================= -->
+<section class="slide" id="s9">
+  <div class="part"><b>10</b><i></i>Two sides, one gap</div>
+  <div class="abs shape9 sl hide" id="s9l">Homeowner</div>
+  <div class="abs shape9 sr hide" id="s9r">Installer</div>
+  <div class="abs reo9 hide" id="s9reo"></div>
+  <div class="abs t9 hide" id="s9t1">Two sides, <span class="grad">one gap</span>.</div>
+  <div class="abs t9b hide" id="s9t2">Reo, the <span class="grad" style="font-weight:700">AI companion</span> for Installers</div>
+</section>
+
+</div></div>
+<div id="hud"></div>
+
+<script>
+function buildMeet(){
+
+    
+
+    /* ---------------------------------------------------------------------------
+       reo: a 1:1 port of app/src/ReoIntro.tsx (+ ReoAvatar geometry) as a pure function of time.
+       render(local seconds) sets SVG attributes only; nothing here reads a clock.
+       --------------------------------------------------------------------------- */
+    const INK = "#141414", PINK = "#FF6B7A", ORANGE = "#FF9A3C";
+    const R = 30, RI = 17.7;
+    const topBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 0 ${px} ${py + R}A${RI} ${R} 0 0 1 ${px - RI} ${py}Z`;
+    const bottomBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 1 ${px} ${py - R}A${RI} ${R} 0 0 0 ${px - RI} ${py}Z`;
+    const EYE_X = 18, EYE_Y = 2, BROW_LIFT = -44, BROW_SPREAD = 1.14;
+    const browTransform = (lift, spread, rot) => `translate(0 ${lift}) translate(0 -9) scale(${spread}) translate(0 9) rotate(${rot})`;
+    const LEFT_ARM = [-42, 16, -62, 30], RIGHT_ARM = [42, 10, 62, -8];
+    const FOOT = { x: 22, y: 52, rx: 14, ry: 9 };
+
+    const T = {
+      slide: [250, 1050], glide: [1050, 1500], turn: [1500, 1950], brows: [1950, 2450], collapse: [1950, 2250],
+      eyes: [2100, 2550], feet: [2450, 2800], arms: [2550, 2900], wave: [2900, 3900], shift: [2900, 3400],
+      r: [3150, 3550], e: [3300, 3650], o: [3400, 3750], tag: [3650, 4050],
+    };
+    const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+    const seg = (t, [a, b]) => clamp((t - a) / (b - a));
+    const lerp = (a, b, p) => a + (b - a) * p;
+    const inOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+    const outBack = (p, s = 1.70158) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+    const inOutBack = (p, s = 1.70158 * 1.525) =>
+      p < 0.5 ? (Math.pow(2 * p, 2) * ((s + 1) * 2 * p - s)) / 2 : (Math.pow(2 * p - 2, 2) * ((s + 1) * (p * 2 - 2) + s) + 2) / 2;
+
+    const W = 600, H = 220, CY = 110, START_X = 99, ERASE_X = 520, END_X = W / 2, END_S = 1.25;
+    const LOCK_X = 161, WM_X = 288, WM_BASE = 150, WM_XH = 70, WM_EO_W = 160, WM_RIGHT = WM_X + WM_XH + 6 + WM_EO_W;
+    const k = WM_XH / 30;
+    const P = (u, v) => `${(WM_X + u * k).toFixed(2)} ${(WM_BASE + (v - 6) * k).toFixed(2)}`;
+    const R_PATH = `M${P(30, -24)}A${30 * k} ${30 * k} 0 0 0 ${P(0, 6)}A${30 * k} ${15 * k} 0 0 1 ${P(30, 6 - 15)}Z`;
+
+    const BLADES = [
+      { d: topBlade(6, -30), role: "brow", side: 1 },
+      { d: bottomBlade(6, 30), role: "brow", side: -1 },
+      { d: topBlade(27, -30), role: "eye", side: 1 },
+      { d: bottomBlade(27, 30), role: "eye", side: -1 },
+    ];
+
+    const svg = document.getElementById("m-svg");
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="m-gb" gradientUnits="userSpaceOnUse" x1="-55" y1="55" x2="55" y2="-55"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="m-gl" gradientUnits="userSpaceOnUse" x1="-70" y1="-70" x2="70" y2="70"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="m-wm" gradientUnits="userSpaceOnUse" x1="${WM_X}" y1="${WM_BASE - WM_XH}" x2="${WM_RIGHT}" y2="${WM_BASE}"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <clipPath id="m-erase"><rect id="m-eraseRect" x="0" y="0" width="${W}" height="${H}"/></clipPath>
+      </defs>
+      <g clip-path="url(#m-erase)" id="m-reonicG"><text x="190" y="154" font-family="Geist, Inter, sans-serif" font-weight="500" font-size="124" letter-spacing="-2" textLength="361" lengthAdjust="spacingAndGlyphs" fill="${INK}">Reonic</text></g>
+      <g id="m-streaks" stroke="${INK}" stroke-linecap="round" stroke-width="3"><line/><line/><line/></g>
+      <g id="m-ic">
+        <g id="m-feet" fill="url(#m-gl)"><ellipse rx="${FOOT.rx}" ry="${FOOT.ry}"/><ellipse rx="${FOOT.rx}" ry="${FOOT.ry}"/></g>
+        <g id="m-armL"><line stroke="url(#m-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g id="m-armR"><line stroke="url(#m-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g id="m-body"><rect x="-50" y="-50" width="100" height="100" rx="26" fill="${INK}"/><rect id="m-tint" x="-50" y="-50" width="100" height="100" rx="26" fill="url(#m-gb)" opacity="0"/></g>
+        ${BLADES.map((b, i) => `<path id="m-bl${i}" d="${b.d}" fill="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke"/>`).join("")}
+        ${[-1, 1].map((s, i) => `<g id="m-eye${i}" opacity="0"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="${INK}"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g>`).join("")}
+      </g>
+      <g id="m-wmk">
+        <path id="m-rp" d="${R_PATH}" fill="url(#m-wm)"/>
+        <text id="m-e" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#m-wm)" x="${WM_X + WM_XH + 6}" y="${WM_BASE}">e</text>
+        <text id="m-o" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#m-wm)" x="${WM_X + WM_XH + 6 + WM_EO_W / 2}" y="${WM_BASE}">o</text>
+        <text id="m-tag" x="${WM_RIGHT}" y="${WM_BASE + 34}" text-anchor="end" font-family="Geist, Inter, sans-serif" font-weight="500" font-size="22" fill="${INK}">by Reonic</text>
+      </g>`;
+    const $ = (id) => document.getElementById(id);
+    const el = {
+      eraseRect: $("m-eraseRect"), reonicG: $("m-reonicG"), streaks: $("m-streaks"), ic: $("m-ic"), feet: $("m-feet"),
+      armL: $("m-armL"), armR: $("m-armR"), body: $("m-body"), tint: $("m-tint"), wmk: $("m-wmk"), rp: $("m-rp"),
+      e: $("m-e"), o: $("m-o"), tag: $("m-tag"), eyes: [$("m-eye0"), $("m-eye1")], bl: BLADES.map((_, i) => $("m-bl" + i)),
+    };
+    const lines = el.streaks.querySelectorAll("line");
+    const feetEl = el.feet.querySelectorAll("ellipse");
+    const setArm = (g, sx, sy, ex, ey, angle, visible) => {
+      const ln = g.firstElementChild;
+      g.setAttribute("display", visible ? "inline" : "none");
+      g.setAttribute("transform", `rotate(${angle} ${sx} ${sy})`);
+      ln.setAttribute("x1", sx); ln.setAttribute("y1", sy); ln.setAttribute("x2", ex); ln.setAttribute("y2", ey);
+    };
+    const blinkAt = (idle) => {
+      if (idle < 600) return 1;
+      const q = ((idle - 600) % 3400) / 170;
+      return q < 1 ? 1 - 0.92 * Math.sin(Math.PI * q) : 1;
+    };
+
+    // reo takes on each installer's theme: [light stop, dark stop] per site, morphing as the site arrives
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const mixHex = (a, b, p) => { const A = hex(a), B = hex(b); return "#" + A.map((v, i) => Math.round(lerp(v, B[i], p)).toString(16).padStart(2, "0")).join(""); };
+    const THEMES = { sun: [PINK, ORANGE], A: ["#1F9D55", "#6EE7A8"], B: ["#1D4ED8", "#60A5FA"], C: ["#F59E0B", "#FDE047"] };
+    const KEYS = [[0, "sun"], [9.6, "sun"], [9.95, "A"], [10.6, "A"], [10.9, "B"], [11.8, "B"], [12.1, "C"], [13.0, "C"], [13.3, "sun"]];
+    const themeAt = (local) => {
+      let i = 0;
+      while (i < KEYS.length - 1 && local >= KEYS[i + 1][0]) i++;
+      const [t0, n0] = KEYS[i], [t1, n1] = KEYS[Math.min(i + 1, KEYS.length - 1)];
+      const p = t1 === t0 ? 1 : inOutCubic(clamp((local - t0) / (t1 - t0)));
+      return [mixHex(THEMES[n0][0], THEMES[n1][0], p), mixHex(THEMES[n0][1], THEMES[n1][1], p)];
+    };
+    const stops0 = svg.querySelectorAll(".rs0"), stops1 = svg.querySelectorAll(".rs1");
+
+    // the whole scene-4 timeline in local seconds: the intro clock starts at local 2.0
+    const INTRO_AT = 2.0;
+    function render(local) {
+      const t = Math.max(0, (local - INTRO_AT) * 1000);
+      const [c0, c1] = themeAt(local);
+      stops0.forEach((n) => n.setAttribute("stop-color", c0));
+      stops1.forEach((n) => n.setAttribute("stop-color", c1));
+      const wordmarkOut = 1 - inOutCubic(seg(local, [8.0, 8.6])); // wordmark leaves, reo steps to centre
+      const reach = outBack(seg(local, [14.2, 15.1]), 1.4);       // both arms reach the two sides
+
+      const pSlide = inOutCubic(seg(t, T.slide));
+      const pGlide = inOutCubic(seg(t, T.glide));
+      const mix = inOutCubic(seg(t, T.shift)) * wordmarkOut;
+      const x = t < T.glide[0] ? lerp(START_X, ERASE_X, pSlide) : lerp(lerp(ERASE_X, END_X, pGlide), LOCK_X, mix);
+      const s = lerp(1, END_S, pGlide);
+      const dt = 16;
+      const speed = clamp((Math.abs(inOutCubic(seg(t + dt, T.slide)) - inOutCubic(seg(t - dt, T.slide))) * (ERASE_X - START_X)) / (2 * dt) / 0.9);
+
+      const pTurnRaw = seg(t, T.turn);
+      const rot = 90 * inOutBack(pTurnRaw);
+      const hop = -14 * Math.sin(Math.PI * pTurnRaw);
+      const tint = inOutCubic(clamp((pTurnRaw - 0.45) / 0.4));
+
+      const pBrow = outBack(seg(t, T.brows));
+      const pCollapse = inOutCubic(seg(t, T.collapse));
+      const pEyes = seg(t, T.eyes);
+      const eyeOpen = pEyes === 0 ? 0 : outBack(pEyes, 2.2);
+      const pFeet = outBack(seg(t, T.feet), 2.4);
+      const pArms = outBack(seg(t, T.arms), 2.4);
+      const pWave = seg(t, T.wave);
+      const wave = pWave > 0 && pWave < 1 ? 22 * Math.sin(pWave * Math.PI * 4) * (1 - pWave * 0.6) : 0;
+      const blink = blinkAt((local - INTRO_AT) * 1000 - T.tag[1]);
+
+      // Reonic wordmark, erased behind the icon
+      el.reonicG.setAttribute("display", t < T.glide[0] ? "inline" : "none");
+      el.eraseRect.setAttribute("x", x + 40);
+      el.eraseRect.setAttribute("width", Math.max(0, W - (x + 40)));
+      // streaks
+      el.streaks.setAttribute("opacity", speed > 0.05 ? speed * 0.35 : 0);
+      [-26, 0, 26].forEach((dy, i) => {
+        lines[i].setAttribute("x1", x - 58 - speed * (60 + i * 18)); lines[i].setAttribute("x2", x - 58);
+        lines[i].setAttribute("y1", CY + dy); lines[i].setAttribute("y2", CY + dy);
+      });
+      el.ic.setAttribute("transform", `translate(${x} ${CY + hop}) scale(${s})`);
+
+      el.feet.setAttribute("display", pFeet > 0 ? "inline" : "none");
+      [-1, 1].forEach((sd, i) => { feetEl[i].setAttribute("cx", FOOT.x * sd); feetEl[i].setAttribute("cy", lerp(FOOT.y - 14, FOOT.y, pFeet)); });
+      const lex = lerp(LEFT_ARM[2], -104, reach), ley = lerp(LEFT_ARM[3], 22, reach);
+      const rex = lerp(RIGHT_ARM[2], 104, reach), rey = lerp(RIGHT_ARM[3], 22, reach);
+      setArm(el.armL, LEFT_ARM[0], LEFT_ARM[1], lerp(LEFT_ARM[0], lex, pArms), lerp(LEFT_ARM[1], ley, pArms), 0, pArms > 0);
+      setArm(el.armR, RIGHT_ARM[0], RIGHT_ARM[1], lerp(RIGHT_ARM[0], rex, pArms), lerp(RIGHT_ARM[1], rey, pArms), wave * (1 - reach), pArms > 0);
+
+      el.body.setAttribute("transform", `rotate(${rot})`);
+      el.tint.setAttribute("opacity", tint);
+      BLADES.forEach((b, i) => {
+        const p = el.bl[i];
+        p.setAttribute("stroke", tint > 0.5 ? "url(#m-gb)" : INK);
+        if (b.role === "brow") {
+          p.setAttribute("transform", browTransform(BROW_LIFT * pBrow, lerp(1, BROW_SPREAD, pBrow), rot));
+          p.setAttribute("opacity", 1);
+        } else {
+          const bcx = 17 * b.side, bcy = 7, kk = lerp(1, 0.15, pCollapse);
+          const cx = lerp(bcx, EYE_X * b.side, pCollapse), cy = lerp(bcy, EYE_Y, pCollapse);
+          p.setAttribute("transform", `translate(${cx} ${cy}) scale(${kk}) translate(${-bcx} ${-bcy}) rotate(${rot})`);
+          p.setAttribute("opacity", 1 - clamp((pCollapse - 0.55) / 0.45));
+        }
+      });
+      [-1, 1].forEach((sd, i) => {
+        el.eyes[i].setAttribute("transform", `translate(${EYE_X * sd} ${EYE_Y}) scale(1 ${Math.max(0.04, eyeOpen * blink)})`);
+        el.eyes[i].setAttribute("opacity", clamp(pEyes * 4));
+      });
+
+      // wordmark lockup: r grows from its point, e and o rise, "by Reonic"
+      const pR = seg(t, T.r), rScale = pR === 0 ? 0 : outBack(pR, 2);
+      const rise = (span) => { const p = seg(t, span); return { opacity: clamp(p * 2), dy: 16 * (1 - outBack(p, 2)) }; };
+      const pE = rise(T.e), pO = rise(T.o);
+      el.wmk.setAttribute("display", pR > 0 && wordmarkOut > 0 ? "inline" : "none");
+      el.wmk.setAttribute("opacity", wordmarkOut);
+      el.rp.setAttribute("transform", `translate(${WM_X} ${WM_BASE}) scale(${rScale}) translate(${-WM_X} ${-WM_BASE})`);
+      el.e.setAttribute("y", WM_BASE + pE.dy); el.e.setAttribute("opacity", pE.opacity);
+      el.o.setAttribute("y", WM_BASE + pO.dy); el.o.setAttribute("opacity", pO.opacity);
+      el.tag.setAttribute("opacity", inOutCubic(seg(t, T.tag)));
+    }
+
+    /* ---- HTML around reo ---- */
+    const tl = gsap.timeline({ paused: true });
+    // pure-function driver: every seek re-renders reo from the timeline time
+    const drv = { v: 0 };
+    tl.to(drv, { v: 1, duration: 16, ease: "none", onUpdate: function () { render(this.time()); } }, 0);
+    render(0);
+
+    // lockup fades in on blank paper (local 0.8-1.5), holds still until the intro clock starts at 2.0
+    tl.fromTo("#m-reo", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power2.out" }, 0.8);
+
+    // tagline under the lockup (rise), leaves with the wordmark
+    tl.fromTo("#m-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 6.3);
+    tl.to("#m-sub", { opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power2.in" }, 8.0);
+
+    // drop-in (38.2 -> 40.1): site A rises, reo lifts, then falls into its hero and lands
+    tl.fromTo("#m-siteA", { opacity: 1, y: 1100, x: 0 }, { opacity: 1, y: 0, duration: 1.0, ease: "power3.out" }, 8.2);
+    tl.fromTo("#m-reo", { y: 0, scale: 1 }, { y: -420, scale: 0.55, duration: 0.9, ease: "power3.inOut" }, 8.3);
+    tl.to("#m-reo", { y: -450, duration: 0.3, ease: "power2.out" }, 9.2);   // anticipation
+    tl.to("#m-reo", { y: 150, duration: 0.6, ease: "power3.in" }, 9.5);       // the drop
+    tl.to("#m-sq", { scaleY: 0.86, scaleX: 1.1, duration: 0.1, ease: "power2.out" }, 10.1); // impact squash
+    tl.to("#m-sq", { scaleY: 1, scaleX: 1, duration: 0.45, ease: "back.out(2.6)" }, 10.2);
+
+    // carousel (40.5 -> 43.6): sites slide through the centre, reo stays and takes each theme (render() morphs the colour)
+    tl.to("#m-siteA", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 10.5);
+    tl.fromTo("#m-siteB", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 10.5);
+    tl.to("#m-siteB", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 11.7);
+    tl.fromTo("#m-siteC", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 11.7);
+    tl.to("#m-siteC", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 12.9);
+    tl.fromTo("#m-site", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 12.9);
+
+    // the gap returns (43.6 -> 44.9): Sonnfeld recedes, reo grows and centres, the two sides slide in
+    tl.to("#m-site", { scale: 0.55, duration: 1.0, ease: "power3.inOut" }, 13.6);
+    tl.to("#m-site", { opacity: 0, duration: 0.6, ease: "power2.inOut" }, 14.0); // clears the stage for the two sides
+    tl.to("#m-reo", { y: 20, scale: 1.0, duration: 1.0, ease: "power3.inOut" }, 13.6);
+    tl.fromTo("#m-bub", { opacity: 0, x: -200 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 13.9);
+    tl.fromTo("#m-card", { opacity: 0, x: 200 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 14.1);
+    // hands arrive (render() reaches 14.2-15.1); both sides light up in the sunset edge
+    tl.to(["#m-edge1", "#m-edge2"], { opacity: 1, duration: 0.5, ease: "power2.out" }, 14.9);
+
+    // hand-over to scene 5 (film 46.0): reo, the bubble and the card leave as the bubble becomes the customer's window
+    tl.to("#m-bub", { opacity: 0, duration: 0.2, ease: "power2.in" }, 16.0);
+    tl.to("#m-card", { opacity: 0, x: 260, duration: 0.5, ease: "power3.in" }, 16.0);
+    tl.to("#m-reo", { opacity: 0, scale: 0.35, y: 60, duration: 0.5, ease: "power3.in" }, 16.0);
+
+    
+  
+return tl;
+}
+
+/* ---------------------------------------------------------------- helpers */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const E="power3.out", EIO="power3.inOut";
+const rise=(tl,t,at,pos,d=.6)=>tl.fromTo(t,{opacity:0,y:24},{opacity:1,y:0,duration:d,ease:E,stagger:0},pos);
+
+/* ---------------------------------------------------------------- builders: each returns a paused timeline with labels b0..bN */
+function build1(){
+  const s=$("#s1"), tl=gsap.timeline({paused:true});
+  const digits=$$("#s1big i");
+  // b0 — number types in
+  tl.set("#s1cap1",{y:0},0);
+  tl.fromTo(digits,{opacity:0,y:30},{opacity:1,y:0,duration:.01,stagger:.22,ease:"none"},.3);
+  tl.fromTo("#s1 .unit",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},1.4);
+  tl.fromTo("#s1cap1",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},1.9);
+  tl.addLabel("b0",2.7);
+  // b1 — number flies into the form
+  tl.to("#s1cap1",{opacity:0,duration:.35},"b0+.1");
+  tl.to("#s1 .unit",{opacity:0,duration:.35},"b0");
+  tl.fromTo("#s1form",{opacity:0,y:70,scale:.94},{opacity:1,y:0,scale:1,duration:.9,ease:"back.out(1.5)"},"b0+.2");
+  tl.to("#s1big",{x:-330,y:66,scale:.128,duration:1,ease:EIO},"b0+.1");
+  tl.to("#s1big",{opacity:0,duration:.25},"b0+1");
+  tl.to("#s1 .caret",{opacity:0,duration:.1},"b0");
+  tl.fromTo("#s1fv",{opacity:0},{opacity:1,duration:.3},"b0+1");
+  tl.addLabel("b1","b0+1.9");
+  // b2 — click, thanks, then the clock
+  tl.fromTo("#s1cur",{opacity:0,x:140,y:120},{opacity:1,x:0,y:0,duration:.1},"b1");
+  tl.to("#s1cur",{left:900,top:640,duration:.9,ease:EIO,x:0,y:0},"b1+.05");
+  tl.to("#s1btn",{scale:.97,duration:.12,yoyo:true,repeat:1,transformOrigin:"center"},"b1+1.05");
+  tl.to("#s1in",{opacity:0,duration:.35},"b1+1.25");
+  tl.to("#s1cur",{opacity:0,duration:.3},"b1+1.3");
+  tl.fromTo("#s1thanks",{opacity:0},{opacity:1,duration:.35},"b1+1.55");
+  tl.to("#s1chk",{strokeDashoffset:0,duration:.5,ease:"power2.out"},"b1+1.7");
+  tl.to("#s1thanks",{opacity:0,duration:.4},"b1+3.3");
+  tl.fromTo("#s1clock",{opacity:0},{opacity:1,duration:.4},"b1+3.5");
+  tl.to("#s1hh",{rotation:360*2,svgOrigin:"100 100",duration:3,ease:"power2.in"},"b1+3.6");
+  tl.to("#s1mh",{rotation:360*9,svgOrigin:"100 100",duration:3,ease:"power2.in"},"b1+3.6");
+  tl.to("#s1form",{filter:"grayscale(1)",duration:1.6,ease:"none"},"b1+4");
+  tl.fromTo("#s1end",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},"b1+5");
+  tl.addLabel("b2","b1+6.8");
+  return tl;
+}
+
+function build2(){
+  const tl=gsap.timeline({paused:true});
+  // b0 — the split
+  tl.fromTo("#s2 .ttl",{opacity:0,y:20},{opacity:1,y:0,duration:.6,ease:E,stagger:.15},.2);
+  tl.fromTo("#s2hc",{opacity:0,x:260,scale:1.25},{opacity:1,x:0,scale:1,duration:.9,ease:EIO},0);
+  tl.fromTo("#s2gap",{opacity:0,scaleY:0},{opacity:1,scaleY:1,duration:.7,ease:E},.5);
+  tl.fromTo("#s2leads h4",{opacity:0,y:16},{opacity:1,y:0,duration:.5,ease:E},.7);
+  tl.fromTo("#s2leads .row",{opacity:0,y:-40},{opacity:1,y:0,duration:.55,ease:E,stagger:.12},.9);
+  tl.addLabel("b0",2.1);
+  // b1 — blank profile with question marks
+  tl.to("#s2leads",{opacity:.25,duration:.4},"b0");
+  tl.fromTo("#s2prof",{opacity:0,scale:.9,y:30,transformOrigin:"50% 10%"},{opacity:1,scale:1,y:0,duration:.7,ease:"back.out(1.3)"},"b0+.1");
+  tl.fromTo("#s2 .q",{opacity:0,scale:.6},{opacity:1,scale:1,duration:.45,ease:"back.out(2.2)",stagger:.22},"b0+.7");
+  tl.addLabel("b1","b0+1.9");
+  // b2 — questions, then the hours bar
+  tl.fromTo("#s2 .chk div",{opacity:0,x:-18},{opacity:1,x:0,duration:.4,ease:E,stagger:.28},"b1");
+  tl.fromTo("#s2 .bl",{opacity:0},{opacity:1,duration:.4},"b1+.9");
+  tl.fromTo("#s2fill",{width:"0%"},{width:"82%",duration:3,ease:"power2.out"},"b1+1");
+  tl.addLabel("b2","b1+4.1");
+  // b3 — the message dies in the gap
+  tl.fromTo("#s2bub",{opacity:0,x:0,left:730},{opacity:1,duration:.4},"b2");
+  tl.to("#s2bub",{left:905,duration:1.8,ease:"power3.out"},"b2");
+  tl.to("#s2bub",{opacity:0,duration:.9,ease:"power1.in"},"b2+1");
+  tl.to("#s2gap",{borderLeftColor:"#E8643C",duration:.25,yoyo:true,repeat:1},"b2+1.7");
+  tl.fromTo("#s2note",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},"b2+2");
+  tl.addLabel("b3","b2+2.9");
+  return tl;
+}
+
+function build3(){
+  const tl=gsap.timeline({paused:true});
+  tl.fromTo("#s3 .ghost",{opacity:0},{opacity:.13,duration:.8},0);
+  tl.fromTo("#s3link",{scaleX:0},{scaleX:1,duration:.9,ease:EIO},.5);
+  tl.fromTo("#s3dot",{opacity:0,left:604},{opacity:1,left:1296,duration:1.1,ease:"power1.inOut"},.5);
+  tl.to("#s3dot",{opacity:0,duration:.2},1.55);
+  tl.fromTo("#s3a",{opacity:0,y:30},{opacity:1,y:0,duration:.8,ease:E},.9);
+  tl.addLabel("b0",2.2);
+  // b1 — "further"
+  tl.to("#s3a",{opacity:0,y:-24,duration:.5,ease:"power2.in"},"b0");
+  tl.fromTo("#s3b",{opacity:0,y:30},{opacity:1,y:0,duration:.8,ease:E},"b0+.45");
+  tl.fromTo("#s3ov",{clipPath:"inset(0 100% 0 0)"},{clipPath:"inset(0 0% 0 0)",duration:.9,ease:"power2.inOut"},"b0+1.2");
+  tl.fromTo("#s3dot",{opacity:1,left:604},{left:1296,duration:2,ease:"power1.inOut"},"b0+.2");
+  tl.to("#s3dot",{opacity:0,duration:.2},"b0+2.1");
+  tl.fromTo("#s3sub",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},"b0+1.9");
+  tl.addLabel("b1","b0+2.8");
+  return tl;
+}
+
+function build4(){
+  const tl=buildMeet();
+  // clicks map onto the film's own clock (seconds in scene 4): intro starts at 2.0, wordmark leaves 8.0, drop 8.2-10.65, carousel 10.5-13.6, gap 13.6-15.4
+  tl.addLabel("b0",1.6).addLabel("b1",7.6).addLabel("b2",10.8).addLabel("b3",13.7).addLabel("b4",15.9);
+  return tl;
+}
+
+function build5(){
+  const tl=gsap.timeline({paused:true});
+  const imgs=$$("#s5shots img"), txt=$$("#s5texts .rt"), pills=$$("#s5pills span");
+  const show=(i,at,dir=1)=>{
+    if(i>0) tl.fromTo(imgs[i],{opacity:1,clipPath:"inset(0 0 0 100%)"},{clipPath:"inset(0 0 0 0%)",duration:.8,ease:EIO},at);
+    tl.to(txt.filter((_,j)=>j!==i),{opacity:0,y:-18,duration:.35},at);
+    tl.fromTo(txt[i],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},at+.3);
+  };
+  // b0 — Sonnfeld homepage
+  tl.fromTo("#s5 .lab, #s5pills",{opacity:0,y:-10},{opacity:1,y:0,duration:.5,ease:E},0);
+  tl.fromTo("#s5win",{opacity:0,y:80,scale:.95,transformOrigin:"50% 0%"},{opacity:1,y:0,scale:1,duration:.9,ease:E},0);
+  tl.fromTo(imgs[0],{opacity:1},{opacity:1},0);
+  tl.fromTo(txt[0],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},.5);
+  tl.fromTo("#s5cur",{opacity:0,left:1100,top:200},{opacity:1,duration:.1},.9);
+  tl.to("#s5cur",{left:540,top:512,duration:1,ease:EIO},.95);
+  tl.addLabel("b0",2.4);
+  // b1 — usage (click Plan my home)
+  tl.to("#s5cur",{scale:.86,duration:.1,yoyo:true,repeat:1,transformOrigin:"top left"},"b0");
+  tl.to("#s5cur",{opacity:0,duration:.3},"b0+.3");
+  tl.to(imgs[0],{filter:"blur(6px)",duration:.4},"b0+.1");
+  show(1,"b0+.2"); pillTo(1,"b0+.2");
+  tl.addLabel("b1","b0+1.4");
+  show(2,"b1"); pillTo(2,"b1"); tl.addLabel("b2","b1+1.2");
+  show(3,"b2"); pillTo(3,"b2"); tl.addLabel("b3","b2+1.2");
+  show(4,"b3"); pillTo(4,"b3"); tl.addLabel("b4","b3+1.2");
+  show(5,"b4"); tl.to(pills,{opacity:0,duration:.3},"b4"); tl.addLabel("b5","b4+1.2");
+  show(6,"b5"); tl.addLabel("b6","b5+1.2");
+  function pillTo(n,at){ tl.to(pills,{backgroundColor:(i)=>i===n-1?"#E8643C":"#fff",color:(i)=>i===n-1?"#fff":"#E8643C",borderColor:(i)=>i===n-1?"#E8643C":"#F6C9B2",duration:.35},at); }
+  return tl;
+}
+
+
+const reoVest=(size,id)=>`<svg width="${size}" height="${size*140/144}" viewBox="-72 -76 144 140" style="overflow:visible"><defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="-60" y1="-60" x2="60" y2="60"><stop offset="0" stop-color="#FF6B7A"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient><clipPath id="${id}b"><rect x="-50" y="-50" width="100" height="100" rx="26"/></clipPath></defs>
+<g fill="url(#${id})"><ellipse cx="-22" cy="52" rx="14" ry="9"/><ellipse cx="22" cy="52" rx="14" ry="9"/></g>
+<g stroke="url(#${id})" stroke-width="15" stroke-linecap="round"><line x1="-42" y1="16" x2="-62" y2="30"/><line x1="42" y1="10" x2="62" y2="-8"/></g>
+<rect x="-50" y="-50" width="100" height="100" rx="26" fill="url(#${id})"/>
+<g clip-path="url(#${id}b)"><path d="M-50 15 L-34 11 L0 34 L34 11 L50 15 V50 H-50 Z" fill="#FFD60A"/><path d="M-34 11 L0 34 L34 11 M0 34 V50" fill="none" stroke="#B59B16" stroke-width="1.5" stroke-linejoin="round"/><g fill="#E5E7EB" stroke="#8B929C" stroke-width=".8"><path d="M-50 30 H-12 L-5 35 H-50 Z M12 30 H50 V35 H5 Z"/><path d="M-50 42 H50 V47 H-50 Z"/></g><rect x="26" y="22" width="10" height="5" rx="1" fill="#FF9A3C"/></g>
+<g fill="#fff" stroke="url(#${id})" stroke-width="7" stroke-linejoin="round" paint-order="stroke"><path d="M-24 -30A30 30 0 0 0 6 0A17.7 30 0 0 1 -11.7 -30Z" transform="translate(0 -44) translate(0 -9) scale(1.14) translate(0 9) rotate(90)"/><path d="M-24 30A30 30 0 0 1 6 0A17.7 30 0 0 0 -11.7 30Z" transform="translate(0 -44) translate(0 -9) scale(1.14) translate(0 9) rotate(90)"/></g>
+<g transform="translate(-18 2)"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="#141414"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g>
+<g transform="translate(18 2)"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="#141414"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g></svg>`;
+document.getElementById("s6reo").innerHTML=reoVest(170,"vz");
+const zoomTo=(tl,sel,fx,fy,sc,at,d=1.1)=>tl.to(sel,{scale:sc,x:Math.min(0,Math.max(1178-1178*sc,590-fx*1178*sc)),y:Math.min(0,Math.max(736-736*sc,368-fy*736*sc)),duration:d,ease:"power3.inOut"},at);
+
+function build6(){
+  const tl=gsap.timeline({paused:true}), tx=$$("#s6texts .lt"), steps=$$("#s6op .st"), imgs=$$("#s6zoom img");
+  gsap.set("#s6zoom",{transformOrigin:"0 0"});
+  // b0 - the plan lands in the planner's inbox; reo appears in the vest
+  tl.fromTo("#s6fly",{opacity:0,x:0,y:0,scale:1},{opacity:1,duration:.4},0);
+  tl.to("#s6fly",{x:690,y:-420,scale:.5,duration:1.1,ease:EIO},.5);
+  tl.fromTo("#s6lab",{opacity:0,y:-10},{opacity:1,y:0,duration:.5,ease:E},.7);
+  tl.fromTo("#s6win",{opacity:0,x:180,scale:.96},{opacity:1,x:0,scale:1,duration:.9,ease:E},.6);
+  tl.to("#s6fly",{opacity:0,duration:.3},1.5);
+  tl.fromTo("#s6reo",{opacity:0,scale:0,y:20},{opacity:1,scale:1,y:0,duration:.7,ease:"back.out(2)"},1.5);
+  tl.fromTo(tx[0],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},1.1);
+  tl.addLabel("b0",2.4);
+  // b1 - the offer pack streams in
+  tl.to(tx[0],{opacity:0,y:-18,duration:.35},"b0");
+  tl.fromTo(tx[1],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},"b0+.3");
+  tl.fromTo("#s6op",{opacity:0,y:30,scale:.96},{opacity:1,y:0,scale:1,duration:.6,ease:E},"b0+.2");
+  tl.fromTo(steps,{opacity:0,x:-16},{opacity:1,x:0,duration:.4,ease:E,stagger:.55},"b0+.7");
+  tl.addLabel("b1","b0+3.6");
+  // b2 - it proposes actions and waits for Approve
+  tl.to(tx[1],{opacity:0,y:-18,duration:.35},"b1");
+  tl.to("#s6op",{opacity:0,y:-20,duration:.4},"b1");
+  tl.fromTo(imgs[1],{opacity:1,clipPath:"inset(0 0 0 100%)"},{clipPath:"inset(0 0 0 0%)",duration:.8,ease:EIO},"b1+.1");
+  zoomTo(tl,"#s6zoom",.79,.5,2,"b1+.9");
+  tl.fromTo(tx[2],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},"b1+.5");
+  tl.fromTo("#s6cur",{opacity:0,left:500,top:140},{opacity:1,duration:.1},"b1+1.9");
+  tl.to("#s6cur",{left:978,top:357,duration:1,ease:EIO},"b1+2");
+  tl.addLabel("b2","b1+3.4");
+  return tl;
+}
+
+
+function build7(){
+  const tl=gsap.timeline({paused:true}), tx=$$("#s7texts .lt"), imgs=$$("#s7zoom img");
+  gsap.set("#s7zoom",{transformOrigin:"0 0"});
+  const swap=(i,j,lab)=>{ tl.to(tx[i],{opacity:0,y:-18,duration:.35},lab); tl.fromTo(tx[j],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},lab+"+.3"); };
+  const wipe=(k,lab)=>tl.fromTo(imgs[k],{opacity:1,clipPath:"inset(0 0 0 100%)"},{clipPath:"inset(0 0 0 0%)",duration:.8,ease:EIO},lab+"+.1");
+  // b0 - design studio
+  tl.fromTo("#s7lab",{opacity:0,y:-10},{opacity:1,y:0,duration:.5,ease:E},.1);
+  tl.fromTo("#s7win",{opacity:0,y:70,scale:.96},{opacity:1,y:0,scale:1,duration:.9,ease:E},0);
+  tl.fromTo(tx[0],{opacity:0,y:30},{opacity:1,y:0,duration:.7,ease:E},.4);
+  tl.addLabel("b0",1.8);
+  // b1 - add / rotate / remove modules
+  tl.addLabel("w1","b0"); swap(0,1,"w1"); wipe(1,"w1");
+  tl.addLabel("b1","b0+1.6");
+  // b2 - everything re-derives
+  tl.addLabel("w2","b1"); swap(1,2,"w2"); wipe(2,"w2"); zoomTo(tl,"#s7zoom",.4,.82,1.9,"w2+.9");
+  tl.addLabel("b2","b1+2.2");
+  // b3 - finalise and send
+  tl.addLabel("w3","b2"); swap(2,3,"w3"); wipe(3,"w3"); zoomTo(tl,"#s7zoom",.45,.88,1.7,"w3+.9");
+  tl.addLabel("b3","b2+2.2");
+  // b4 - the gap closes
+  tl.to(tx[3],{opacity:0,y:-18,duration:.35},"b3");
+  tl.to("#s7win",{opacity:0,scale:.9,x:-120,duration:.7,ease:"power3.in"},"b3");
+  tl.to("#s7lab",{opacity:0,duration:.3},"b3");
+  tl.fromTo("#gcl",{opacity:0,x:-200},{opacity:1,x:0,duration:.8,ease:E},"b3+.6");
+  tl.fromTo("#gcr",{opacity:0,x:200},{opacity:1,x:0,duration:.8,ease:E},"b3+.7");
+  tl.to("#gcl",{left:305,duration:1.2,ease:EIO},"b3+1.8");
+  tl.to("#gcr",{left:975,duration:1.2,ease:EIO},"b3+1.8");
+  tl.fromTo("#gcbar",{opacity:0,scaleY:0},{opacity:1,scaleY:1,duration:.6,ease:E},"b3+2.8");
+  tl.to(["#gcl","#gcr"],{borderColor:"#F2784B",duration:.6},"b3+2.8");
+  tl.fromTo("#s7end",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},"b3+3");
+  tl.addLabel("b4","b3+3.9");
+  return tl;
+}
+
+
+/* ---- parts 8-9 ---- */
+function reoLock9(){
+  const R=30, RI=17.7, tb=(px,py)=>`M${px-R} ${py}A${R} ${R} 0 0 0 ${px} ${py+R}A${RI} ${R} 0 0 1 ${px-RI} ${py}Z`, bb=(px,py)=>`M${px-R} ${py}A${R} ${R} 0 0 1 ${px} ${py-R}A${RI} ${R} 0 0 0 ${px-RI} ${py}Z`;
+  const WM_X=288, WM_BASE=150, WM_XH=70, WM_RIGHT=WM_X+WM_XH+6+160, k=WM_XH/30, P=(u,v)=>`${(WM_X+u*k).toFixed(2)} ${(WM_BASE+(v-6)*k).toFixed(2)}`;
+  const rp=`M${P(30,-24)}A${30*k} ${30*k} 0 0 0 ${P(0,6)}A${30*k} ${15*k} 0 0 1 ${P(30,-9)}Z`;
+  const bt="translate(0 -44) translate(0 -9) scale(1.14) translate(0 9) rotate(90)";
+  const eye=sd=>`<g class="eye" transform="translate(${18*sd} 2)"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="#141414"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g>`;
+  return `<svg width="1200" height="440" viewBox="0 0 600 220" style="overflow:visible"><defs><linearGradient id="g9" gradientUnits="userSpaceOnUse" x1="-60" y1="-60" x2="60" y2="60"><stop offset="0" stop-color="#FF6B7A"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient><linearGradient id="w9" gradientUnits="userSpaceOnUse" x1="${WM_X}" y1="${WM_BASE-WM_XH}" x2="${WM_RIGHT}" y2="${WM_BASE}"><stop offset="0" stop-color="#FF6B7A"/><stop offset="1" stop-color="#FF9A3C"/></linearGradient></defs>
+  <g transform="translate(161 110)"><g id="r9body">
+    <g fill="url(#g9)"><ellipse cx="-22" cy="52" rx="14" ry="9"/><ellipse cx="22" cy="52" rx="14" ry="9"/></g>
+    <g stroke="url(#g9)" stroke-width="15" stroke-linecap="round"><line id="r9al" x1="-42" y1="16" x2="-62" y2="30"/><line id="r9ar" x1="42" y1="10" x2="62" y2="-8"/></g>
+    <rect x="-50" y="-50" width="100" height="100" rx="26" fill="url(#g9)"/>
+    <g fill="#fff" stroke="url(#g9)" stroke-width="7" stroke-linejoin="round" paint-order="stroke"><path d="${tb(6,-30)}" transform="${bt}"/><path d="${bb(6,30)}" transform="${bt}"/></g>
+    ${eye(-1)}${eye(1)}
+  </g></g>
+  <g id="w9g"><path id="w9r" d="${rp}" fill="url(#w9)" opacity="0"/>
+  <text id="w9e" font-family="Geist,system-ui" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#w9)" x="${WM_X+WM_XH+6}" y="${WM_BASE}" opacity="0">e</text>
+  <text id="w9o" font-family="Geist,system-ui" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#w9)" x="${WM_X+WM_XH+6+80}" y="${WM_BASE}" opacity="0">o</text>
+  <text id="w9b" font-family="Geist,system-ui" font-weight="500" font-size="22" fill="#1B1D20" x="${WM_RIGHT}" y="${WM_BASE+34}" text-anchor="end" opacity="0">by Reonic</text></g></svg>`;
+}
+document.getElementById("s9reo").innerHTML = reoLock9();
+
+function buildM(){
+  const tl=gsap.timeline({paused:true});
+  tl.fromTo("#sMimg",{opacity:0,y:120,rotation:-6,scale:.8},{opacity:1,y:0,rotation:-1.5,scale:1,duration:1,ease:"back.out(1.4)"},.1);
+  tl.addLabel("b0",1.3);
+  tl.to("#sMimg",{x:-270,rotation:-2,duration:.9,ease:EIO},"b0");
+  tl.fromTo("#sMtxt",{opacity:0,y:30},{opacity:1,y:0,duration:.8,ease:E},"b0+.5");
+  tl.addLabel("b1","b0+1.5");
+  return tl;
+}
+
+function buildB(){
+  const tl=gsap.timeline({paused:true});
+  tl.fromTo("#sBk",{opacity:0,y:14},{opacity:1,y:0,duration:.5,ease:E},.1);
+  tl.fromTo("#sBh",{opacity:0,y:34},{opacity:1,y:0,duration:.8,ease:E},.2);
+  tl.fromTo("#sBc1",{opacity:0,y:60},{opacity:1,y:0,duration:.8,ease:E},.9);
+  tl.addLabel("b0",2.2);
+  tl.fromTo("#sBc2",{opacity:0,y:60},{opacity:1,y:0,duration:.8,ease:E},"b0");
+  tl.addLabel("b1","b0+1.2");
+  tl.fromTo("#sBm",{opacity:0,y:20},{opacity:1,y:0,duration:.7,ease:E},"b1");
+  tl.addLabel("b2","b1+1.1");
+  return tl;
+}
+function buildE(){
+  const tl=gsap.timeline({paused:true});
+  const n={a:0}, h={g:0,p:0,r:0};
+  tl.fromTo("#sEk",{opacity:0,y:14},{opacity:1,y:0,duration:.5,ease:E},.1);
+  tl.fromTo("#sEh",{opacity:0,y:34},{opacity:1,y:0,duration:.8,ease:E},.2);
+  tl.fromTo("#sE1",{opacity:0,y:60},{opacity:1,y:0,duration:.8,ease:E},.9);
+  tl.to(n,{a:11260,duration:1.6,ease:"power2.out",onUpdate:()=>{ $("#sEn1").textContent=Math.round(n.a).toLocaleString("en"); }},1.1);
+  tl.fromTo("#sEf",{opacity:0},{opacity:1,duration:.6},1.8);
+  tl.addLabel("b0",3);
+  tl.fromTo("#sE2",{opacity:0,y:60},{opacity:1,y:0,duration:.8,ease:E},"b0");
+  tl.to("#sEb1",{width:"100%",duration:1.2,ease:"power3.out"},"b0+.8");
+  tl.to("#sEb2",{width:"46.7%",duration:1.2,ease:"power3.out"},"b0+1.0");
+  tl.to(h,{g:3529,p:1647,r:53,duration:1.4,ease:"power3.out",onUpdate:()=>{ $("#sEv1").textContent=Math.round(h.g).toLocaleString("en")+" kg"; $("#sEv2").textContent=Math.round(h.p).toLocaleString("en")+" kg"; $("#sEr").textContent=Math.round(h.r); }},"b0+.8");
+  tl.addLabel("b1","b0+2.4");
+  return tl;
+}
+function build9(){
+  const tl=gsap.timeline({paused:true});
+  const body="#r9body";
+  gsap.set("#s9reo",{transformOrigin:"322px 220px"});
+  // b0 - two sides, one gap
+  tl.fromTo("#s9l",{opacity:0,x:-260},{opacity:1,x:0,duration:.9,ease:E},.1);
+  tl.fromTo("#s9r",{opacity:0,x:260},{opacity:1,x:0,duration:.9,ease:E},.2);
+  tl.fromTo("#s9t1",{opacity:0,y:24},{opacity:1,y:0,duration:.8,ease:E},.8);
+  tl.addLabel("b0",1.9);
+  // b1 - reo drops into the gap and bridges it
+  tl.to("#s9t1",{opacity:0,y:-18,duration:.35},"b0");
+  tl.fromTo("#s9reo",{opacity:1,y:-520},{y:0,duration:.8,ease:"power3.in"},"b0+.2");
+  tl.to(body,{scaleY:.85,scaleX:1.08,transformOrigin:"0px 52px",duration:.1},"b0+1");
+  tl.to(body,{scaleY:1,scaleX:1,duration:.5,ease:"elastic.out(1.1,.5)"},"b0+1.1");
+  tl.to("#r9al",{attr:{x2:-128,y2:8},duration:.6,ease:"back.out(1.4)"},"b0+1.4");
+  tl.to("#r9ar",{attr:{x2:128,y2:8},duration:.6,ease:"back.out(1.4)"},"b0+1.4");
+  tl.to("#s9l",{borderColor:"#F2784B",duration:.5},"b0+1.8");
+  tl.to("#s9r",{borderColor:"#F2784B",duration:.5},"b0+1.8");
+  tl.addLabel("b1","b0+2.6");
+  // b2 - the lockup builds
+  tl.to(["#s9l","#s9r"],{opacity:0,duration:.5},"b1");
+  tl.to("#r9al",{attr:{x2:-62,y2:30},duration:.5,ease:"power2.inOut"},"b1");
+  tl.to("#r9ar",{attr:{x2:62,y2:-8},duration:.5,ease:"power2.inOut"},"b1");
+  tl.to("#s9reo",{x:-290,duration:.9,ease:EIO},"b1+.2");
+  tl.fromTo("#w9r",{opacity:0,y:20},{opacity:1,y:0,duration:.5,ease:E},"b1+.9");
+  tl.fromTo("#w9e",{opacity:0,y:20},{opacity:1,y:0,duration:.5,ease:E},"b1+1.05");
+  tl.fromTo("#w9o",{opacity:0,y:20},{opacity:1,y:0,duration:.5,ease:E},"b1+1.2");
+  tl.fromTo("#w9b",{opacity:0},{opacity:1,duration:.5},"b1+1.6");
+  tl.to(".eye",{scaleY:.08,transformOrigin:"0px 2px",duration:.1,yoyo:true,repeat:1},"b1+2.2");
+  tl.fromTo("#s9t2",{opacity:0,y:24},{opacity:1,y:0,duration:.8,ease:E},"b1+1.6");
+  tl.addLabel("b2","b1+2.9");
+  return tl;
+}
+
+
+function buildT(){
+  const tl=gsap.timeline({paused:true});
+  tl.fromTo("#sTt",{opacity:0,y:40,scale:.94},{opacity:1,y:0,scale:1,duration:.9,ease:E},.1);
+  tl.fromTo("#sTs",{opacity:0,y:20},{opacity:1,y:0,duration:.6,ease:E},.7);
+  tl.addLabel("b0",1.5);
+  tl.fromTo("#sT .mem",{opacity:0,y:90,scale:.92},{opacity:1,y:0,scale:1,duration:.8,ease:"back.out(1.4)",stagger:.2},"b0");
+  tl.addLabel("b1","b0+1.5");
+  return tl;
+}
+function buildD(){
+  const tl=gsap.timeline({paused:true});
+  tl.fromTo("#sDt",{opacity:0,y:40},{opacity:1,y:0,duration:.9,ease:E},.1);
+  tl.fromTo("#sDs",{opacity:0,y:24},{opacity:1,y:0,duration:.7,ease:E},.7);
+  tl.addLabel("b0",1.6);
+  tl.fromTo("#sDq",{opacity:0,scale:.7,rotation:-4},{opacity:1,scale:1,rotation:0,duration:.9,ease:"back.out(1.5)"},"b0");
+  tl.fromTo("#sDy",{opacity:0,scale:.7,rotation:4},{opacity:1,scale:1,rotation:0,duration:.9,ease:"back.out(1.5)"},"b0+.25");
+  tl.addLabel("b1","b0+1.2");
+  return tl;
+}
+
+/* ---------------------------------------------------------------- engine */
+const PRINT=/[?&]print/.test(location.search);
+const deck=[["#s1",build1],["#s2",build2],["#s3",build3],["#s4",build4],["#sT",buildT],["#s5",build5],["#s6",build6],["#s7",build7],["#sM",buildM],["#sB",buildB],["#sE",buildE],["#sD",buildD],["#s9",build9]].map(([sel,fn])=>({el:$(sel),tl:fn()}));
+deck.forEach(d=>{d.labels=Object.keys(d.tl.labels).filter(k=>/^b\d+$/.test(k)).sort((a,b)=>+a.slice(1)-+b.slice(1));});
+
+const hud=$("#hud"); hud.innerHTML=deck.map(()=>"<i></i>").join("");
+let cur=-1, step=0, live=null, locked=false;
+
+function fit(){const s=Math.min(innerWidth/1920,innerHeight/1080);$("#stage").style.transform=PRINT?"none":`scale(${s})`;}
+addEventListener("resize",fit); fit();
+
+function mark(){ $$("#hud i").forEach((e,i)=>e.classList.toggle("on",i===cur)); history.replaceState(null,"","#"+(cur+1)+(step?"."+step:"")+(PRINT?"":"")+location.search); }
+
+function settle(){ if(live){ live.kill(); live=null; const d=deck[cur]; d.tl.seek(d.labels[step],false); } }
+
+function playTo(d,label){ settle(); live=d.tl.tweenTo(label,{ease:"none",onComplete:()=>{live=null;}}); }
+
+function jump(i,s){ // instant, no transition
+  settle(); deck.forEach((d,k)=>{d.el.classList.toggle("on",k===i); if(k!==i)gsap.set(d.el,{clearProps:"all"});});
+  cur=i; step=s; deck[i].tl.seek(deck[i].labels[s],false); mark();
+}
+
+function transition(to,dir){
+  if(locked) return; locked=true;
+  const from=deck[cur], next=deck[to], kinds=["push","rise","zoom","rise","iris","push","zoom","zoom","push","rise","rise","zoom"];
+  const kind = kinds[(dir>0?to:cur)-1] || "push";
+  const sgn = dir>0?1:-1;
+  settle();
+  next.el.classList.add("on"); gsap.set(next.el,{zIndex:5}); gsap.set(from.el,{zIndex:4});
+  next.tl.seek(dir>0?0:next.tl.labels[next.labels[next.labels.length-1]],false);
+  const done=()=>{ from.el.classList.remove("on"); gsap.set([from.el,next.el],{clearProps:"all"}); next.el.classList.add("on"); locked=false; cur=to; step=dir>0?0:next.labels.length-1; mark(); };
+  const T=gsap.timeline({onComplete:done});
+  const enter=()=>{ if(dir>0) live=next.tl.tweenTo("b0",{ease:"none",onComplete:()=>{live=null}}); };
+  if(kind==="push"){
+    T.to(from.el,{x:-sgn*420,opacity:0,duration:.8,ease:"power3.in"},0);
+    T.fromTo(next.el,{x:sgn*420,opacity:0},{x:0,opacity:1,duration:.8,ease:"power3.out"},.55);
+    T.call(enter,null,.7);
+  } else if(kind==="rise"){
+    T.to(from.el,{y:-sgn*180,opacity:0,duration:.7,ease:"power3.in"},0);
+    T.fromTo(next.el,{y:sgn*180,opacity:0},{y:0,opacity:1,duration:.8,ease:"power3.out"},.45);
+    T.call(enter,null,.6);
+  } else if(kind==="zoom"){
+    T.to(from.el,{scale:1.18,opacity:0,filter:"blur(18px)",duration:.8,ease:"power2.in"},0);
+    T.fromTo(next.el,{scale:.88,opacity:0,filter:"blur(14px)"},{scale:1,opacity:1,filter:"blur(0px)",duration:.9,ease:"power3.out"},.5);
+    T.call(enter,null,.7);
+  } else { // iris: the next scene grows out of the centre
+    T.fromTo(next.el,{clipPath:"circle(0% at 50% 56%)"},{clipPath:"circle(80% at 50% 56%)",duration:1.1,ease:"power3.inOut"},0);
+    T.to(from.el,{scale:.94,duration:1.1,ease:"power3.inOut"},0);
+    T.call(enter,null,.55);
+  }
+}
+
+function next(){
+  if(locked) return;
+  if(live){ settle(); return; }
+  const d=deck[cur];
+  if(step<d.labels.length-1){ step++; playTo(d,d.labels[step]); mark(); }
+  else if(cur<deck.length-1) transition(cur+1,1);
+}
+function prev(){
+  if(locked) return;
+  settle();
+  const d=deck[cur];
+  if(step>0){ step--; playTo(d,d.labels[step]); mark(); }
+  else if(cur>0) transition(cur-1,-1);
+}
+
+if(PRINT){
+  document.body.classList.add("print");
+  deck.forEach(d=>{ d.el.classList.add("on"); d.tl.seek(d.tl.labels[d.labels[d.labels.length-1]],false); });
+  document.getElementById("hud").remove();
+  (document.fonts?document.fonts.ready:Promise.resolve()).then(()=>{document.body.dataset.ready="1";});
+} else {
+  const h=(location.hash||"#1").slice(1).split("."); const i=Math.max(0,Math.min(deck.length-1,(+h[0]||1)-1));
+  const s=Math.min(deck[i].labels.length-1,+h[1]||0);
+  jump(i,s);
+  if(!location.hash){ deck[0].tl.progress(0); live=deck[0].tl.tweenTo("b0",{ease:"none",onComplete:()=>{live=null}}); }
+  addEventListener("keydown",e=>{
+    if(["ArrowRight","ArrowDown"," ","PageDown","Enter"].includes(e.key)){e.preventDefault();next();}
+    else if(["ArrowLeft","ArrowUp","PageUp","Backspace"].includes(e.key)){e.preventDefault();prev();}
+    else if(e.key==="Home"){jump(0,0);} else if(e.key==="End"){jump(deck.length-1,deck[deck.length-1].labels.length-1);}
+    else if(e.key==="f"||e.key==="F"){document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();}
+  });
+  addEventListener("click",e=>{ if(e.clientX<innerWidth*0.15) prev(); else next(); });
+}
+</script>
+</body>
+</html>
