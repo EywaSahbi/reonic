@@ -6,7 +6,7 @@ import type { RoofLocation } from "./types";
 // Tiles and outline share one Web-Mercator pixel space, so the outline sits exactly on the building.
 const W = 640, H = 380; // same shape as the drawn house (320 x 190)
 const TILE = 256, MAX_ZOOM = 19; // Esri has real imagery up to 19 in Germany; 20 is a placeholder
-const FILL = 0.6, MAX_UPSCALE = 2; // beyond zoom 19 we enlarge: house fills ~60% of the frame, at most 2x (sharper than 2.5x)
+const FILL = 0.8, MAX_UPSCALE = 3.5; // beyond zoom 19 we enlarge: house fills ~80% of the frame, at most 3.5x (softer, but close)
 const URL = (z: number, x: number, y: number) =>
   `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 
