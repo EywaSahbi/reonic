@@ -38,8 +38,7 @@ HERE = Path(__file__).parent
 STORE = Path(os.getenv("REO_STORE", HERE / "plans.json"))  # shortcut: one JSON file, fine for a demo
 GREETING = ("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system "
             "with a price estimate. To start: roughly how many kWh of electricity do you use per year? It's on your bill.")
-HANDOFF_OFFER = ("This plan looks solid. Shall I send it to Sonnfeld? A planner will check it, usually visit "
-                 "to see the roof, and send you a final quote. You're not committing to anything.")
+HANDOFF_OFFER = "Shall I send this plan to Sonnfeld? A planner checks it and sends you a final quote, no commitment."
 OFFLINE_TEXT = "My calculator isn't reachable right now, so I can't give you numbers yet."
 
 app = FastAPI(title="reo")
@@ -321,16 +320,16 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer) -> str:
     if new and not had_numbers:
         parts.append("For your home, " + scripted.headline(d))
     elif changed:
-        parts.append(f"Got it, so I've {changed}. The new estimate is {est}.")
+        parts.append(f"Got it, I've {changed}. Now {est}.")
     elif new:
-        parts.append(f"Thanks, noted. The estimate is {est}.")
+        parts.append(f"Noted, now {est}.")
     roof_limit = next((r for r in d["components"]["pv"]["reasons"] if "roof is the limit" in r), None)
     if roof_limit and (new.get("roof_area_sqm") or new.get("roof_width_m")):
         parts.append(roof_limit[0].upper() + roof_limit[1:] + ".")  # engine's own words: the roof caps the modules
     if intent == "question":
         parts.append(scripted.answer(d, topic))
     elif intent == "skip":
-        parts.append("No problem, I'll work with a typical value for now.")
+        parts.append("No problem, I'll use a typical value.")
     elif intent == "other" and not new:
         parts.append("I'm only here to help with your home's energy plan. Shall we continue with that?")
     if "heating_type" in new and (advice := scripted.heating_advice(d)):

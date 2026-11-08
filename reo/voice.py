@@ -4,6 +4,7 @@ Both calls return None on any failure, so a voice problem never breaks the text 
 """
 import logging
 import os
+import re
 from pathlib import Path
 
 import httpx
@@ -38,10 +39,34 @@ def transcribe(audio: bytes, filename: str = "audio.webm", content_type: str = "
         return None
 
 
+NUM = r"\d[\d.,]*"
+SPOKEN = [  # (pattern, replacement), applied in order; spoken text only, the chat text is never changed
+    (rf"€\s?({NUM})\s?[–-]\s?€?({NUM})", r"\1 to \2 euros"),            # €11,900–22,600
+    (rf"€\s?({NUM})", r"\1 euros"),
+    (rf"({NUM})\s?[–-]\s?({NUM})", r"\1 to \2"),                        # 5–10
+    (rf"({NUM})\s?%", r"\1 percent"),
+    (r"\bkWp\b", "kilowatt peak"), (r"\bkWh\b", "kilowatt hours"), (r"\bkW\b", "kilowatts"),
+    (r"\bkg\b", "kilograms"), (r"m²|\bm2\b|\bqm\b", "square metres"), (r"\bct\b", "cents"),
+    (r"CO₂|\bCO2\b", "carbon dioxide"), (r"\bKfW\b", "K f W"), (r"\bEVs?\b", "E V"), (r"\bPV\b", "solar"),
+    (r"/\s?(?:yr|year|a)\b", " per year"), (r"/\s?(?:mo|month)\b", " per month"), (r"\byrs\b", "years"),
+    (rf"({NUM})\s?[×x]\s?(?=\d)", r"\1 by "), (rf"({NUM})×", r"\1 times"),          # 8 x 6 m, 3.7×
+    (r"\be\.g\.", "for example"), (r"\bi\.e\.", "that is"), (r"\bapprox\.", "approximately"), (r"~", "about "),
+    (r"\s+", " "),
+]
+
+
+def spoken(text: str) -> str:
+    """Text as it should be read aloud: units, currency, ranges and abbreviations written out."""
+    for pattern, repl in SPOKEN:
+        text = re.sub(pattern, repl, text)
+    return text.strip()
+
+
 def speak(text: str) -> bytes | None:
     """reo's reply text -> mp3 bytes, or None."""
     if not enabled() or not text:
         return None
+    text = spoken(text)
     voice = os.getenv("ELEVENLABS_VOICE_ID") or DEFAULT_VOICE
     try:
         r = httpx.post(f"{API}/text-to-speech/{voice}", params={"output_format": "mp3_44100_128"},

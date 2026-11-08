@@ -5,24 +5,24 @@ REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL
 # Prompts per field. The order is fixed by next_question() below (customer-backend flow of 2026-11-08).
 QUESTIONS = [
     (("total_demand_kwh", "annual_demand_kwh"), {"field": "total_demand_kwh", "input": "number",
-                                                  "prompt": "To start: roughly how many kWh of electricity do you use per year? It's on your bill."}),
+                                                  "prompt": "Roughly how many kWh of electricity do you use per year? It's on your bill."}),
     (("num_inhabitants",), {"field": "num_inhabitants", "input": "choice", "options": ["1", "2", "3", "4", "5+"],
-                            "prompt": "No problem. How many people live in your home? I can estimate the usage from that."}),
+                            "prompt": "No problem. How many people live in your home? I can estimate from that."}),
     (("roof_area_sqm", "roof_width_m"), {"field": "roof_area_sqm", "input": "address",
-                          "prompt": "What's your address? I'll measure your roof from the map. You can also skip."}),
+                          "prompt": "What's your address? I'll measure the roof from the map, or you can skip."}),
     (("region",), {"field": "region", "input": "choice", "options": REGIONS,
-                   "prompt": "Which federal state do you live in? That sets how much sun your panels get."}),
+                   "prompt": "Which federal state? It sets how much sun your panels get."}),
     (("roof_dims",), {"field": "roof_dims", "input": "dimensions",
                       "prompt": "Sunny roof face: width × length (m)"}),
     (("has_ev", "ev_planned"), {"field": "has_ev", "input": "choice", "options": ["Yes, already", "Planned", "No"],
-                                "prompt": "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox."}),
+                                "prompt": "Do you have an electric car, or plan one? It changes the solar size."}),
     (("heating_type",), {"field": "heating_type", "input": "choice",
                          "options": ["gas", "oil", "heatpump", "electric", "district", "other"],
-                         "prompt": "How do you heat today? That decides whether a heat pump makes sense."}),
+                         "prompt": "How do you heat today? It decides whether a heat pump fits."}),
     (("has_existing_pv",), {"field": "has_existing_pv", "input": "choice", "options": ["Yes, I have solar", "No solar yet"],
-                            "prompt": "Do you already have solar panels on the roof? Then I'll plan around them."}),
+                            "prompt": "Do you already have solar on the roof?"}),
     (("existing_pv_kwp",), {"field": "existing_pv_kwp", "input": "number",
-                            "prompt": "Roughly how big is your existing solar system, in kWp? It's on your old offer or the inverter."}),
+                            "prompt": "Roughly how big is it, in kWp? It's on the old offer or inverter."}),
 ]
 ASK = {a["field"]: a for _, a in QUESTIONS}
 

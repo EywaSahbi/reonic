@@ -180,23 +180,20 @@ def headline(d: dict) -> str:
 
 
 def heating_advice(d: dict) -> str | None:
-    """Why a heat pump beats today's fossil / district heating, from the engine's heating_comparison (None = nothing to claim)."""
+    """One sentence on a heat pump vs today's fossil / district heating, from the engine's heating_comparison (None = nothing to claim)."""
     hc = d.get("heating_comparison")
     if not hc:
         return None
     name = {"gas": "gas heating", "oil": "oil heating", "district": "district heating"}.get(hc["fuel"], "your current heating")
     now, hp = rnd(hc["cost_now_eur_per_year"], 10), rnd(hc["cost_heatpump_eur_per_year"], 10)
-    out = [f"A heat pump would be worth a look: for the same heat it needs about {rnd(hc['energy_factor'], 0.1):g} times less energy than {name}."]
+    out = f"A heat pump needs about {rnd(hc['energy_factor'], 0.1):g} times less energy than {name}"
     if hc["heatpump_cheaper"]:
-        out.append(f"On grid power it would cost around €{hp:,} a year instead of €{now:,}, and less with your own solar.")
+        out += f" and on grid power costs around €{hp:,} a year instead of €{now:,}"
     else:
-        out.append(f"On grid power it would cost around €{hp:,} a year against €{now:,} today, so the case rests on your own solar.")
+        out += f", but on grid power costs around €{hp:,} a year against €{now:,}, so it pays off with your own solar"
     if (hc.get("co2_reduction_pct") or 0) > 0:
-        saved = hc["co2_now_kg_per_year"] - hc["co2_heatpump_kg_per_year"]
-        out.append(f"It would cut your heating CO₂ by about {rnd(hc['co2_reduction_pct'])}% (roughly {rnd(saved, 100):,} kg a year).")
-    if hc.get("note"):
-        out.append("These are estimates; your heat demand is assumed.")
-    return " ".join(out)
+        out += f", cutting CO₂ by about {rnd(hc['co2_reduction_pct'])}%"
+    return out + "."
 
 
 def changes(before: dict | None, after: dict) -> str | None:
