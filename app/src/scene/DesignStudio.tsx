@@ -171,7 +171,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
       <label className={`studio-hw-row ${k !== "inverter" && Math.abs(hw[k] - sizeOf(design, k)) > 1e-6 ? "changed" : ""}`}>
         <span>{k === "inverter" ? "Inverter" : LABEL[k].replace(" + car", "")}</span>
         <select value={hw[k]} disabled={disabled} onChange={(e) => setSize(k, Number(e.target.value))}>
-          <option value={0}>{k === "inverter" ? "Automatic" : "None"}</option>
+          {!hw[k] && <option value={0} disabled hidden>–</option> /* no "none" / "automatic" choice (EywaSahbi); removing a device: × in the palette */}
           {opts.map((v) => <option key={v} value={v}>{fmt(v)} {UNIT[k]}{k === "inverter" ? " hybrid" : ""}</option>)}
         </select>
       </label>
