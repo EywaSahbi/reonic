@@ -10,11 +10,14 @@ New-Item -ItemType Directory -Force -Path $runtimeDir | Out-Null
 if ($Protected) {
     $tokenFile = Join-Path $runtimeDir 'installer-token.txt'
     if (-not (Test-Path -LiteralPath $tokenFile)) {
-        $tokenValue = [Convert]::ToHexString([System.Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
+        # 16 random base32 characters (80 bits), grouped for easy entry; omit ambiguous I/O/0/1.
+        $alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+        $groups = 1..4 | ForEach-Object { -join (1..4 | ForEach-Object { $alphabet[[System.Security.Cryptography.RandomNumberGenerator]::GetInt32($alphabet.Length)] }) }
+        $tokenValue = $groups -join '-' 
         [System.IO.File]::WriteAllText($tokenFile, $tokenValue)
     }
     $env:REO_INSTALLER_TOKEN = [System.IO.File]::ReadAllText($tokenFile).Trim()
-    if ($env:REO_INSTALLER_TOKEN.Length -lt 32) { throw 'Installer token file is empty or too short.' }
+    if ($env:REO_INSTALLER_TOKEN.Length -lt 19) { throw 'Installer token file is empty or too short.' }
     $env:REO_ALLOWED_ORIGINS = $FrontendOrigin
 }
 
