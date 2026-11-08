@@ -243,6 +243,8 @@ export const mockApi: Api = {
   },
 
   async sendMessage(id, text) {
+    // like reo f358828: an address typed while the roof ask is open runs the roof lookup
+    if (get(id).facts.roof_area_sqm === undefined && /\D{3,}\s\d+\w?\s*,/.test(text)) return mockApi.sendAddress(id, text);
     const plan = get(id);
     plan.transcript.push({ role: "customer", text, at: now() });
     const skipped = (skippedBySession[id] ??= new Set());

@@ -50,7 +50,9 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     setAsk(undefined);
     try {
       const t = await api.sendVoice(id, audio);
-      setMessages((m) => [...m, ...(t.heard ? [{ role: "customer" as const, text: t.heard, at: stamp() }] : []), ...t.messages]);
+      const roof = t.roof ? { roofResult: { roof: t.roof, facts: t.plan.facts } } : {};   // spoken address -> roof box above reo's reply
+      setMessages((m) => [...m, ...(t.heard ? [{ role: "customer" as const, text: t.heard, at: stamp() }] : []), ...t.messages.map((x, i) => (i === 0 ? { ...x, ...roof } : x))]);
+      if (t.roof) setRoofResult({ roof: t.roof, facts: t.plan.facts });
       setPlan(t.plan);
       setChips(t.suggestions);
       setAsk(t.ask);
@@ -149,6 +151,11 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     if (!id || !s.trim()) return;
     if (/^skip$/i.test(s.trim()) && roofReturn.current && ask?.field === "roof_area_sqm") {
       setAsk(roofReturn.current.ask); setChips(roofReturn.current.chips); roofReturn.current = null;
+      return;
+    }
+    // address box open (reo's ask or "Change address"): a typed address goes to the roof lookup, numbers/questions stay chat
+    if (ask?.input === "address" && /[a-zäöüß]{3,}.*\d|\d{5}/i.test(s) && !/^\s*\d+([.,]\d+)?\s*(m²|m2|sqm|kwh)?\s*$/i.test(s) && !s.trim().endsWith("?")) {
+      setText(""); lookupRoof(s.trim());
       return;
     }
     if (billRead && /^(yes, that's right|not quite)$/i.test(s.trim())) {
@@ -271,7 +278,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               )}
               <form className="composer" onSubmit={(e) => { e.preventDefault(); say(text); }}>
                 {voiceOn && <MicButton disabled={busy || !id} onRecorded={sendVoice} onStart={() => { reoAudio.stop(); setNotice(null); }} onError={setNotice} />}
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={ask?.input === "number" ? `${ask.prompt}${/kwh/i.test(ask.prompt) ? " · e.g. 4500" : ""}` : voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message the energy advisor" />
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={ask?.input === "address" ? "Your address, e.g. Musterstraße 12, München" : ask?.input === "number" ? `${ask.prompt}${/kwh/i.test(ask.prompt) ? " · e.g. 4500" : ""}` : voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message the energy advisor" />
                 <button type="submit" disabled={busy || !text.trim()}>Send</button>
               </form>
             </div>

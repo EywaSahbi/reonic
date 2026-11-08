@@ -1,18 +1,13 @@
-import { useState } from "react";
 import type { HomeFacts, RoofLookup } from "./types";
 import "./address.css";
 
-export function AddressLookup({ prompt, busy, onSubmit, onDimensions, onSkip }: {
-  prompt: string; busy: boolean; onSubmit: (address: string) => void; onDimensions: () => void; onSkip: () => void;
+// The address itself is typed or spoken in the normal composer; reo runs the roof lookup while this ask is open (reo f358828).
+export function AddressLookup({ prompt, busy, onDimensions, onSkip }: {
+  prompt: string; busy: boolean; onSubmit?: (address: string) => void; onDimensions: () => void; onSkip: () => void;
 }) {
-  const [address, setAddress] = useState("");
   return <section className="address-lookup" aria-busy={busy}>
     <div className="address-heading"><span aria-hidden>⌖</span><div><strong>Find your roof</strong><p>{prompt}</p></div></div>
-    <form onSubmit={(e) => { e.preventDefault(); if (address.trim() && !busy) onSubmit(address.trim()); }}>
-      <label htmlFor="roof-address">Street, house number, postcode and city</label>
-      <div className="address-search"><input id="roof-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Musterstraße 12, 80331 München" autoComplete="street-address" required disabled={busy} /><button className="btn-primary" type="submit" disabled={busy || !address.trim()}>{busy ? "Looking up…" : "Find roof"}</button></div>
-      <p className="address-note">We use OpenStreetMap to estimate the sunny roof area. Your planner checks it before the final quote.</p>
-    </form>
+    <p className="address-note">Type or say your address below. We use OpenStreetMap to estimate the sunny roof area; your planner checks it before the final quote.</p>
     <div className="address-alternatives"><button type="button" disabled={busy} onClick={onDimensions}>Enter roof dimensions</button><button type="button" disabled={busy} onClick={onSkip}>Skip for now</button></div>
   </section>;
 }
