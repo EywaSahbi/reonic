@@ -69,3 +69,47 @@ and a reason for every number.
 18
 00:01:06,400 --> 00:01:09,047
 Tap any number, and the advisor explains it.
+
+19
+00:01:13,600 --> 00:01:17,100
+The planner opens the plan, and reo has already written the summary.
+
+20
+00:01:17,300 --> 00:01:21,600
+Panels are placed on the satellite image, around the skylight and the rooftop units.
+
+21
+00:01:21,800 --> 00:01:25,887
+The planner moves, adds or removes modules, and the price follows.
+
+22
+00:01:26,400 --> 00:01:29,047
+Every line of the breakdown follows the design.
+
+23
+00:01:29,600 --> 00:01:34,300
+Then reo suggests the next steps: a calendar event for the site visit, a CRM task.
+
+24
+00:01:34,500 --> 00:01:36,822
+A note, one click, and the quote is sent.
+
+25
+00:01:38,000 --> 00:01:41,158
+The customer sees their confirmed quote the same moment.
+
+26
+00:01:41,600 --> 00:01:46,523
+reo is an agent, not a chatbot: the engine, calendar, CRM and WhatsApp.
+
+27
+00:01:46,900 --> 00:01:49,176
+One companion for every installer.
+
+28
+00:01:50,200 --> 00:01:55,400
+Ten percent of Reonic's installers adopting reo: about seven hundred thousand dollars in new ARR.
+
+29
+00:01:55,800 --> 00:01:56,589
+Thank you.
