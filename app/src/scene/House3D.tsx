@@ -10,7 +10,8 @@ import { defaultItems, enginePanels, roofCells, roofFrom } from "./layout";
 export default function House3D({ design, facts }: { design: Design; facts: HomeFacts }) {
   const pv = design.components.pv;
   const roof = useMemo(() => roofFrom(facts), [facts.roof_width_m, facts.roof_length_m, facts.roof_area_sqm, facts.roof_tilt_deg]); // eslint-disable-line react-hooks/exhaustive-deps
-  const cells = useMemo(() => roofCells(roof, pv.max_modules), [roof, pv.max_modules]);
+  const need = pv.recommended ? pv.quantity ?? 0 : 0;
+  const cells = useMemo(() => roofCells(roof, pv.max_modules, need), [roof, pv.max_modules, need]);
   const panels = enginePanels(design, cells);
   const items = defaultItems(design, roof);
   const count = pv.recommended ? pv.quantity ?? null : 0;

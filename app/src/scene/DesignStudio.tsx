@@ -19,7 +19,8 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   design: Design; facts: HomeFacts; disabled: boolean; onApply: (locks: Locks) => Promise<void>;
 }) {
   const roof = useMemo(() => roofFrom(facts), [facts]);
-  const cells = useMemo(() => roofCells(roof, design.components.pv.max_modules), [roof, design.components.pv.max_modules]);
+  const need = design.components.pv.recommended ? design.components.pv.quantity ?? 0 : 0;
+  const cells = useMemo(() => roofCells(roof, design.components.pv.max_modules, need), [roof, design.components.pv.max_modules, need]);
   const [panels, setPanels] = useState<Set<string>>(() => enginePanels(design, cells));
   const [items, setItems] = useState<Items>(() => defaultItems(design, roof));
   const [tool, setTool] = useState<Tool>("move");

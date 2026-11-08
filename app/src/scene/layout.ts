@@ -40,19 +40,20 @@ function faceGrid(width: number, slope: number) {
   return p.cols * p.rows >= l.cols * l.rows ? p : l;
 }
 
-/** Cells on the sunny face (face 0) first, then the back face (face 1, only when the roof is not measured). */
-export function roofCells(r: Roof, maxModules?: number): Cell[] {
+/** Cells on the sunny face (face 0) first, then the back face (face 1): offered when the roof is not measured, or when the
+ * engine places more modules than our drawn face holds (our face is an approximation of the engine's roof). */
+export function roofCells(r: Roof, maxModules?: number, need = 0): Cell[] {
   const g = faceGrid(r.width, r.slope);
   const out: Cell[] = [];
   for (const face of [0, 1] as const) {
-    if (face === 1 && (r.known || r.flat)) break;
+    if (face === 1 && (r.flat || (r.known && need <= out.length))) break;
     for (let row = 0; row < g.rows; row++)
       for (let col = 0; col < g.cols; col++) {
         const usedW = g.cols * (g.w + GAP) - GAP;
         out.push({ id: `${face}-${row}-${col}`, face, w: g.w, h: g.h, x: -usedW / 2 + col * (g.w + GAP) + g.w / 2, y: MARGIN + row * (g.h + GAP) + g.h / 2 });
       }
   }
-  if (maxModules != null && maxModules >= 0) return out.slice(0, Math.max(maxModules, 0));
+  if (maxModules != null && maxModules >= 0) return out.slice(0, Math.max(maxModules, need, 0));
   return out;
 }
 

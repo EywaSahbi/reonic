@@ -13,6 +13,7 @@ assert.equal(cells.length, 24);
 assert.ok(cells.every((c) => c.face === 0));
 assert.equal(L.roofCells(roof, 20).length, 20, "max_modules caps the grid");
 assert.ok(L.roofCells(L.roofFrom({})).some((c) => c.face === 1), "unknown roof offers the back face");
+assert.equal(L.roofCells(roof, undefined, 30).length, 48, "engine count above the drawn face spills to the back face");
 
 const d = design();
 assert.equal(L.enginePanels(d, cells).size, 24);
