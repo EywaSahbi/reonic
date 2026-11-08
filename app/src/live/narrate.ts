@@ -121,9 +121,9 @@ export function explain(topic: Topic, d: Design): Say {
     return { key: k(), spot: "door", text: `Your estimate is ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}. The biggest parts:`,
       lines: top.map((i) => `${i.label}: ${eur(i.total_eur)}`), more: "What would make my plan cheaper?" };
   }
-  if (topic === "savings") return { key: k(), spot: "roof", text: `About ${eur(e.annual_savings_eur)} a year off your energy costs, estimated from your usage and today's tariffs.`,
+  if (topic === "savings") return { key: k(), spot: "roof", text: `About ${eur(e.annual_savings_eur)} a year off your electricity bill from the solar panels and battery, estimated from your usage and today's tariffs.`,
     lines: [`You use ${e.self_consumption_pct}% of your own solar power`], more: "How do you calculate my savings?" };
-  if (topic === "payback") return { key: k(), spot: "door", text: e.payback_years != null ? `The savings pay the system back in about ${Math.round(e.payback_years)} years.` : "With these savings the system doesn't pay back on its own.",
+  if (topic === "payback") return { key: k(), spot: "roof", text: e.payback_years != null ? `The solar panels and battery pay for themselves in about ${Math.round(e.payback_years)} years from those savings.` : "From these savings alone the solar and battery don't pay for themselves.",
     more: "How could the payback be shorter?" };
   if (topic === "autarky") return { key: k(), spot: "battery", text: `${e.autarky_pct}% of the power your home uses would come from your own roof${d.components.battery.recommended ? " and battery" : ""}.`,
     more: "How could I be more independent?" };
