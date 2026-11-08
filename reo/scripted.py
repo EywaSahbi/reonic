@@ -219,6 +219,10 @@ def heating_advice(d: dict) -> str | None:
         return None
     name = {"gas": "gas heating", "oil": "oil heating", "district": "district heating"}.get(hc["fuel"], "your current heating")
     now, hp = rnd(hc["cost_now_eur_per_year"], 10), rnd(hc["cost_heatpump_eur_per_year"], 10)
+    if hc["fuel"] == "electric":   # same tariff: the heat pump makes COP kWh of heat from 1 kWh of power, electric heating 1
+        out = (f"A heat pump makes about {rnd(hc['cop'], 0.1):g} kWh of heat from 1 kWh of electricity, your electric heating 1 kWh, "
+               f"so it would cost around €{hp:,} a year instead of €{now:,}")
+        return out + (f", cutting CO₂ by about {rnd(hc['co2_reduction_pct'])}%." if (hc.get("co2_reduction_pct") or 0) > 0 else ".")
     out = f"A heat pump needs about {rnd(hc['energy_factor'], 0.1):g} times less energy than {name}"
     if hc["heatpump_cheaper"]:
         out += f" and on grid power costs around €{hp:,} a year instead of €{now:,}"

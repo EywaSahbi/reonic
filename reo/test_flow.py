@@ -39,7 +39,7 @@ def test_location_fallbacks():
 def test_ev_and_heating_are_always_asked_in_that_order():
     base = {"total_demand_kwh": 4500, "roof_area_sqm": 40}
     assert fields(base) == "has_ev" and fields({**base, "has_ev": False}) == "heating_type"
-    assert fields({**base, "has_ev": False, "heating_type": "electric"}) is None
+    assert fields({**base, "has_ev": False, "heating_type": "electric", "heating_fuel_kwh": 9000}) is None
 
 
 def test_no_key_means_fallback(monkeypatch):
@@ -75,11 +75,19 @@ def test_heating_advice_only_claims_what_the_engine_shows():
 
 def test_no_heatpump_ask_after_heating():
     base = {"total_demand_kwh": 4500, "roof_area_sqm": 40, "has_ev": False}
-    for h in ("heatpump", "electric"):
-        assert fields({**base, "heating_type": h}) is None
+    assert fields({**base, "heating_type": "heatpump"}) is None
+    assert fields({**base, "heating_type": "electric"}) == "heating_fuel_kwh"           # heating electricity from the bill
     assert fields({**base, "heating_type": "oil"}) == "heating_oil_litres"
     for h in ("gas", "district", "other"):
         assert fields({**base, "heating_type": h}) == "heating_fuel_kwh" and fields({**base, "heating_type": h}, {"heating_fuel_kwh"}) is None
     import scripted
     assert [scripted.heatpump_answer(x) for x in ("Yes, show me the heat pump option", "yes please", "No, keep my plan", "no", "maybe")] \
         == [True, True, False, False, None]
+
+
+def test_electric_heating_advice():
+    import scripted
+    hc = {"fuel": "electric", "cop": 3.3, "energy_factor": 3.3, "cost_now_eur_per_year": 4200, "cost_heatpump_eur_per_year": 1273,
+          "heatpump_cheaper": True, "co2_reduction_pct": 69.7}
+    t = scripted.heating_advice({"heating_comparison": hc})
+    assert "3.3 kWh of heat from 1 kWh" in t and "€1,270" in t and "€4,200" in t and "70%" in t

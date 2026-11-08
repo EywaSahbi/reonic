@@ -93,9 +93,10 @@ def next_question(facts: dict, design: dict | None = None, skipped: set[str] = f
     # so the heating comparison and the heat pump size are not the 'median heat demand' assumption
     heating = facts.get("heating_type")
     use = "heating_oil_litres" if heating == "oil" else "heating_fuel_kwh"
-    if heating in FOSSIL and not known("heating_fuel_kwh", "heating_oil_litres", "heating_demand_kwh") and use not in skipped:
+    if heating in FOSSIL | {"electric"} and not known("heating_fuel_kwh", "heating_oil_litres", "heating_demand_kwh") and use not in skipped:
         return ASK[use] if use == "heating_oil_litres" else \
-            {**ASK[use], "prompt": {"district": "Yearly district heat (kWh)", "other": "Yearly heating energy (kWh)"}.get(heating, "Yearly gas use (kWh)")}
+            {**ASK[use], "prompt": {"district": "Yearly district heat (kWh)", "other": "Yearly heating energy (kWh)",
+                                    "electric": "Yearly heating electricity (kWh)"}.get(heating, "Yearly gas use (kWh)")}
     return None   # heat pump: no ask, it is in the quote by default and the customer toggles it (api.sync_heatpump_lock)
 
 

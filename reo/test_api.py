@@ -226,7 +226,8 @@ def test_kwh_skip_goes_through_people_then_dimensions(tmp_path, monkeypatch):
     assert t["ask"]["field"] == "has_ev"                                       # nothing known about the roof: assumed, on to EV
     assert say("No")["ask"]["field"] == "heating_type"
     t = say("electric")
-    assert "heat pump would be worth" not in t["messages"][0]["text"] and "ask" not in t   # flow done: handoff offer
+    assert t["ask"]["field"] == "heating_fuel_kwh" and t["ask"]["prompt"] == "Yearly heating electricity (kWh)"
+    assert "ask" not in say("Skip")                                            # flow done: handoff offer
 
 
 def test_address_sets_roof_location_for_the_satellite_view(tmp_path, monkeypatch):
@@ -268,7 +269,7 @@ def test_heatpump_default_and_toggle(tmp_path, monkeypatch):
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     facts = lambda f: c.post(f"/sessions/{pid}/facts", json={"facts": f}).json()
     hp = lambda t: t["plan"]["design"]["components"]["heatpump"]["recommended"]
-    t = facts({"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric"})
+    t = facts({"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric", "heating_fuel_kwh": 9000})
     assert hp(t) and "ask" not in t                                      # anything but a heat pump: in the quote
     assert not hp(facts({"heatpump_option": False})) and hp(facts({"heatpump_option": True}))   # toggle off, on again
     assert not hp(facts({"heating_type": "heatpump"}))                  # already a heat pump: reo's lock dropped
@@ -286,11 +287,12 @@ def test_skip_in_facts(tmp_path, monkeypatch):
     assert t["ask"]["field"] == "has_ev"
 
 
-def test_electric_heating_has_no_heatpump_step(tmp_path, monkeypatch):
+def test_electric_heating_gets_the_heat_pump_and_its_use_ask(tmp_path, monkeypatch):
     c = client(tmp_path, monkeypatch)
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     t = c.post(f"/sessions/{pid}/facts", json={"facts": {"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric"}}).json()
-    assert "ask" not in t and "heatpump_option" not in t
+    assert t["plan"]["design"]["components"]["heatpump"]["recommended"] and t["ask"]["field"] == "heating_fuel_kwh"
+    assert "heatpump_option" not in t
 
 
 def test_wallbox_toggle_and_heating_use_skip(tmp_path, monkeypatch):
