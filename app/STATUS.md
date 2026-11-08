@@ -98,9 +98,13 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Auth tests (2), client auth/SSE regression, production build, browser customer flow/planner gate, public anonymous 401/authenticated 200, CORS and authenticated SSE replay passed.
 - start-backend.ps1 -Protected and start-tunnel.ps1 provide guarded restart. Laptop must stay awake/online. See DEPLOYMENT.md. Existing OSM relation-outline limitation still belongs to reo; manual dimensions remain available.
 
-## Demo PIN and capacity protection (in progress)
+## Demo PIN and capacity protection (delivered)
 
 - User requests a whole-demo code and overload protection. Client gate verifies via proposed GET /demo/access, carries X-Demo-Pin on HTTP/uploads/authenticated fetch-SSE, keeps PIN runtime-only in sessionStorage, and relocks on demo 401 separately from planner Bearer auth.
 - 429 displays backend Retry-After; 413 requests a smaller bill photo. Auth regression checks include PIN scoping, relock and capacity messaging.
 - Requested reo-side caps: 5 active planning sessions with idle expiry, 2 concurrent agent jobs, throttled PIN attempts and bounded uploads. These are conservative requested settings, not measured maximum capacity. Laptop: 16 GiB RAM, 24 logical processors, ~1.7 GiB free at inspection, Python services ~150 MiB idle.
 - Awaiting reo contract + implementation on board. Client changes are not yet deployed; no claim of backend-enforced PIN/capacity until verified.
+
+- Completed under Raneem's explicit task-specific reo ownership exception: ef81dcf backend, 6e39d28 startup integration. Live backend enables PIN and caps; Vercel deployment dpl_BhrP2nhtnKFpJ1ZXDixCW1z4pHao is READY at the same production URL. Existing session plans are preserved.
+- Verified public missing PIN 401, correct PIN 200, PIN-only planner 401, PIN+planner 200; health reports 5 sessions/2 runs; wrong-code attempts hit 429 while correct code stays accepted. Browser gate unlock and real advisor session resume passed. 40-test backend suite passed plus 10 focused capacity tests (including additional error/concurrency regressions); client auth tests and production build pass.
+- Earlier pending notes above are historical; no PIN/capacity backend dependency remains. Laptop memory exhaustion from unrelated apps cannot be prevented by API admission limits.

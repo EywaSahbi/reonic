@@ -8,6 +8,20 @@
 - Verified: production customer flow, planner token gate, anonymous planner 401, authenticated planner 200, production CORS, unrelated-origin denial, and authenticated SSE replay through the public tunnel.
 - Planner token lives only in local ignored app/.runtime/installer-token.txt. Open that file locally and paste into the planner access form; do not put it in Git, the board or frontend environment variables.
 
+## Demo access and capacity
+
+The whole interactive demo requires a backend-verified code. The code is kept locally in ignored app/.runtime/demo-pin.txt and is sent in X-Demo-Pin, never bundled. Planner routes also require the separate Bearer token. Wrong attempts are throttled. After changing the code or limits, restart reo with the protected startup helper; saved plans remain intact.
+
+Current admission limits: 5 active customer planning sessions (15-minute idle expiry), 2 concurrent agent runs, 2 concurrent write requests, 12 inflight requests including SSE, 240 requests/minute, 8 MiB multipart and 64 KiB JSON bodies. Excess work is rejected with 429/Retry-After rather than queued; oversized requests return 413. These limits activate with REO_DEMO_PIN. They limit active planning sessions, not the number of people who can download the static frontend. They are conservative settings, not a measured hardware maximum or protection against other applications exhausting laptop RAM.
+
+To change the main caps on a stopped backend:
+
+```powershell
+./app/scripts/start-backend.ps1 -Protected -MaxActiveSessions 5 -MaxAgentRuns 2
+```
+
+Use one worker. Changing script parameters does not reconfigure an already-running process; restart reo first. Public health reports the active configuration for verification.
+
 ## Prepared
 
 Vercel project `sonnfeld-reo` is linked and the CLI is authenticated. Deploy from `app/` only. `vercel.json` builds Vite into dist with `npm run build:deploy`. The deployment guard rejects mock/localhost/non-HTTPS API URLs and URLs containing credentials. `.vercelignore` excludes runtime files, learning logs and secrets.
