@@ -86,9 +86,7 @@ def next_question(facts: dict, design: dict | None = None, skipped: set[str] = f
     for field in ("has_ev", "heating_type"):
         if not known(*next(k for k, a in QUESTIONS if a["field"] == field)) and field not in skipped:
             return ASK[field]
-    if facts.get("heating_type") in FOSSIL and "heatpump_option" not in skipped:   # "skipped" also holds closed asks
-        return ASK["heatpump_option"]
-    return None
+    return None   # heat pump: no ask, it is in the quote by default and the customer toggles it (api.sync_heatpump_lock)
 
 
 def offer_handoff(facts: dict, design: dict | None = None, skipped: set[str] = frozenset()) -> bool:

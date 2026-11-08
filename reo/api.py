@@ -184,28 +184,21 @@ def _design(plan: dict, st: dict) -> tuple[dict, bool]:
     return (d, True) if d else (engine.offline_design(), False)
 
 
-# ---------- heat pump option (customer-backend flow of 2026-11-08) ----------
+# ---------- heat pump in the quote (EywaSahbi, 2026-11-08) ----------
 
-def hp_option_open(plan: dict, st: dict) -> bool:
-    return plan["facts"].get("heating_type") in flow.FOSSIL and "heatpump_option" not in st["skipped"]
+def replaceable_heating(facts: dict) -> bool:
+    return facts.get("heating_type") not in (None, "heatpump")
 
 
 def sync_heatpump_lock(plan: dict, st: dict) -> None:
-    """Fossil heating: the plan stays without a heat pump until the customer opts in. Other heating: drop reo's own lock."""
-    if hp_option_open(plan, st) and "heatpump" not in st["locks"]:
-        st["locks"]["heatpump"] = {"recommended": False}
-        st["hp_flow"] = True
-    elif plan["facts"].get("heating_type") not in flow.FOSSIL and st.pop("hp_flow", None):
+    """Any heating but a heat pump: the heat pump is in the customer's quote by default (engine-sized and priced); the
+    customer toggles it with /facts {heatpump_option}. Heat pump heating already: drop reo's own lock."""
+    if replaceable_heating(plan["facts"]):
+        if "heatpump" not in st["locks"]:
+            st["locks"]["heatpump"] = {"recommended": True}
+            st["hp_flow"] = True
+    elif st.pop("hp_flow", None):
         st["locks"].pop("heatpump", None)
-        st["skipped"] = [f for f in st["skipped"] if f != "heatpump_option"]
-
-
-def heatpump_option(plan: dict, st: dict, without: dict) -> tuple[dict, dict] | None:
-    """(design with a heat pump, engine what-if delta of adding it), both from engine calls of this turn."""
-    with_ = engine.design(plan["facts"], {**st["locks"], "heatpump": {"recommended": True}}, customer_prices(st))
-    ex = engine.explain(plan["facts"], "heatpump", st["locks"], customer_prices(st))
-    delta = next((w["delta"] for w in (ex or {}).get("what_if", []) if w["change"].startswith("add ")), None)
-    return (with_, delta) if with_ and delta and with_["components"]["heatpump"]["recommended"] else None
 
 
 # ---------- customer turn ----------
@@ -249,11 +242,10 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
 
     before = plan["design"]
     had_numbers = before.get("params_version") != engine.OFFLINE and any(h["trigger"] != "start" for h in plan["history"])
-    hp_answer = new.pop("heatpump_option", None)         # an answer to the heat pump ask, not a home fact
-    if hp_answer is not None and "heatpump_option" not in st["skipped"] and plan["facts"].get("heating_type") in flow.FOSSIL:
+    hp_answer = new.pop("heatpump_option", None)         # the customer's heat pump toggle, not a home fact
+    if hp_answer is not None and replaceable_heating({**plan["facts"], **new}):
         st["locks"]["heatpump"] = {"recommended": bool(hp_answer)}
         st["hp_flow"] = True
-        st["skipped"] = sorted(set(st["skipped"]) | {"heatpump_option"})
     else:
         hp_answer = None
     plan["facts"].update(new)
@@ -271,23 +263,15 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
         st["offered"], ask = True, None
     st["last_ask"] = ask["field"] if ask else None
 
-    option = heatpump_option(plan, st, d) if ok and ask and ask["field"] == "heatpump_option" else None
-    if ask and ask["field"] == "heatpump_option" and option is None:     # no heat pump version to show: close the ask
-        st["skipped"] = sorted(set(st["skipped"]) | {"heatpump_option"})
-        ask = flow.next_question(plan["facts"], d if ok else None, set(st["skipped"]))
-        offer = ok and not st["offered"] and flow.offer_handoff(plan["facts"], d, set(st["skipped"]))
-        if offer:
-            st["offered"], ask = True, None
-        st["last_ask"] = ask["field"] if ask else None
     reply = None
     if not ok:
         reply = OFFLINE_TEXT + (" " + ask["prompt"] if ask else "")
-    elif free_text and not option and hp_answer is None:   # the heat pump step is worded from the two engine designs
+    elif free_text and hp_answer is None:
         reply = llm.reply(audience="customer", latest_message=text, facts=plan["facts"], engine_result=d,
                           next_question=ask, offer_handoff=offer, changed=changed, transcript=plan["transcript"],
                           flags=plan["flags"])
     if reply is None:
-        reply = template(d, intent, topic, new, changed, had_numbers, ask, offer, option, hp_answer)
+        reply = template(d, intent, topic, new, changed, had_numbers, ask, offer, hp_answer)
     m = reo_msg(plan, reply)
     plan["updated_at"] = now()
 
@@ -300,8 +284,6 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
     turn = {"messages": [m], "plan": out(plan), "suggestions": suggestions}
     if ask:
         turn["ask"] = flow.ui_ask(ask)
-    if option:
-        turn["heatpump_option"] = {"without": d, "with": option[0]}
     return turn
 
 
@@ -383,7 +365,7 @@ def goal_turn(db: dict, plan: dict, st: dict, new: dict, goal: str) -> dict:
             + [c for c in GOAL_CHIPS if c.lower().split()[0] not in goal], "goal_result": res}
 
 
-def template(d, intent, topic, new, changed, had_numbers, ask, offer, option=None, hp_answer=None) -> str:
+def template(d, intent, topic, new, changed, had_numbers, ask, offer, hp_answer=None) -> str:
     lo, hi = d["price"]["range_eur"]
     est = f"roughly {scripted.eur(lo)}–{scripted.eur(hi)[1:]} (estimate)"
     parts = []
@@ -391,7 +373,7 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer, option=Non
         parts.append("For your home, " + scripted.headline(d))
     elif changed:
         parts.append(f"Got it, I've {changed}. Now {est}.")
-    elif new and not option:
+    elif new:
         parts.append(f"Noted, now {est}.")
     roof_limit = next((r for r in d["components"]["pv"]["reasons"] if "roof is the limit" in r), None)
     if roof_limit and (new.get("roof_area_sqm") or new.get("roof_width_m")):
@@ -404,8 +386,6 @@ def template(d, intent, topic, new, changed, had_numbers, ask, offer, option=Non
         parts.append("I'm only here to help with your home's energy plan. Shall we continue with that?")
     if hp_answer is not None:
         parts.append("Done, your plan now includes the heat pump." if hp_answer else "Okay, we keep your plan without a heat pump.")
-    elif option:
-        parts.append(scripted.heatpump_option_text(d, option[0], option[1]))
     if "heating_type" in new and (advice := scripted.heating_advice(d)):
         parts.append(advice)
     if ask:
@@ -422,7 +402,8 @@ class Text(BaseModel):
 
 
 class Facts(BaseModel):
-    facts: dict
+    facts: dict = {}
+    skip: list[str] = []   # asks the customer skipped (step form: Back makes last_ask unreliable for a typed "Skip")
 
 
 class Address(BaseModel):
@@ -536,6 +517,9 @@ def send_facts(pid: str, body: Facts):
     with _lock:
         db = _load()
         facts = {k: v for k, v in body.facts.items() if v is not None}
+        if body.skip:
+            _, st = _get(db, pid)
+            st["skipped"] = sorted(set(st["skipped"]) | set(body.skip))
         turn = customer_turn(db, pid, {"facts": facts, "intent": "facts", "topic": None}, "facts", free_text=False)
         _save(db)
         return turn
