@@ -152,15 +152,19 @@ function diff(a: Design, b: Design): Change {
   return { keys, text: parts.length ? parts.join(" · ") : "No change to the design.", prev: a };
 }
 
-/** With real map data the roof editor above is the main tool, so the design studio folds into its title bar;
- *  a click on the bar (or the arrow on its right) opens it, another click folds it again. Without map data it stays open. */
-function StudioFold({ fold, children }: { fold: boolean; children: ReactNode }) {
-  const [open, setOpen] = useState(false);
-  if (!fold) return <>{children}</>;
+/** Satellite roof editor and 3D design studio as two views of one card, switched like on the customer site
+ *  (EywaSahbi). With real map data the satellite view comes first; without it only the 3D studio exists. */
+function RoofViews({ hasMap, roof, studio }: { hasMap: boolean; roof: ReactNode; studio: ReactNode }) {
+  const [view, setView] = useState<"photo" | "3d">(hasMap ? "photo" : "3d");
+  useEffect(() => { if (hasMap) setView("photo"); }, [hasMap]);
+  if (!hasMap) return <>{studio}</>;
   return (
-    <div className={`studio-fold ${open ? "is-open" : "is-folded"}`} onClick={(e) => { if ((e.target as Element).closest(".studio-head, .studio-fold-toggle")) setOpen((o) => !o); }}>
-      <button type="button" className="studio-fold-toggle" aria-expanded={open} aria-label={open ? "Fold the design studio" : "Open the design studio"}>{open ? "Fold" : "Open"} <span aria-hidden>{open ? "▴" : "▾"}</span></button>
-      {children}
+    <div className="roof-views">
+      <div className="house-toggle roof-views-toggle" role="tablist" aria-label="Roof view">
+        <button role="tab" aria-selected={view === "photo"} onClick={() => setView("photo")}>Your roof</button>
+        <button role="tab" aria-selected={view === "3d"} onClick={() => setView("3d")}>3D plan</button>
+      </div>
+      {view === "photo" ? roof : studio}
     </div>
   );
 }
@@ -235,13 +239,11 @@ function PlanDetail({ id }: { id: string }) {
       )}
       {error && <div className="chat-error">{error}</div>}
 
-      <RoofEditor plan={plan} disabled={quoted || isOffline(d)} onPlan={(p) => { const c = diff(plan.design, p.design); if (c.keys.size) setChange(c); setPlan(p); }} />
-
-      <StudioFold fold={!!(plan.roof_location && plan.roof_layout && plan.roof_layout.frame.lat != null)}>
-        <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
+      <RoofViews hasMap={!!(plan.roof_location && plan.roof_layout && plan.roof_layout.frame.lat != null)}
+        roof={<RoofEditor plan={plan} disabled={quoted || isOffline(d)} onPlan={(p) => { const c = diff(plan.design, p.design); if (c.keys.size) setChange(c); setPlan(p); }} />}
+        studio={<Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
           <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks, prices) => edit({ locks, ...(prices ? { prices } : {}) })} />
-        </Suspense>
-      </StudioFold>
+        </Suspense>} />
 
       <div className="detail-grid">
 

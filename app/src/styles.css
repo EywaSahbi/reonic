@@ -428,6 +428,9 @@ h1, h2, h3 { color: var(--ink); }
 .house-toggle { position: absolute; top: 8px; left: 8px; display: flex; gap: 2px; padding: 2px; background: rgba(255,255,255,.88); border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow-ui); }
 .house-toggle button { border: 0; background: none; font: inherit; font-size: 12px; padding: 4px 10px; border-radius: 999px; color: var(--ink-500); cursor: pointer; }
 .house-toggle button[aria-selected="true"] { background: var(--ink); color: var(--white); }
+.roof-views { display: flex; flex-direction: column; gap: 10px; }
+.roof-views-toggle { position: static; align-self: flex-start; }
+.roof-views-toggle button { font-size: 13px; padding: 6px 14px; }
 
 /* Planner design studio (src/scene/DesignStudio.tsx) */
 .studio { padding: 16px; }
