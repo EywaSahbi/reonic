@@ -203,10 +203,7 @@ function PlanDetail({ id }: { id: string }) {
         </div>
       </div>
 
-      <section className="card summary">
-        <h3>Summary</h3>
-        <p>{plan.summary ?? summarize(plan)}</p>
-      </section>
+      <Summary plan={plan} />
 
       {isOffline(d) && <div className="flag flag-warn">⚠ Design engine unreachable: no sizes or prices in this plan yet. Edits and finalise need the engine.</div>}
 
@@ -263,19 +260,49 @@ function PlanDetail({ id }: { id: string }) {
   );
 }
 
-// shortcut: fallback summary templated from plan data, used only while reo has not set Plan.summary.
-function summarize(p: Plan): string {
-  const f = p.facts, d = p.design, c = d.components;
-  const home = [
-    f.num_inhabitants ? `${f.num_inhabitants}-person home` : "Home",
-    `${(f.total_demand_kwh ?? f.annual_demand_kwh ?? d.economics.total_demand_kwh).toLocaleString("en")} kWh/yr${f.total_demand_kwh ?? f.annual_demand_kwh ? "" : " (estimated)"}`,
-    f.heating_type ? `${f.heating_type} heating` : "heating unknown",
-    f.has_ev ? "has EV" : f.ev_planned ? "EV planned" : null,
-  ].filter(Boolean).join(", ");
-  const assumed = d.assumptions.map((a) => a.note).join("; ");
-  const sys = COMPONENT_KEYS.filter((k) => c[k].recommended).map((k) => `${c[k].size} ${c[k].unit} ${NAMES[k]}`).join(", ");
-  const asks = p.transcript.filter((m) => m.role === "customer" && /why|cost|price|expensive/i.test(m.text)).length;
-  return `${home}${assumed ? `; assumed: ${assumed}` : ""}. ${asks ? `Customer asked ${asks}× about reasons or cost. ` : ""}Proposal: ${sys}; ${eur(d.price.total_eur)} (range ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}), payback ~${d.economics.payback_years ?? "–"} yrs.${p.flags.length ? ` Check: ${p.flags.map((x) => x.text).join("; ")}.` : ""}`;
+// Planner summary (EywaSahbi): ordered sections built from the plan's facts and the engine's design (numbers rounded only).
+const FIELD_LABEL: Partial<Record<string, string>> = {
+  total_demand_kwh: "Yearly electricity use", annual_demand_kwh: "Household electricity use", num_inhabitants: "Household size",
+  heating_type: "Heating", heating_demand_kwh: "Heat demand", has_ev: "Electric car", ev_planned: "Planned electric car",
+  has_existing_pv: "Existing solar", existing_pv_kwp: "Existing solar size", roof_area_sqm: "Roof area", roof_orientation_deg: "Roof orientation",
+  roof_tilt_deg: "Roof tilt", roof_type: "Roof shape", region: "Federal state", house_size_sqm: "Living space",
+  electricity_price_eur_per_kwh: "Electricity tariff", building_type: "Type of house", budget_eur: "Budget",
+};
+const HEATING: Record<string, string> = { gas: "Gas", oil: "Oil", heatpump: "Heat pump", electric: "Electric", district: "District heating", other: "Other" };
+const cap = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function Summary({ plan }: { plan: Plan }) {
+  const f = plan.facts, d = plan.design, c = d.components;
+  const use = f.total_demand_kwh ?? f.annual_demand_kwh;
+  const home: [string, string][] = [
+    ["Household", f.num_inhabitants ? `${f.num_inhabitants} ${f.num_inhabitants === 1 ? "person" : "people"}` : "–"],
+    ["Electricity use", use ? `${Math.round(use).toLocaleString("en")} kWh/yr` : `about ${Math.round(d.economics.total_demand_kwh).toLocaleString("en")} kWh/yr (estimated)`],
+    ["Heating", f.heating_type ? HEATING[f.heating_type] ?? f.heating_type : "unknown"],
+    ["Electric car", f.has_ev ? "yes" : f.ev_planned ? "planned" : f.has_ev === false ? "no" : "unknown"],
+    ["Roof", [f.roof_area_sqm ? `${f.roof_area_sqm} m²` : null, f.region].filter(Boolean).join(", ") || "not measured"],
+  ];
+  if (f.electricity_price_eur_per_kwh) home.push(["Tariff", `${Math.round(f.electricity_price_eur_per_kwh * 100)} ct/kWh`]);
+  const offline = isOffline(d);
+  const proposal: [string, string][] = offline ? [] : [
+    ["Solar", c.pv.recommended && c.pv.size ? `${Math.round(c.pv.size * 10) / 10} kWp${c.pv.quantity ? ` · ${c.pv.quantity} modules` : ""}` : "–"],
+    ["Battery", c.battery.recommended && c.battery.size ? `${Math.round(c.battery.size * 10) / 10} kWh` : "–"],
+    ["Heat pump", c.heatpump.recommended && c.heatpump.size ? `${c.heatpump.size} kW` : "–"],
+    ["Wallbox", c.wallbox.recommended && c.wallbox.size ? `${c.wallbox.size} kW` : "–"],
+    ["Price", eur(d.price.total_eur)],
+    ["Payback", d.economics.payback_years != null ? `about ${Math.round(d.economics.payback_years)} years` : "–"],
+  ];
+  const check = d.missing_inputs.filter((m) => m.impact !== "low");
+  return (
+    <section className="card summary">
+      <h3>Summary</h3>
+      <div className="summary-grid">
+        <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
+        {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}
+      </div>
+      {d.assumptions.length > 0 && <div className="summary-list"><h4>Assumed</h4><ul>{d.assumptions.map((a, i) => <li key={i}>{cap(a.note || String(a.field).replace(/_/g, " "))}</li>)}</ul></div>}
+      {check.length > 0 && <div className="summary-list"><h4>To check</h4><ul>{check.map((m) => <li key={String(m.field)}><b>{FIELD_LABEL[String(m.field)] ?? cap(String(m.field).replace(/_/g, " "))}</b>: {m.why}</li>)}</ul></div>}
+    </section>
+  );
 }
 
 
