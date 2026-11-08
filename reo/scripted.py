@@ -48,6 +48,18 @@ NUMBER_FIELDS = {"total_demand_kwh", "num_inhabitants", "roof_area_sqm", "existi
                  "electricity_price_eur_per_kwh", "budget_eur"}   # a bare number answers these asks
 
 
+STREET = r"(stra(ss|ß)e|str\.?|weg|platz|allee|gasse|ring|damm|ufer|chaussee|street|road|avenue|lane)"
+
+
+def looks_like_address(text: str) -> bool:
+    """A typed / spoken German address (street + number, a postcode, or 'Name 12, City'), not a question or a number answer."""
+    t = text.strip().lower()
+    if "?" in t or not re.search(r"[a-zäöüß]{3}", t) or re.search(r"kwh|\bkw\b|€|eur\b|m²|\bm2\b|sqm|\bqm\b|\d\s*[x×]\s*\d", t):
+        return False
+    return bool(re.search(r"\b\d{5}\b", t) or re.search(STREET + r"\s*\d+\s*[a-z]?\b", t)
+                or re.search(r"[a-zäöüß]{3,}\s+\d+\s*[a-z]?\s*,\s*[a-zäöüß]{3,}", t))
+
+
 def heatpump_answer(text: str) -> bool | None:
     """Answer to the heat pump option ask: chip text or a typed yes / no, else None."""
     t = text.strip().lower()

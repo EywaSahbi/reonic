@@ -138,6 +138,31 @@ def test_address_lookup(tmp_path, monkeypatch):
     assert t["ask"]["field"] == "roof_dims"
 
 
+def test_address_typed_or_spoken_in_the_chat(tmp_path, monkeypatch):
+    import voice
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "4500"}).json()
+    assert t["ask"]["input"] == "address"
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "Musterstraße 12, 80331 München"}).json()  # no address box
+    assert t["plan"]["facts"]["roof_area_sqm"] == 48 and t["roof"]["source"] == "demo data"
+    assert t["messages"][0]["text"].startswith("I looked up your address")
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    c.post(f"/sessions/{pid}/messages", json={"text": "4500"})
+    monkeypatch.setattr(voice, "transcribe", lambda *a: "Musterstraße 12 in München")
+    monkeypatch.setattr(voice, "speak", lambda text: None)
+    t = c.post(f"/sessions/{pid}/voice", files={"audio": ("a.webm", b"xx", "audio/webm")}).json()
+    assert t["plan"]["facts"]["roof_area_sqm"] == 48 and t["heard"].startswith("Musterstraße")
+
+
+def test_looks_like_address():
+    import scripted
+    yes = ["Musterstraße 12, 80331 München", "Platz der Republik 1, Berlin", "Hauptstr. 5", "10557 Berlin",
+           "Am Lindenhof 3, Dresden"]
+    no = ["4500", "Skip", "15000 kWh", "the roof is 10 x 5.5 m", "about 50 m²", "why a battery?", "we have 4 people"]
+    assert all(scripted.looks_like_address(s) for s in yes) and not any(scripted.looks_like_address(s) for s in no)
+
+
 def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
     import roof
     c = client(tmp_path, monkeypatch)

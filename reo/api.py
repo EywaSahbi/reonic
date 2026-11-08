@@ -467,8 +467,20 @@ def start_session(_: dict | None = None):
             raise
 
 
+def address_answer(pid: str, text: str) -> dict | None:
+    """A typed or spoken address while the address ask is open runs the roof lookup like POST /address (no separate box needed)."""
+    with _lock:
+        plan, st = _get(_load(), pid)
+        open_ask = plan["status"] == "drafting" and st.get("last_ask") == "roof_area_sqm"
+    if open_ask and scripted.chip(text) is None and scripted.looks_like_address(text):
+        return send_address(pid, Address(address=text))
+    return None
+
+
 @app.post("/sessions/{pid}/messages")
 def send_message(pid: str, body: Text):
+    if turn := address_answer(pid, body.text):
+        return turn
     with _lock:
         db = _load()
         turn = message_turn(db, pid, body.text)
@@ -494,16 +506,18 @@ def send_voice(pid: str, audio: UploadFile = File(...)):
     """Spoken turn (VOICE.md): speech-to-text -> the normal message turn -> text-to-speech of reo's reply."""
     data = audio.file.read()
     heard = voice.transcribe(data, audio.filename or "audio.webm", audio.content_type or "audio/webm")
-    with _lock:
-        db = _load()
-        plan, st = _get(db, pid)
-        if heard is None:
-            m = reo_msg(plan, "Sorry, I didn't catch that. Could you say it again, or type it?")
+    turn = address_answer(pid, heard) if heard else None
+    if turn is None:
+        with _lock:
+            db = _load()
+            plan, st = _get(db, pid)
+            if heard is None:
+                m = reo_msg(plan, "Sorry, I didn't catch that. Could you say it again, or type it?")
+                _save(db)
+                turn = {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS.get(st.get("last_ask") or "", [])}
+                return {**turn, "heard": "", "audio": None}
+            turn = message_turn(db, pid, heard)
             _save(db)
-            turn = {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS.get(st.get("last_ask") or "", [])}
-            return {**turn, "heard": "", "audio": None}
-        turn = message_turn(db, pid, heard)
-        _save(db)
     mp3 = voice.speak(" ".join(m["text"] for m in turn["messages"]))
     return {**turn, "heard": heard, "audio": base64.b64encode(mp3).decode() if mp3 else None}
 
