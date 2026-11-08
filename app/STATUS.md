@@ -108,3 +108,9 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Completed under Raneem's explicit task-specific reo ownership exception: ef81dcf backend, 6e39d28 startup integration. Live backend enables PIN and caps; Vercel deployment dpl_BhrP2nhtnKFpJ1ZXDixCW1z4pHao is READY at the same production URL. Existing session plans are preserved.
 - Verified public missing PIN 401, correct PIN 200, PIN-only planner 401, PIN+planner 200; health reports 5 sessions/2 runs; wrong-code attempts hit 429 while correct code stays accepted. Browser gate unlock and real advisor session resume passed. 40-test backend suite passed plus 10 focused capacity tests (including additional error/concurrency regressions); client auth tests and production build pass.
 - Earlier pending notes above are historical; no PIN/capacity backend dependency remains. Laptop memory exhaustion from unrelated apps cannot be prevented by API admission limits.
+
+## Inbox delete deployment integration
+
+- Reviewed/pulled Eywa's 8d3cee9, built frontend and ran auth checks; isolated delete regression passes. Restarted protected reo; live schema exposes DELETE /plans/{pid}, PIN and caps preserved. No real plan deleted during verification.
+- Vercel blocked direct deployment from Eywa-authored HEAD because the author is not permitted in this project. This owner-authored integration record follows review/testing; original author/commit remains intact. Retrying deployment from the integration commit.
+- Git auto-deployment remains disconnected: Vercel failed private-repo access during setup. Current publication is CLI/app-only; do not assume pushes publish. Preserve no-dataset-upload rule if configuring future automation.

@@ -81,3 +81,7 @@ Enter the real HTTPS tunnel URL at each environment prompt. Do not add Anthropic
 - Disconnecting the tunnel shows an honest offline state.
 
 Current status: deployed and verified. The engine and reo run as hidden local processes; ngrok must remain running. Restart using the two scripts above after a laptop restart. Laptop sleep, shutdown or internet loss makes the backend unavailable. If the tunnel hostname changes, update VITE_API_URL and redeploy Vercel. The engine remains loopback-only.
+
+## Commit-author deployment restriction
+
+A direct CLI deployment from Eywa-authored 8d3cee9 was blocked because that author lacks deployment permission in this Vercel project. The project owner should review/test team deliveries and commit the integration record under their normal repository identity before deploying, preserving the original authors' commits. Do not spoof author metadata or buy a team upgrade without approval. Git integration is still disconnected, so pushes alone do not publish.
