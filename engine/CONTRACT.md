@@ -45,6 +45,7 @@ type PriceList = Record<string, number>;   // keys as returned by GET /prices; e
 // 2026-11-08: equipment prices come from real products in engine/catalog.json (quote lines = product x qty + sourced
 // installation rates). GET /prices now returns only subsidy, feed-in and fuel rates. Overridable keys in `prices`:
 // module_eur, inverter_eur, mounting_eur_per_module, battery_eur, wallbox_device_eur, heatpump_device_eur and the labour keys of catalog.json.
+// `inverter_kw` in prices picks the inverter model (0 / absent = smallest that carries the array). Wallbox price follows its size (11 / 22 kW).
                                            // Overriding `<key>` fixes that price (low = high = the override).
 
 type Design = {

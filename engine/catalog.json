@@ -62,18 +62,27 @@
       ],
       "source": "https://reduco.ai/blog/solar/byd-stromspeicher-test-erfahrungen (HVS 5.1 / 7.7 / 10.2 / 12.8, June 2026); other sizes on the straight line through these prices"
     },
-    "wallbox": {
-      "name": "go-e Charger Gemini 11 kW",
-      "price_eur": 644.14,
-      "source": "https://dcs.dk/en/p/go-e-charger-gemini-wallbox-11-kw-1-8m-kabel-weiss-1001155024 (offers from 548 EUR: einfacheauto.de)"
-    },
     "heatpump": {
       "name": "Vaillant aroTHERM plus air-water heat pump with hydraulic station",
       "ref_kw": 10,
       "ref_price_eur": 19729.0,
       "eur_per_kw": 147.0,
       "source": "42watt.de 2026-08: VWL 105/8.1 A + VWZ MEH 97/7 mean gross list price 19,729 EUR (Stiftung Warentest, 2025-07-17); other sizes by the outdoor-unit price step (3 kW 5,800 EUR, 7 kW 6,389 EUR = 147 EUR/kW)"
-    }
+    },
+    "wallboxes": [
+      {
+        "name": "go-e Charger Gemini 11 kW",
+        "kw": 11,
+        "price_eur": 644.14,
+        "source": "https://dcs.dk/en/p/go-e-charger-gemini-wallbox-11-kw-1-8m-kabel-weiss-1001155024 (offers from 548 EUR: einfacheauto.de)"
+      },
+      {
+        "name": "go-e Charger Gemini 22 kW",
+        "kw": 22,
+        "price_eur": 759.0,
+        "source": "https://shop.go-e.com/go-e-charger-gemini-22-kw-en (759 EUR incl. VAT)"
+      }
+    ]
   },
   "labour": {
     "pv_roof_installation_eur_per_kwp": [

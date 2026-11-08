@@ -123,3 +123,68 @@ export function locksFrom(d: Design, modules: number, items: Items, perModule: n
   }
   return locks;
 }
+
+
+// ---------- free module placement (planner's design studio) ----------
+// Face coordinates of the front roof: x along the eave (0 = middle), y up the slope from the eave. Module centres only.
+export type FreePanel = { id: string; x: number; y: number };
+export type RoofArea = { xMin: number; xMax: number; yMin: number; yMax: number; w: number; h: number; width: number; top: number };
+type Pt = { x: number; y: number };
+const EPS = 0.005;
+let nextId = 0;
+const newId = () => `m${++nextId}`;
+
+/** Where module centres may sit (same module orientation and margins as the grid, so the engine's count always fits). */
+export function roofArea(r: Roof): RoofArea {
+  const { length: L } = houseDims(r);
+  const g = faceGrid(r.width, r.slope);
+  const [w, h] = g.cols > 0 && g.rows > 0 ? [g.w, g.h] : [MOD_SHORT, MOD_LONG];
+  return { xMin: -L / 2 + MARGIN + w / 2, xMax: L / 2 - MARGIN - w / 2, yMin: MARGIN + h / 2, yMax: r.slope - MARGIN - h / 2, w, h, width: L, top: r.slope };
+}
+
+export const clampToRoof = (p: Pt, a: RoofArea): Pt => ({ x: clamp(p.x, a.xMin, a.xMax), y: clamp(p.y, a.yMin, a.yMax) });
+
+/** Inside the roof and not overlapping another module (`skip`: the module being moved). */
+export function fits(p: Pt, panels: FreePanel[], a: RoofArea, skip?: string): boolean {
+  if (p.x < a.xMin - EPS || p.x > a.xMax + EPS || p.y < a.yMin - EPS || p.y > a.yMax + EPS) return false;
+  return panels.every((q) => q.id === skip || Math.abs(q.x - p.x) >= a.w + GAP - EPS || Math.abs(q.y - p.y) >= a.h + GAP - EPS);
+}
+
+/** Free spots right beside another module (left, right, above, below): where a module joins the formation. */
+function besides(panels: FreePanel[], a: RoofArea, skip?: string): Pt[] {
+  const dx = a.w + GAP, dy = a.h + GAP;
+  return panels.filter((q) => q.id !== skip)
+    .flatMap((q) => [{ x: q.x + dx, y: q.y }, { x: q.x - dx, y: q.y }, { x: q.x, y: q.y + dy }, { x: q.x, y: q.y - dy }])
+    .filter((s) => fits(s, panels, a, skip));
+}
+
+/** An added module joins the others as a rectangle: fill the lowest row first, left to right, then the next row up. */
+export function nextSlot(panels: FreePanel[], a: RoofArea): Pt | null {
+  if (!panels.length) return a.xMax >= a.xMin - EPS && a.yMax >= a.yMin - EPS ? { x: a.xMin, y: a.yMin } : null;
+  const s = besides(panels, a);
+  s.sort((p, q) => Math.round((p.y - q.y) * 100) || p.x - q.x);
+  return s[0] ?? null;
+}
+
+/** A clicked or dropped spot: the nearest place beside another module within `reach` metres (so rows line up), else the
+ * spot itself if it is free. */
+export function snapSlot(p: Pt, panels: FreePanel[], a: RoofArea, skip?: string, reach = 0.6): Pt | null {
+  const near = besides(panels, a, skip).map((q) => ({ q, d: Math.hypot(q.x - p.x, q.y - p.y) })).sort((m, n) => m.d - n.d)[0];
+  if (near && near.d <= reach) return near.q;
+  const c = clampToRoof(p, a);
+  return fits(c, panels, a, skip) ? c : null;
+}
+
+/** `n` modules: keep the planner's own (those still on the roof), add the rest to the formation, drop the surplus. */
+export function layoutPanels(n: number, a: RoofArea, keep: FreePanel[] = []): FreePanel[] {
+  const out: FreePanel[] = [];
+  for (const p of keep) if (out.length < n && fits(p, out, a)) out.push(p);
+  while (out.length < n) {
+    const s = nextSlot(out, a);
+    if (!s) break;
+    out.push({ id: newId(), ...s });
+  }
+  return out;
+}
+
+export const addPanel = (panels: FreePanel[], at: Pt): FreePanel[] => [...panels, { id: newId(), ...at }];

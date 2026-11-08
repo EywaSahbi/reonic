@@ -423,6 +423,11 @@ h1, h2, h3 { color: var(--ink); }
 .studio-diff li { display: grid; grid-template-columns: 1fr auto; padding: 6px 8px; border-radius: 8px; background: var(--paper-sand); font-size: 13px; }
 .studio-diff li small { grid-column: 1 / -1; font-size: 11px; color: var(--ink-500); }
 .studio-diff li.changed { background: var(--warning-soft); box-shadow: inset 3px 0 0 var(--warning); }
+.studio-hw { display: flex; flex-direction: column; gap: 4px; }
+.studio-hw-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 2px 8px; padding: 6px 8px; border-radius: 8px; background: var(--paper-sand); font-size: 13px; }
+.studio-hw-row small { grid-column: 1 / -1; font-size: 11px; color: var(--ink-500); }
+.studio-hw-row select { font: inherit; font-size: 13px; padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--white); color: var(--ink); }
+.studio-hw-row.changed { background: var(--warning-soft); box-shadow: inset 3px 0 0 var(--warning); }
 .studio-econ { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 0; font-size: 13px; }
 .studio-econ dt { font-size: 11px; color: var(--ink-500); }
 .studio-econ dd { margin: 0; font-weight: 600; }

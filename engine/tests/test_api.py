@@ -247,3 +247,12 @@ def test_price_range_uses_typical_band_not_extremes():
     assert post({"total_demand_kwh": 4500})["price"]["range_eur"][1] / post({"total_demand_kwh": 4500})["price"]["range_eur"][0] < 1.6
     fixed = post({"total_demand_kwh": 4500}, prices={"module_eur": 93})["price"]["range_eur"]
     assert fixed[0] < fixed[1]
+
+
+def test_planner_hardware_choice_sets_inverter_and_wallbox():
+    base = {"total_demand_kwh": 4500, "ev_planned": True}
+    d = post(base, locks={"wallbox": {"recommended": True, "size": 22}}, prices={"inverter_kw": 10})
+    labels = [i["label"] for i in d["price"]["items"]]
+    assert "Hybrid inverter 10 kW" in labels and "Wallbox 22 kW" in labels
+    wb = next(i for i in d["price"]["items"] if i["label"] == "Wallbox 22 kW")
+    assert wb["total_eur"] == 759.0

@@ -64,9 +64,13 @@ def product(key, default, overrides):
     return overrides.get(key, default)
 
 
-def inverters_for(pv_kwp):
-    """Smallest catalogue hybrid inverter whose DC input (kW x ratio) carries the array; several of the largest above."""
+def inverters_for(pv_kwp, choice=None):
+    """The planner's inverter (`inverter_kw` in prices: as many as the array needs), else the smallest catalogue hybrid
+    inverter whose DC input (kW x ratio) carries the array; several of the largest above."""
     inv, ratio = CATALOG["products"]["inverters"], CATALOG["products"]["inverter_dc_ratio"]
+    if choice:
+        pick = min(inv, key=lambda i: abs(i["kw"] - choice))
+        return pick, max(1, math.ceil(pv_kwp / (pick["kw"] * ratio)))
     fit = next((i for i in inv if i["kw"] * ratio >= pv_kwp), None)
     if fit:
         return fit, 1
@@ -163,7 +167,7 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         sh = {"pv": (pv_kwp - hp_pv) / pv_kwp, "heatpump": hp_pv / pv_kwp} if hp_pv else None
         n = pv_modules or max(1, round(pv_kwp * 1000 / sizing.module_w))
         line(prod["module"]["label"], n, "pc", product("module_eur", prod["module"]["price_eur"], overrides), "pv", share=sh)
-        inv, k = inverters_for(pv_kwp)
+        inv, k = inverters_for(pv_kwp, overrides.get("inverter_kw"))
         line(f"Hybrid inverter {inv['kw']:g} kW", k, "pc", product("inverter_eur", inv["price_eur"], overrides), "pv", share=sh)
         line(prod["mounting"]["label"], n, "pc", product("mounting_eur_per_module", prod["mounting"]["price_eur_per_module"], overrides), "pv", share=sh)
         work("Installation on the roof (modules, rails)", pv_kwp, "kWp", "pv_roof_installation_eur_per_kwp", "pv", sh)
@@ -176,7 +180,8 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         line(f"Battery storage {bat_kwh:g} kWh (lithium iron phosphate, high voltage)", 1, "pc", product("battery_eur", battery_price(bat_kwh), overrides), "battery")
         work("Battery installation", 1, "flat", "battery_installation_eur", "battery")
     if wb_rec:
-        line(f"Wallbox {wb_kw:g} kW", 1, "pc", product("wallbox_device_eur", prod["wallbox"]["price_eur"], overrides), "wallbox")
+        wbp = min(prod["wallboxes"], key=lambda w: abs(w["kw"] - wb_kw))
+        line(f"Wallbox {wb_kw:g} kW", 1, "pc", product("wallbox_device_eur", wbp["price_eur"], overrides), "wallbox")
         work("Wallbox installation and registration", 1, "flat", "wallbox_installation_eur", "wallbox")
     if hp_rec and hp_kw:
         hp = prod["heatpump"]

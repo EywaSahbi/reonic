@@ -5,7 +5,7 @@ import { OfferPackPanel, RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
 
 const DesignStudio = lazy(() => import("./scene/DesignStudio"));
-import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
+import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary, type PriceList } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
 const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
@@ -130,7 +130,7 @@ function PlanDetail({ id }: { id: string }) {
 
   useEffect(() => { api.getPlan(id).then(setPlan).catch((e) => setError(errText(e))); }, [id]);
 
-  async function edit(body: { locks?: Locks; facts?: Partial<HomeFacts> }) {
+  async function edit(body: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }) {
     if (!plan) return;
     setBusy(true);
     setError(null);
@@ -197,7 +197,7 @@ function PlanDetail({ id }: { id: string }) {
       {error && <div className="chat-error">{error}</div>}
 
       <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
-        <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks) => edit({ locks })} />
+        <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks, prices) => edit({ locks, ...(prices ? { prices } : {}) })} />
       </Suspense>
 
       <div className="detail-grid">

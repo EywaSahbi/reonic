@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, type MutableRefObject } from "react";
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
 import * as THREE from "three";
-import { houseDims, WALL_H, type Cell, type ItemKey, type Items, type Roof, type Spot } from "./layout";
+import { houseDims, WALL_H, type Cell, type FreePanel, type ItemKey, type Items, type Roof, type RoofArea, type Spot } from "./layout";
 
 // The lot, the house and the components, built from primitives (no downloaded assets). Shared by the customer card and the
 // planner's design studio. Draws what it is given; computes no number anyone sees.
@@ -31,16 +31,22 @@ function panelTexture() {
 export type SceneEvents = {
   hoverCell: string | null;
   selected: ItemKey | null;
-  onCellDown: (id: string) => void;
-  onCellEnter: (id: string | null) => void;
+  onCellDown?: (id: string) => void;
+  onCellEnter?: (id: string | null) => void;
+  // free roof (design studio): positions in face coordinates of the front roof
+  onRoofDown?: (x: number, y: number) => void;
+  onRoofMove?: (x: number, y: number) => void;
+  onRoofHover?: (over: boolean) => void;
+  onPanelDown?: (id: string) => void;
   onItemDown: (k: ItemKey) => void;
   onGroundMove: (p: Spot) => void;
   onGroundDown: () => void;
 };
 
-type Props = { roof: Roof; cells: Cell[]; panels: Set<string>; items: Items; events?: SceneEvents };
+export type FreeRoofProps = { panels: FreePanel[]; area: RoofArea; active?: string | null };
+type Props = { roof: Roof; cells: Cell[]; panels: Set<string>; items: Items; events?: SceneEvents; free?: FreeRoofProps };
 
-export function HouseScene({ roof, cells, panels, items, events }: Props) {
+export function HouseScene({ roof, cells, panels, items, events, free }: Props) {
   const { length: L, depth: D } = houseDims(roof);
   // The attic follows the roof planes exactly (eave at D/2, roof tilt), so the two never disagree at the ridge,
   // even when houseDims clamps the depth.
@@ -64,7 +70,7 @@ export function HouseScene({ roof, cells, panels, items, events }: Props) {
 
       <Trees lotX={lotX} lotZ={lotZ} />
       <HouseBody L={L} D={D} rise={rise} flat={roof.flat} />
-      <RoofFaces roof={roof} L={L} D={D} cells={cells} panels={panels} events={events} />
+      <RoofFaces roof={roof} L={L} D={D} cells={cells} panels={panels} events={events} free={free} />
 
       {items.heatpump && <Placed spot={items.heatpump} k="heatpump" events={events}><HeatPump /></Placed>}
       {items.battery && <Placed spot={items.battery} k="battery" events={events} faceWall={L}><Battery /></Placed>}
@@ -111,7 +117,7 @@ function Window(p: { position: [number, number, number]; rotation?: [number, num
 }
 
 /** Roof planes + module cells. Face 0 looks at the camera (front, sunny); face 1 is the same face turned 180°. */
-function RoofFaces({ roof, L, D, cells, panels, events }: { roof: Roof; L: number; D: number; cells: Cell[]; panels: Set<string>; events?: SceneEvents }) {
+function RoofFaces({ roof, L, D, cells, panels, events, free }: { roof: Roof; L: number; D: number; cells: Cell[]; panels: Set<string>; events?: SceneEvents; free?: FreeRoofProps }) {
   const t = (roof.tilt * Math.PI) / 180;
   const faces = roof.flat ? [0] : [0, 1];
   const run = D / 2 / Math.cos(t); // eave to ridge along the slope
@@ -125,7 +131,7 @@ function RoofFaces({ roof, L, D, cells, panels, events }: { roof: Roof; L: numbe
                 <boxGeometry args={[L + 0.6, run + 0.2, 0.16]} /><meshStandardMaterial color={C.roof} />
               </mesh>
             )}
-            {cells.filter((c) => c.face === face).map((c) => (
+            {free && face === 0 ? <FreeRoof free={free} events={events} /> : cells.filter((c) => c.face === face).map((c) => (
               <CellMesh key={c.id} cell={c} on={panels.has(c.id)} flat={roof.flat} events={events} />
             ))}
           </group>
@@ -150,9 +156,9 @@ function CellMesh({ cell, on, flat, events }: { cell: Cell; on: boolean; flat: b
       {/* hit area + ghost outline (planner only) */}
       {events && (
         <mesh userData={{ cellId: cell.id }}
-          onPointerDown={(e) => { e.stopPropagation(); events.onCellDown(cell.id); }}
-          onPointerEnter={(e) => { e.stopPropagation(); events.onCellEnter(cell.id); }}
-          onPointerLeave={() => events.onCellEnter(null)}>
+          onPointerDown={(e) => { e.stopPropagation(); events.onCellDown?.(cell.id); }}
+          onPointerEnter={(e) => { e.stopPropagation(); events.onCellEnter?.(cell.id); }}
+          onPointerLeave={() => events.onCellEnter?.(null)}>
           <planeGeometry args={[cell.w, cell.h]} />
           <meshBasicMaterial color={hover ? C.hover : C.ghost} transparent opacity={showGhost ? (hover ? 0.7 : 0.28) : hover ? 0.5 : 0} depthWrite={false} />
         </mesh>
@@ -168,6 +174,41 @@ function CellMesh({ cell, on, flat, events }: { cell: Cell; on: boolean; flat: b
           <meshStandardMaterial attach="material-5" color={C.panel} />
         </mesh>
       </group>
+    </group>
+  );
+}
+
+/** The studio's front roof: modules anywhere on it. An invisible plane reports where the pointer is (face coordinates);
+ *  the modules themselves can be grabbed. */
+function FreeRoof({ free, events }: { free: FreeRoofProps; events?: SceneEvents }) {
+  const a = free.area;
+  const at = (e: ThreeEvent<PointerEvent>): [number, number] => {
+    const p = e.object.worldToLocal(e.point.clone());
+    return [p.x, p.y + a.top / 2];
+  };
+  return (
+    <group>
+      <mesh position={[0, a.top / 2, 0.025]}
+        onPointerDown={(e) => { e.stopPropagation(); events?.onRoofDown?.(...at(e)); }}
+        onPointerMove={(e) => events?.onRoofMove?.(...at(e))}
+        onPointerOver={() => events?.onRoofHover?.(true)} onPointerOut={() => events?.onRoofHover?.(false)}>
+        <planeGeometry args={[a.width + 0.6, a.top + 0.4]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} />
+      </mesh>
+      {free.panels.map((p) => (
+        <group key={p.id} position={[p.x, p.y, 0.03]}>
+          <mesh position={[0, 0, 0.04]} castShadow onPointerDown={(e) => { e.stopPropagation(); events?.onPanelDown?.(p.id); }}>
+            <boxGeometry args={[a.w, a.h, 0.05]} />
+            <meshStandardMaterial attach="material-0" color={C.frame} />
+            <meshStandardMaterial attach="material-1" color={C.frame} />
+            <meshStandardMaterial attach="material-2" color={C.frame} />
+            <meshStandardMaterial attach="material-3" color={C.frame} />
+            <meshStandardMaterial attach="material-4" map={panelTexture()} roughness={0.25} metalness={0.4}
+              emissive={free.active === p.id ? C.hover : "#000000"} emissiveIntensity={free.active === p.id ? 0.35 : 0} />
+            <meshStandardMaterial attach="material-5" color={C.panel} />
+          </mesh>
+        </group>
+      ))}
     </group>
   );
 }
