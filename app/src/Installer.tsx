@@ -4,6 +4,7 @@ import { getInstallerToken, setInstallerToken } from "./auth";
 import { RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
 import { ReoAvatar } from "./ReoAvatar";
+import { MicButton, voiceForced } from "./Voice";
 import "./installer.css";
 
 const DesignStudio = lazy(() => import("./scene/DesignStudio"));
@@ -294,7 +295,7 @@ function Summary({ plan }: { plan: Plan }) {
   const check = d.missing_inputs.filter((m) => m.impact !== "low");
   return (
     <section className="card summary">
-      <h3 className="installer-reo-heading"><ReoAvatar size={32} outfit="vest" greet={false} interactive={false} title="reo" />Summary</h3>
+      <h3 className="installer-reo-heading"><ReoAvatar size={52} outfit="vest" greet={false} interactive title="reo" />Summary</h3>
       <div className="summary-grid">
         <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
         {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}
@@ -386,13 +387,34 @@ function NextSteps({ plan, onPlan }: { plan: Plan; onPlan: (p: Plan) => void }) 
 
 function AskReo({ id }: { id: string }) {
   const [q, setQ] = useState("");
-  const [qa, setQa] = useState<{ q: string; a: string; runId?: string }[]>([]);
+  const [qa, setQa] = useState<{ q: string; a: string; runId?: string; voice?: boolean }[]>([]);
   const [busy, setBusy] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(voiceForced());
+  const [note, setNote] = useState<string | null>(null);
+  const [speaking, setSpeaking] = useState<number | null>(null); // index of the answer being read aloud
+  const player = useRef<HTMLAudioElement | null>(null);
   const end = useRef<HTMLDivElement>(null);
+  useEffect(() => { api.health().then((h) => setVoiceOn((v) => v || h.voice)).catch(() => {}); }, []);
   useEffect(() => { if (qa.length) end.current?.scrollIntoView({ block: "nearest" }); }, [qa]);
+  useEffect(() => () => { player.current?.pause(); }, []);
+
+  function stopSpeaking() { player.current?.pause(); player.current = null; setSpeaking(null); }
+  function play(src: string, i: number) {
+    stopSpeaking();
+    const el = new Audio(src);
+    player.current = el;
+    el.onended = el.onerror = () => setSpeaking(null);
+    setSpeaking(i);
+    el.play().catch(() => setSpeaking(null));
+  }
+  async function readAloud(i: number) {
+    if (speaking === i) { stopSpeaking(); return; }
+    const blob = await api.speak(qa[i].a).catch(() => null);
+    if (blob) play(URL.createObjectURL(blob), i); else setNote("Voice isn't available right now.");
+  }
   async function ask(text: string) {
     if (!text.trim()) return;
-    setBusy(true);
+    setBusy(true); setNote(null); stopSpeaking();
     try {
       const { answer, run_id } = await api.askPlan(id, text);
       setQa((x) => [...x, { q: text, a: answer, runId: run_id }]);
@@ -403,18 +425,50 @@ function AskReo({ id }: { id: string }) {
       setBusy(false);
     }
   }
+  async function askByVoice(audio: Blob) {
+    setBusy(true); setNote(null);
+    try {
+      const r = await api.askPlanVoice(id, audio);
+      if (!r.heard) { setNote(r.answer); return; }
+      const i = qa.length;
+      setQa((x) => [...x, { q: r.heard, a: r.answer, runId: r.run_id, voice: true }]);
+      if (r.audio) play(`data:audio/mpeg;base64,${r.audio}`, i); // a spoken question gets a spoken answer
+    } catch (e) {
+      setNote(`Voice question failed: ${errText(e)}`);
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <section className="card ask-reo">
-      <h3 className="installer-reo-heading"><ReoAvatar size={36} outfit="vest" greet={false} interactive={false} title="reo" />Ask reo why</h3>
+      <div className="ask-reo-head">
+        <ReoAvatar size={84} outfit="vest" greet interactive winkKey={qa.length} className={speaking !== null ? "is-waving" : ""} title="reo" />
+        <div>
+          <h3>Ask reo why</h3>
+          <p className="muted small">{voiceOn ? "Type a question or tap the mic, reo answers out loud." : "Type a question about this plan."}</p>
+        </div>
+      </div>
       <div className="chips">
         {["Why this battery size?", "Why a heat pump?", "Why does it cost this much?"].map((s) => <button key={s} className="chip" disabled={busy} onClick={() => ask(s)}>{s}</button>)}
       </div>
       {qa.map((x, i) => (
-        <div key={i} className="qa"><p className="qa-q">{x.q}</p><p className="qa-a">{x.a}</p>{x.runId && <RunTimeline runId={x.runId} trace={[]} live={false} />}</div>
+        <div key={i} className="qa">
+          <p className="qa-q">{x.voice ? "🎙 " : ""}{x.q}</p>
+          <p className="qa-a">{x.a}</p>
+          {voiceOn && !x.a.startsWith("Error:") && (
+            <button type="button" className="qa-speak" onClick={() => readAloud(i)} aria-label={speaking === i ? "Stop reading" : "Read the answer aloud"}>
+              {speaking === i ? "■ Stop" : "🔊 Listen"}
+            </button>
+          )}
+          {x.runId && <RunTimeline runId={x.runId} trace={[]} live={false} />}
+        </div>
       ))}
       <div ref={end} />
+      {busy && <p className="muted small">reo is thinking…</p>}
+      {note && <p className="muted small" role="status">{note}</p>}
       <form className="composer" onSubmit={(e) => { e.preventDefault(); ask(q); }}>
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Why …?" disabled={busy} aria-label="Ask reo about this plan" />
+        {voiceOn && <MicButton disabled={busy} onStart={stopSpeaking} onRecorded={askByVoice} onError={setNote} />}
         <button type="submit" disabled={busy || !q.trim()}>Ask</button>
       </form>
     </section>

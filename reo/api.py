@@ -795,6 +795,19 @@ def ask_plan(pid: str, body: Ask):
     return {"answer": res.get("answer") or scripted.answer(d, scripted.extract(body.text)["topic"]), "run_id": run["id"]}
 
 
+@app.post("/plans/{pid}/ask/voice")
+def ask_plan_voice(pid: str, audio: UploadFile = File(...)):
+    """The planner asks by voice (EywaSahbi): ElevenLabs speech-to-text -> the same answer as /ask -> reo's answer spoken
+    back. `audio` is base64 mp3 or null when voice is off; `heard` is empty when nothing was understood."""
+    _get(_read(), pid)
+    heard = voice.transcribe(audio.file.read(), audio.filename or "audio.webm", audio.content_type or "audio/webm")
+    if not heard:
+        return {"heard": "", "answer": "Sorry, I didn't catch that. Could you say it again, or type it?", "audio": None}
+    res = ask_plan(pid, Ask(text=heard))
+    mp3 = voice.speak(res["answer"])
+    return {**res, "heard": heard, "audio": base64.b64encode(mp3).decode() if mp3 else None}
+
+
 @app.post("/plans/{pid}/finalize")
 def finalize(pid: str, body: Finalize):
     with _lock:

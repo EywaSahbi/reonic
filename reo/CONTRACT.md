@@ -76,6 +76,7 @@ Behaviour notes (v1):
 | DELETE | `/plans/{id}` | → `{deleted: id}` (plan, its state and runs removed; 404 if unknown; booked slots stay) | done |
 | POST | `/plans/{id}/edit` | `{locks?, facts?, prices?}` → `Plan` (engine re-run, edit recorded; 503 if engine down) | done |
 | POST | `/plans/{id}/ask` | `{text}` → `{answer: string}` ("why a 10 kWh battery?") | done (benchmarks M2) |
+| POST | `/plans/{id}/ask/voice` | multipart `audio` → `{heard, answer, run_id?, audio: base64 mp3 \| null}` (planner asks by voice; ElevenLabs STT + TTS, planner token) | done |
 | POST | `/plans/{id}/finalize` | `{note?}` → `Plan` (status `quoted`) | done |
 | GET | `/prices` | → engine `PriceList` passthrough (503 if engine down) | done |
 

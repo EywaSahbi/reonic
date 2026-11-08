@@ -62,6 +62,10 @@ export type Api = {
   deletePlan(id: string): Promise<{ deleted: string }>;
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
   askPlan(id: string, text: string): Promise<{ answer: string; run_id?: string }>;
+  /** Planner asks by voice: ElevenLabs speech-to-text, reo's answer, spoken back (audio: base64 mp3 or null). */
+  askPlanVoice(id: string, audio: Blob): Promise<{ heard: string; answer: string; run_id?: string; audio: string | null }>;
+  /** reo reads a text aloud (ElevenLabs); null when voice is off. */
+  speak(text: string): Promise<Blob | null>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
   preparePlan(id: string): Promise<Plan>;
   chooseVariant(id: string, name: VariantName): Promise<Plan>;
@@ -100,6 +104,18 @@ const httpApi: Api = {
   getPlan: (id) => call("GET", `/plans/${id}`),
   editPlan: (id, edit) => call("POST", `/plans/${id}/edit`, edit),
   askPlan: (id, text) => call("POST", `/plans/${id}/ask`, { text }),
+  async askPlanVoice(id, audio) {
+    const form = new FormData();
+    form.append("audio", audio, audio.type.includes("mp4") ? "speech.mp4" : "speech.webm");
+    const path = `/plans/${id}/ask/voice`;
+    const res = await fetch(BASE.replace(/\/$/, "") + path, { method: "POST", headers: requestHeaders(path), body: form });
+    if (!res.ok) throw await responseError(res);
+    return res.json();
+  },
+  async speak(text) {
+    const res = await fetch(BASE.replace(/\/$/, "") + "/tts", { method: "POST", headers: requestHeaders("/tts", true), body: JSON.stringify({ text }) });
+    return res.ok ? res.blob() : null;
+  },
   finalizePlan: (id, note) => call("POST", `/plans/${id}/finalize`, { note }),
   preparePlan: (id) => call("POST", `/plans/${id}/prepare`, {}),
   chooseVariant: (id, name) => call("POST", `/plans/${id}/variant`, { name }),

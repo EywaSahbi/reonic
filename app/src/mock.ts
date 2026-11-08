@@ -426,6 +426,14 @@ export const mockApi: Api = {
     return delay(save(plan));
   },
 
+  async askPlanVoice(id) {
+    const heard = "Why this battery size?";
+    const { answer } = await mockApi.askPlan(id, heard);
+    return { heard, answer, audio: null };
+  },
+
+  async speak() { return null; },
+
   async askPlan(id, text) {
     const plan = get(id);
     return delay({ answer: answerWhy(plan, "why " + text) ?? "I don't have a reason recorded for that yet." });

@@ -152,3 +152,14 @@ def test_planner_sees_the_estimate_the_customer_was_given(tmp_path, monkeypatch)
     assert p["customer_estimate"] == {"total_eur": handed["total_eur"], "range_eur": handed["range_eur"]}
     assert p["design"]["price"]["total_eur"] != handed["total_eur"]
     assert "customer_estimate" not in c.get(f"/sessions/{pid}").json()
+
+
+def test_planner_asks_by_voice(tmp_path, monkeypatch):
+    import voice
+    c, pid, _ = setup(tmp_path, monkeypatch)
+    monkeypatch.setattr(voice, "transcribe", lambda audio, *a: "why this battery size?" if audio else None)
+    monkeypatch.setattr(voice, "speak", lambda text: b"mp3")
+    r = c.post(f"/plans/{pid}/ask/voice", files={"audio": ("a.webm", b"xx", "audio/webm")}).json()
+    assert r["heard"] == "why this battery size?" and r["answer"] and r["audio"] == "bXAz"
+    r = c.post(f"/plans/{pid}/ask/voice", files={"audio": ("a.webm", b"", "audio/webm")}).json()
+    assert r["heard"] == "" and r["audio"] is None

@@ -302,6 +302,12 @@ h1, h2, h3 { color: var(--ink); }
 .this-plan td { font-weight: 600; color: var(--ink); background: var(--paper-sand); }
 
 .ask-reo { display: flex; flex-direction: column; gap: 10px; }
+.ask-reo-head { display: flex; align-items: center; gap: 14px; }
+.ask-reo-head h3 { margin: 0 0 2px; }
+.ask-reo-head p { margin: 0; }
+.ask-reo-head .reo-mascot { flex: 0 0 auto; filter: drop-shadow(0 6px 12px rgba(255, 107, 122, .18)); }
+.qa-speak { align-self: flex-start; border: 1px solid var(--line); background: var(--white); border-radius: 999px; padding: 3px 10px; font: inherit; font-size: 12px; color: var(--ink-700); cursor: pointer; }
+.qa-speak:hover { background: var(--paper-sand); }
 .qa { background: var(--paper-sand); border-radius: var(--radius-sm); padding: 8px 12px; }
 .qa p { margin: 0; }
 .qa-q { font-weight: 600; font-size: 14px; color: var(--ink); }
