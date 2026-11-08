@@ -32,7 +32,10 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
 }) {
   const c = design.components;
   const need = c.pv.recommended ? c.pv.quantity ?? 0 : 0;
-  const roof = useMemo(() => fitRoof(facts, need), [facts, need]);
+  // the drawn roof holds what the engine says the real roof holds (measured roof), else room well beyond today's count,
+  // so the planner can always add modules (EywaSahbi)
+  const room = c.pv.max_modules ?? Math.max(need, 30);
+  const roof = useMemo(() => fitRoof(facts, Math.max(need, room)), [facts, need, room]);
   const cells = useMemo(() => frontCells(roof, c.pv.max_modules, need), [roof, c.pv.max_modules, need]);
   const area = useMemo(() => roofArea(roof), [roof]);
   const engineCount = enginePanels(design, cells).size;
