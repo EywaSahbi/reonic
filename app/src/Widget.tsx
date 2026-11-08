@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { AddressSuggestion, Ask, HomeFacts, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
+import { PlanChat } from "./PlanChat";
 import { iconFor } from "./Icons";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
@@ -124,14 +125,17 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       <div className="widget-body">
         {!plan ? <div className="stepper"><div className="step-card is-busy" aria-busy /></div> : results ? (
           <div className="results">
-            {drafting && back.length > 0 && <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button>}
-            {plan.status === "handed_over" && <div className="sent-banner">✓ Sent to Sonnfeld. Your final quote appears here once your planner has confirmed it.</div>}
-            {plan.status === "quoted" && <div className="sent-banner">✓ Your planner has confirmed your plan.</div>}
-            <PlanCard plan={plan}
-              onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
-              onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>)) : undefined} />
-            {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
-            {error && <div className="chat-error">Something went wrong: {error}</div>}
+            <div className="results-main">
+              {drafting && back.length > 0 && <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button>}
+              {plan.status === "handed_over" && <div className="sent-banner">✓ Sent to Sonnfeld. Your final quote appears here once your planner has confirmed it.</div>}
+              {plan.status === "quoted" && <div className="sent-banner">✓ Your planner has confirmed your plan.</div>}
+              <PlanCard plan={plan}
+                onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
+                onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>)) : undefined} />
+              {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
+              {error && <div className="chat-error">Something went wrong: {error}</div>}
+            </div>
+            <PlanChat plan={plan} onPlan={setPlan} />
           </div>
         ) : ask && (
           <div className="stepper">
