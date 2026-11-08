@@ -122,3 +122,9 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Planner: "Design studio" card under the offer pack: palette drag-and-drop, Paint/Erase modules, move components, Apply → locks via PATCH /plans/{id}. Numbers only from the engine.
 - Ege (engine) approved to edit app/ for voice auto-stop, plan card price headline, address box position (board ACK).
 - Decision: studio placement turns into locks only for components that differ from the engine design (pv size = modules × engine kWp/module), so an untouched studio never locks anything.
+
+## Living advisor (8 Nov, Raneem's pick 1+2+3)
+
+- `src/live/`: LiveStage (3D house + the advisor character as an HTML overlay that glides to what changed, glass bubble, live step line), narrate.ts (pure: kind of answer, pending/done steps from the real call + response, the advisor's line = reo's own reply minus the question, engine reasons as fallback, tap-a-number explanations), live.css (Apple-like glass, spring curves, reduced motion).
+- Step form: stage beside every step (stacked on phones). Results: stage on top, numbers tappable ("Tap any number to see why"), advisor explains in the scene, "Ask more" sends the question to the results chat (text + voice, starter chips).
+- Hard rule 2: every number shown in bubbles/steps is the engine's from that turn; step labels describe calls reo actually makes. Verified live (local reo :8011 + engine :8010): 4500 kWh -> address -> EV planned -> gas -> results -> tap savings -> Ask more -> grounded reo answer. Desktop + 375 px checked.

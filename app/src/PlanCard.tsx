@@ -31,6 +31,7 @@ function HouseView({ plan }: { plan: Plan }) {
   );
 }
 import { HeatingComparison } from "./HeatingComparison";
+import type { Topic } from "./live/narrate";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
 // Display rounding only (persona.md): sizes to 1 decimal, payback to whole years.
@@ -39,7 +40,11 @@ const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("e
 
 // Results screen of the step form: components, sizes, price range, savings, payback.
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
-export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void }) {
+export function PlanCard({ plan, onHandoff, onToggleHeatpump, onExplain }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void; onExplain?: (t: Topic) => void }) {
+  // With onExplain (results screen with the living stage): numbers are buttons, the advisor explains them in the scene,
+  // and the house lives in the stage instead of the card.
+  const tap = (t: Topic, label: string, node: React.ReactNode) => onExplain
+    ? <button type="button" className="explain-btn" onClick={() => onExplain(t)} aria-label={`Why ${label}?`}>{node}</button> : node;
   const d = plan.design;
   const hpToggle = onToggleHeatpump && plan.facts.heating_type != null && plan.facts.heating_type !== "heatpump";
   if (isOffline(d)) {
@@ -57,7 +62,7 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
 
   return (
     <aside className="plan" aria-label="Your plan">
-      <HouseView plan={plan} />
+      {!onExplain && <HouseView plan={plan} />}
       <div className="plan-head">
         <span className="plan-kicker">
           {quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your cost estimate"}
@@ -68,16 +73,16 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
           <div className="plan-price plan-price-empty">–<small>your plan builds up as you answer</small></div>
         ) : (
           <div className="plan-price" key={`${lo}-${hi}`}>
-            {eur(lo)}–{eur(hi).slice(1)}
+            {tap("price", "this price", <>{eur(lo)}–{eur(hi).slice(1)}</>)}
             <small>estimate</small>
           </div>
         )}
       </div>
 
       <dl className="econ">
-        <div><dt>Savings / yr</dt><dd>{eur(d.economics.annual_savings_eur)}</dd></div>
-        <div><dt>Payback</dt><dd>{d.economics.payback_years !== null ? `~${Math.round(d.economics.payback_years)} yrs` : "none"}</dd></div>
-        <div><dt>Own power</dt><dd>{d.economics.autarky_pct}%</dd></div>
+        <div><dt>Savings / yr</dt><dd>{tap("savings", "these savings", eur(d.economics.annual_savings_eur))}</dd></div>
+        <div><dt>Payback</dt><dd>{tap("payback", "this payback", d.economics.payback_years !== null ? `~${Math.round(d.economics.payback_years)} yrs` : "none")}</dd></div>
+        <div><dt>Own power</dt><dd>{tap("autarky", "this share of own power", `${d.economics.autarky_pct}%`)}</dd></div>
       </dl>
 
       {d.price.items.length > 0 && (
@@ -101,8 +106,10 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
                 <span className="comp-name">{NAMES[k]}</span>
                 <span className="comp-end">
                   <span className="comp-size">
-                    {c.recommended && c.size !== null ? `${num(c.size)} ${c.unit}` : "not included"}
-                    {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
+                    {tap(k, NAMES[k].toLowerCase(), <>
+                      {c.recommended && c.size !== null ? `${num(c.size)} ${c.unit}` : "not included"}
+                      {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
+                    </>)}
                   </span>
                   {k === "heatpump" && hpToggle && (
                     <button type="button" role="switch" aria-checked={c.recommended} aria-label="Heat pump in my plan"

@@ -1,9 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { AddressSuggestion, Ask, HomeFacts, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { PlanChat } from "./PlanChat";
 import { iconFor } from "./Icons";
+import { doneSteps, explain, greeting, kindOf, pendingSteps, sayFor, type Kind, type Say, type Topic, type TraceStep } from "./live/narrate";
+
+// Living stage (three.js) loads after the first paint; the step card works without it.
+const LiveStage = lazy(() => import("./live/LiveStage"));
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
@@ -29,13 +33,20 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null); // one line above the step, e.g. "✓ Roof found · 48 m²"
   const [handoffOpen, setHandoffOpen] = useState(false);
+  const [say, setSay] = useState<Say | null>(null);         // the advisor's line in the scene
+  const [trace, setTrace] = useState<TraceStep[]>([]);      // what is being done right now
+  const [chatAsk, setChatAsk] = useState<{ text: string; n: number } | null>(null);
   const started = useRef(false);
 
-  async function run(p: () => Promise<Turn>, from?: Ask) {
+  async function run(p: () => Promise<Turn>, from?: Ask, kind: Kind = "other") {
     setBusy(true);
     setError(null);
+    setSay(null);
+    setTrace(pendingSteps(kind));
     try {
       const t = await p();
+      setTrace(kind === "start" ? [] : doneSteps(kind, t));
+      setSay(kind === "start" ? greeting() : sayFor(kind, t));
       if (from) setBack((b) => [...b, from]);
       setPlan(t.plan);
       setAsk(t.ask);
@@ -44,6 +55,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       else setNote(null);
     } catch (e) {
       setError(errText(e));
+      setTrace((s) => s.map((x) => (x.state === "run" ? { ...x, state: "fail", detail: "try again" } : x)));
     } finally {
       setBusy(false);
     }
@@ -54,13 +66,13 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     if (started.current) return;
     started.current = true;
     const saved = readSaved();
-    if (!saved) { run(() => api.startSession()); return; }
+    if (!saved) { run(() => api.startSession(), undefined, "start"); return; }
     api.getSession(saved)
       .then((p) => {
-        if (p.status === "drafting") { writeSaved(null); run(() => api.startSession()); return; }
+        if (p.status === "drafting") { writeSaved(null); run(() => api.startSession(), undefined, "start"); return; }
         setPlan(p);
       })
-      .catch(() => { writeSaved(null); run(() => api.startSession()); });
+      .catch(() => { writeSaved(null); run(() => api.startSession(), undefined, "start"); });
   }, []);
 
   useEffect(() => { if (plan?.id) writeSaved(plan.id); }, [plan?.id]);
@@ -79,12 +91,14 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   function startOver() {
     writeSaved(null);
-    setPlan(null); setAsk(undefined); setBack([]); setNote(null); setHandoffOpen(false); setError(null);
-    run(() => api.startSession());
+    setPlan(null); setAsk(undefined); setBack([]); setNote(null); setHandoffOpen(false); setError(null); setSay(null); setTrace([]);
+    run(() => api.startSession(), undefined, "start");
   }
 
   const id = plan?.id;
-  const facts = (f: Partial<HomeFacts>, skip?: string[]) => id && ask && run(() => api.sendFacts(id, f, skip), ask);
+  const facts = (f: Partial<HomeFacts>, skip?: string[]) => id && ask && run(() => api.sendFacts(id, f, skip), ask, kindOf(ask, f, skip));
+  const onExplain = (topic: Topic) => plan && setSay(explain(topic, plan.design));
+  const askMore = (q: string) => setChatAsk((c) => ({ text: q, n: (c?.n ?? 0) + 1 }));
   const goBack = () => {
     const prev = back.at(-1);
     if (!prev) return;
@@ -129,15 +143,24 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               {drafting && back.length > 0 && <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button>}
               {plan.status === "handed_over" && <div className="sent-banner">✓ Sent to Sonnfeld. Your final quote appears here once your planner has confirmed it.</div>}
               {plan.status === "quoted" && <div className="sent-banner">✓ Your planner has confirmed your plan.</div>}
+              <Suspense fallback={<div className="live-stage is-tall" />}>
+                <LiveStage plan={plan} say={say} trace={trace} busy={busy} tall onMore={askMore} />
+              </Suspense>
+              {!busy && <p className="explain-hint">Tap any number to see why.</p>}
               <PlanCard plan={plan}
                 onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
-                onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>)) : undefined} />
+                onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>), undefined, "toggle") : undefined}
+                onExplain={onExplain} />
               {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
               {error && <div className="chat-error">Something went wrong: {error}</div>}
             </div>
-            <PlanChat plan={plan} onPlan={setPlan} />
+            <PlanChat plan={plan} onPlan={setPlan} ask={chatAsk} />
           </div>
         ) : ask && (
+          <div className="live-split">
+          <Suspense fallback={<div className="live-stage" />}>
+            <LiveStage plan={plan} say={say} trace={trace} busy={busy} />
+          </Suspense>
           <div className="stepper">
             <div className={`step-card ${busy ? "is-busy" : ""}`} key={String(ask.field) + ask.input}>
               <div className="step-progress" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step}>
@@ -146,7 +169,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               </div>
               {note && <p className="step-note">{note}</p>}
               <h2 className="step-title">{TITLE[ask.field] ?? ask.prompt}</h2>
-              <StepInput ask={ask} busy={busy} onFacts={facts} onAddress={(a, point) => id && run(() => api.sendAddress(id, a, point), ask)}
+              <StepInput ask={ask} busy={busy} onFacts={facts} onAddress={(a, point) => id && run(() => api.sendAddress(id, a, point), ask, "address")}
                 suggest={(q) => (id ? api.suggestAddress(id, q).then((r) => r.suggestions) : Promise.resolve([]))}
                 onDims={() => { setBack((b) => [...b, ask]); setAsk(DIMS_ASK); setNote(null); }} />
               {error && <div className="chat-error">Something went wrong: {error}</div>}
@@ -154,6 +177,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                 {back.length > 0 ? <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button> : <span />}
               </div>
             </div>
+          </div>
           </div>
         )}
       </div>
