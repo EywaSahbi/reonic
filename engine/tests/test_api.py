@@ -256,3 +256,14 @@ def test_planner_hardware_choice_sets_inverter_and_wallbox():
     assert "Hybrid inverter 10 kW" in labels and "Wallbox 22 kW" in labels
     wb = next(i for i in d["price"]["items"] if i["label"] == "Wallbox 22 kW")
     assert wb["total_eur"] == 759.0
+
+
+def test_roi_is_solar_and_battery_only():
+    """Savings and payback never include the heat pump or the wallbox (EywaSahbi): no device cost, no fuel saving."""
+    hp_on, hp_off = (post(GAS_HOME, locks={"heatpump": {"recommended": on}}) for on in (True, False))
+    assert hp_on["components"]["heatpump"]["recommended"] and hp_on["price"]["total_eur"] > hp_off["price"]["total_eur"] + 10000
+    e1, e0 = hp_on["economics"], hp_off["economics"]
+    assert abs(e1["payback_years"] - e0["payback_years"]) < 3 and abs(e1["annual_savings_eur"] - e0["annual_savings_eur"]) < 600
+    ev = {"total_demand_kwh": 4500, "ev_planned": True}
+    wb_on, wb_off = (post(ev, locks={"wallbox": {"recommended": on}})["economics"] for on in (True, False))
+    assert wb_on["payback_years"] == wb_off["payback_years"]

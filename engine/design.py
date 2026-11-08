@@ -145,6 +145,7 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     # price: line items at mid prices, plus low / high per component (the range only sums recommended ones)
     items, cost = [], {k: [0.0, 0.0] for k in COMPONENTS}
     hp_pv = sizing.heatpump_extra_kwp if adds_hp_pv else 0.0   # PV that exists for the heat pump
+    roi_invest = [0.0]   # solar + battery lines only: the ROI never includes heat pump or wallbox (EywaSahbi)
 
     def line(label, qty, unit, unit_mid, comp, unit_lo=None, unit_hi=None, share=None):
         """One quote line; low / high feed the range (products are fixed prices, labour has a sourced band)."""
@@ -152,6 +153,8 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         hi = unit_mid if unit_hi is None else unit_hi
         items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": round(unit_mid, 2),
                       "total_eur": round(qty * unit_mid, 2)})
+        if comp in ("pv", "battery"):
+            roi_invest[0] += qty * unit_mid
         for c, f in (share or {comp: 1.0}).items():
             cost[c][0] += f * qty * lo
             cost[c][1] += f * qty * hi
@@ -220,14 +223,22 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         fuel_before = heat / price_of("boiler_efficiency", overrides)[0] \
             * price_of(FUEL.get(home.heating_type, "gas_eur_per_kwh"), overrides)[0]
     elec_after = after["import"] * price - after["export"] * feed_in
-    savings = elec_before + fuel_before - elec_after
+    # ROI = solar + battery only (EywaSahbi): the same loads as after (EV and heat pump power included) with and
+    # without the new PV / battery; no heat pump or wallbox cost, no fuel saving from switching heating.
+    if home.existing_pv_kwp:
+        no_new = sim(round(house), round(home.ev_kwh), round(home.heatpump_kwh + hp_el), round(home.existing_pv_kwp, 2),
+                     round(home.y_kwh_per_kwp, 1), existing_bat)
+    else:
+        no_new = {"import": after["load"], "export": 0.0}
+    savings = no_new["import"] * price - no_new["export"] * feed_in - elec_after
+    invest = roi_invest[0]
     gen = after["generation"]
     economics = {
         "total_demand_kwh": round(after["load"]),
         "self_consumption_pct": round(100 * after["self_used"] / gen, 1) if gen else 0.0,
         "autarky_pct": round(100 * after["self_used"] / after["load"], 1) if after["load"] else 0.0,
         "annual_savings_eur": round(savings),
-        "payback_years": round(total / savings, 1) if savings > 0 and total else None,
+        "payback_years": round(invest / savings, 1) if savings > 0 and invest else None,
         "bill_today_eur_per_month": round((elec_before + fuel_before) / 12),
         "bill_after_eur_per_month": round(elec_after / 12),
     }

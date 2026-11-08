@@ -53,7 +53,7 @@ type Design = {
   price: { items: { label: string; qty: number; unit: string; unit_price_eur: number; total_eur: number }[];
            total_eur: number; range_eur: [number, number] };
   economics: { total_demand_kwh: number; self_consumption_pct: number; autarky_pct: number;
-               annual_savings_eur: number; payback_years: number | null;
+               annual_savings_eur: number; payback_years: number | null;   // ROI = solar + battery only: PV + battery lines vs the electricity bill at the same loads; never heat pump / wallbox cost or fuel savings
                bill_today_eur_per_month: number; bill_after_eur_per_month: number };   // after < 0 = net feed-in credit
   bundle: "S" | "M" | "L" | "XL" | null;                                          // by new PV kWp: < 6, < 10, < 14, else XL
   installer_profile: string | null;     // installer whose expert habits were used, null = all installers
