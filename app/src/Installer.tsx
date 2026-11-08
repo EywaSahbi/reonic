@@ -268,7 +268,8 @@ function PlanDetail({ id }: { id: string }) {
         </section>
       )}
 
-      {(quoted || plan.offer_pack?.status !== "ready") && <section className="card finalize">
+      {/* the offer pack no longer carries a send-quote step: the planner finalises here (EywaSahbi) */}
+      <section className="card finalize">
         {quoted ? (
           <p><strong>Quote sent.</strong> The customer now sees the confirmed plan and price on the website.</p>
         ) : (
@@ -278,7 +279,7 @@ function PlanDetail({ id }: { id: string }) {
             <button className="btn-primary" onClick={finalize} disabled={busy || isOffline(d)}>Finalise and send quote · {eur(d.price.total_eur)}</button>
           </>
         )}
-      </section>}
+      </section>
     </div>
   );
 }
