@@ -192,5 +192,7 @@ def test_customer_engine_calls_carry_the_reveal_locks(tmp_path, monkeypatch):
     monkeypatch.setattr(engine, "design", lambda f, locks=None, prices=None: seen.append(dict(locks or {})) or fake_design(f, locks, prices))
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     assert set(seen[-1]) == {"pv", "battery", "wallbox", "heatpump"}  # empty house, no price
+    first = c.get(f"/sessions/{pid}").json()["design"]["components"]
+    assert "electricity use" in first["pv"]["reasons"][0] and "installer" not in first["wallbox"]["reasons"][0]
     c.post(f"/sessions/{pid}/messages", json={"text": "we use about 4,500 kWh a year"})
     assert set(seen[-1]) == {"wallbox", "heatpump"}
