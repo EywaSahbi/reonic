@@ -54,11 +54,7 @@
 /* the widget in stage mode fills the sheet */
 .widget.widget-stage { position: static; inset: auto; width: 100%; height: 100%; max-width: none; border: 0; border-radius: 0; box-shadow: none; background: transparent; animation: none; }
 .widget-stage .widget-head { padding: 16px 24px; background: rgba(255, 255, 255, 0.6); }
-.widget-stage .chat-log { padding: 24px max(16px, calc((100% - 680px) / 2)); }
-.widget-stage .chat-controls { padding: 14px max(16px, calc((100% - 680px) / 2)) 20px; }
-.widget-stage.widget-wide .chat-log, .widget-stage.widget-wide .chat-controls { padding-left: 24px; padding-right: 24px; }
-.widget-stage .plan { width: 380px; background: rgba(255, 255, 255, 0.55); }
-.widget-stage .bubble { font-size: 16px; line-height: 24px; }
+
 
 /* ---------- below the hero ---------- */
 .home-more { max-width: 1180px; margin: 0 auto; padding: 72px clamp(16px, 4vw, 48px) 96px; }
@@ -80,15 +76,4 @@
 }
 .reo-avatar-slot { width: 40px; height: 40px; display: grid; place-items: center; flex-shrink: 0; }
 
-.reo-message { display: flex; align-items: flex-start; gap: 12px; width: 100%; }
-.reo-message-avatar { display: flex; flex: 0 0 104px; width: 104px; justify-content: center; }
-.reo-message-avatar > .reo-character { width: 100%; }
-.reo-message .bubble { position: relative; min-width: 0; max-width: calc(100% - 116px); margin-top: 18px; border-radius: 4px 18px 18px 18px; }
-.reo-message .bubble::before { content: ""; position: absolute; top: 0; left: -9px; width: 10px; height: 13px; background: var(--paper-sand); clip-path: polygon(100% 0, 100% 100%, 0 0); }
-@media (max-width: 600px) {
-  .reo-message { gap: 8px; }
-  .reo-message-avatar { flex-basis: 64px; width: 64px; }
-  .reo-message-avatar > * { max-width: 64px; height: auto; }
-  .reo-message .bubble { max-width: calc(100% - 72px); margin-top: 10px; }
-  .widget-stage .chat-log { padding: 18px 12px; }
-}
+.widget-stage .results .plan { background: transparent; }

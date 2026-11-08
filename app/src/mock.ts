@@ -285,9 +285,11 @@ export const mockApi: Api = {
     return delay(respondToFacts(plan, facts, text, skipped));
   },
 
-  async sendFacts(id, facts) {
+  async sendFacts(id, facts, skip = []) {
     const plan = get(id);
-    return delay(respondToFacts(plan, facts, "facts", (skippedBySession[id] ??= new Set())));
+    const skipped = (skippedBySession[id] ??= new Set());
+    skip.forEach((f) => skipped.add(f));
+    return delay(respondToFacts(plan, facts, "facts", skipped));
   },
 
   async sendBill(id, _image) {

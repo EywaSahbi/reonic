@@ -49,7 +49,8 @@ export type Api = {
   sendVoice(id: string, audio: Blob): Promise<VoiceTurn>;
   startSession(): Promise<Turn>;
   sendMessage(id: string, text: string): Promise<Turn>;
-  sendFacts(id: string, facts: Partial<HomeFacts>): Promise<Turn>;
+  /** skip: ask fields the customer skipped (reo/CONTRACT.md /facts). */
+  sendFacts(id: string, facts: Partial<HomeFacts>, skip?: string[]): Promise<Turn>;
   sendBill(id: string, image: File): Promise<Turn>;
   sendAddress(id: string, address: string): Promise<Turn>;
   handoff(id: string, name: string, email?: string): Promise<Plan>;
@@ -81,7 +82,7 @@ const httpApi: Api = {
   },
   startSession: () => call("POST", "/sessions", {}),
   sendMessage: (id, text) => call("POST", `/sessions/${id}/messages`, { text }),
-  sendFacts: (id, facts) => call("POST", `/sessions/${id}/facts`, { facts }),
+  sendFacts: (id, facts, skip) => call("POST", `/sessions/${id}/facts`, { facts, ...(skip?.length ? { skip } : {}) }),
   async sendBill(id, image) {
     const form = new FormData();
     form.append("image", image);
