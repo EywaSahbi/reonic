@@ -1,4 +1,4 @@
-import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
+import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type Plan } from "./types";
 import { House } from "./House";
 import { Satellite } from "./Satellite";
 import { lazy, Suspense, useEffect, useState } from "react";
@@ -10,14 +10,31 @@ const webglOk = () => {
   return gl;
 };
 
+/** The house fills up as the customer answers (EywaSahbi): panels + battery once the demand is known, wallbox once the EV
+ *  question is answered, heat pump once the heating is known; everything after the handoff. Picture only: the engine's
+ *  design and every number on the card stay as they are. */
+function revealed(plan: Plan): Design {
+  if (plan.status !== "drafting") return plan.design;
+  const f = plan.facts, c = plan.design.components;
+  const show: Record<ComponentKey, boolean> = {
+    pv: f.total_demand_kwh != null || f.annual_demand_kwh != null || f.num_inhabitants != null,
+    battery: f.total_demand_kwh != null || f.annual_demand_kwh != null || f.num_inhabitants != null,
+    wallbox: f.has_ev != null || f.ev_planned != null,
+    heatpump: f.heating_type != null,
+  };
+  const hide = (k: ComponentKey) => (show[k] ? c[k] : { ...c[k], recommended: false });
+  return { ...plan.design, components: { pv: hide("pv"), battery: hide("battery"), heatpump: hide("heatpump"), wallbox: hide("wallbox") } };
+}
+
 /** 3D house (engine design drawn on the roof); once an address was found, the satellite photo of the customer's
  *  building replaces it (EywaSahbi), with the 3D plan one tab away. */
 function HouseView({ plan }: { plan: Plan }) {
   const label = plan.roof_location?.label;
   const [view, setView] = useState<"3d" | "photo">(label ? "photo" : "3d");
   useEffect(() => { if (label) setView("photo"); }, [label]); // a new address switches to its photo
-  const flat = <House design={plan.design} />;
-  const three = webglOk() ? <Suspense fallback={flat}><House3D design={plan.design} facts={plan.facts} /></Suspense> : flat;
+  const design = revealed(plan);
+  const flat = <House design={design} />;
+  const three = webglOk() ? <Suspense fallback={flat}><House3D design={design} facts={plan.facts} /></Suspense> : flat;
   if (!plan.roof_location) return three;
   return (
     <div className="house-views">
