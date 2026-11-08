@@ -181,6 +181,10 @@
     tl.to("#c5-pnone", { opacity: 0, duration: 0.2 }, H + 1.7);
     tl.fromTo("#c5-prow", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, H + 1.75);
 
+    // scene 6 takes over at film 73.2: the customer's window slides away and the planner placeholder is covered by the real planner window
+    tl.to("#c5-group", { x: -760, opacity: 0, duration: 0.6, ease: "power3.in" }, TOTAL + 1.5);
+    tl.to(["#c5-planner", "#c5-plabel"], { opacity: 0, duration: 0.3 }, TOTAL + 1.75);
+
     window.__timelines["customer"] = tl;
   </script>
 </template>
