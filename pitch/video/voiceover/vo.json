@@ -1,0 +1,26 @@
+{
+  "_comment": "Voice-over for scenes 1-4 (0:00-0:46). start = seconds from the start of the video (global). until = latest second the line may end (the next visual beat). 'on screen' is what the picture does at that moment. Edit text freely; only changed lines are regenerated.",
+  "duration": 46,
+  "lines": [
+    { "id": "01-wants-solar",  "start": 1.0,  "until": 2.8,  "text": "A homeowner wants solar.",
+      "on screen": "4,500 types in, 'kWh a year' rises (1.7)" },
+    { "id": "02-one-number",   "start": 2.8,  "until": 5.8,  "text": "All they know is one number from their bill.",
+      "on screen": "caption 'A homeowner wants solar. This is all they know.' (2.3-4.7); quote card rises (5.0)" },
+    { "id": "03-form",         "start": 6.4,  "until": 8.0,  "text": "They fill in a form,",
+      "on screen": "number flies into the field (5.1-5.8); cursor moves (6.8) and clicks Get quote (7.8)" },
+    { "id": "04-wait",         "start": 8.4,  "until": 10.4, "text": "and then they wait.",
+      "on screen": "'Thanks! We'll call you back.' (8.2) then the clock (9.7)" },
+    { "id": "05-installer",    "start": 12.3, "until": 17.5, "text": "On the other side, an installer gets another lead that starts from zero.",
+      "on screen": "split: homeowner left, installer right (12.0); lead list (13.4); profile with ? marks (15.0)" },
+    { "id": "06-hours",        "start": 17.9, "until": 21.9, "text": "A planner will spend hours turning it into a design and a price.",
+      "on screen": "checklist types (18.0-20.7), hours bar fills" },
+    { "id": "07-reonic",       "start": 24.6, "until": 27.8, "text": "Reonic already connects installers and their customers.",
+      "on screen": "after the bubble dies in the gap (21-23): 'Reonic already connects the two.' (24.5)" },
+    { "id": "08-further",      "start": 28.3, "until": 30.6, "text": "We wanted to go... further.",
+      "on screen": "'We wanted to go further' (28.2), 'further' wipes to gradient (28.7)" },
+    { "id": "09-meet-reo",     "start": 34.45,"until": 36.2, "text": "Meet reo.",
+      "on screen": "Reonic becomes reo: slide (32.25), turn (33.5), arms (34.55), wave (34.9), lockup (35.9)" },
+    { "id": "10-companion",    "start": 38.4, "until": 43.9, "text": "An agentic companion, dropped onto the installer's website, doing the work in between.",
+      "on screen": "site rises (38.2), reo drops in (39.5-40.1), sites slide through (40.5-43.6), gap returns (43.6)" }
+  ]
+}

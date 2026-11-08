@@ -1,0 +1,11 @@
+# HyperFrames working files (regenerated on every check/snapshot/preview)
+.hyperframes/
+.thumbnails/
+.impeccable/
+renders/
+node_modules/
+
+# generated voice-over: keep only the finished track and subtitles
+voiceover/out/*
+!voiceover/out/vo.mp3
+!voiceover/out/vo.srt

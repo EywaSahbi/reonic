@@ -1,0 +1,341 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2"); font-weight: 700; }
+
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #1b1d20; }
+    #root * { box-sizing: border-box; }
+    .abs { position: absolute; }
+
+    /* installer website (real Sonnfeld hero photo) */
+    #m-site { left: 480px; top: 170px; width: 960px; height: 700px; border-radius: 22px; overflow: hidden; background: #fff;
+      border: 2px solid #e4e4e7; box-shadow: 0 24px 60px rgba(9, 9, 11, 0.12); z-index: 1; opacity: 0; }
+    #m-chrome { left: 0; top: 0; width: 960px; height: 56px; background: #fff; border-bottom: 1px solid #e4e4e7; }
+    .m-dot { top: 20px; width: 16px; height: 16px; border-radius: 8px; background: #e4e4e7; }
+    #m-url { left: 150px; top: 12px; width: 660px; height: 32px; border-radius: 16px; background: #f4f4f5; }
+    #m-hero { left: 0; top: 56px; width: 960px; height: 644px; background: url("assets/house-hero.jpg") center / cover no-repeat; }
+    #m-shade { left: 0; top: 56px; width: 960px; height: 644px; background: linear-gradient(180deg, rgba(9,9,11,.38), rgba(9,9,11,.18) 55%, rgba(9,9,11,.30)); }
+    #m-logo { left: 36px; top: 76px; display: flex; align-items: center; gap: 12px; color: #fff; font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+    .m-nav { top: 92px; height: 12px; border-radius: 6px; background: rgba(255,255,255,.7); }
+    #m-h1 { left: 0; top: 108px; width: 960px; text-align: center; color: #fff; font-size: 66px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+    #m-pill { left: 345px; top: 292px; width: 270px; height: 74px; border-radius: 37px; background: #1b1d20; color: #fff; font-size: 28px; font-weight: 600;
+      text-align: center; line-height: 74px; }
+
+    /* three generic installer sites (fictional, flat colour, one theme each) */
+    .m-gsite { left: 480px; top: 170px; width: 960px; height: 700px; border-radius: 22px; overflow: hidden; border: 2px solid #e4e4e7;
+      box-shadow: 0 24px 60px rgba(9, 9, 11, 0.12); z-index: 1; opacity: 0; background: var(--bg); }
+    .gs-hero { left: 0; top: 56px; width: 960px; height: 644px; background: var(--bg); }
+    .gs-bar { left: 0; top: 0; width: 960px; height: 56px; background: #fff; border-bottom: 1px solid #e4e4e7; }
+    .gs-logo { left: 36px; top: 76px; display: flex; align-items: center; gap: 12px; color: var(--fg); font-size: 30px; font-weight: 700; letter-spacing: -0.01em; }
+    .gs-mark { display: inline-block; width: 36px; height: 36px; background: var(--ac); }
+    .gs-nav { top: 92px; height: 12px; border-radius: 6px; background: var(--fg); opacity: 0.45; }
+    .gs-h1 { left: 0; top: 108px; width: 960px; text-align: center; color: var(--fg); font-size: 66px; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; }
+    .gs-cta { left: 335px; top: 292px; width: 290px; height: 74px; background: var(--ac); color: var(--acfg); font-size: 28px; font-weight: 600; text-align: center; line-height: 74px; }
+
+    /* the two sides, back in the gap */
+    .m-side { z-index: 2; background: #fff; border: 2px solid #e4e4e7; box-shadow: 0 18px 44px rgba(9,9,11,.08); opacity: 0; }
+    .m-edge { position: absolute; inset: -4px; border-radius: inherit; border: 4px solid transparent; opacity: 0;
+      background: linear-gradient(#fff, #fff) padding-box, linear-gradient(120deg, #f7a35c, #f2784b 50%, #ee6a5b) border-box;
+      -webkit-mask: linear-gradient(#000 0 0) padding-box exclude, linear-gradient(#000 0 0); }
+    #m-bub { left: 140px; top: 576px; width: 500px; height: 100px; border-radius: 50px; font-size: 28px; font-weight: 500; color: #1b1d20; white-space: nowrap;
+      display: flex; align-items: center; justify-content: center; padding: 0 30px 0 22px; line-height: 1; }
+    #m-card { left: 1280px; top: 526px; width: 430px; height: 200px; border-radius: 24px; padding: 28px 32px; }
+    #m-card .t { font-size: 30px; font-weight: 600; color: #1b1d20; margin-bottom: 22px; }
+    #m-card .b { height: 14px; border-radius: 7px; background: #e4e4e7; margin-bottom: 14px; }
+
+    /* reo */
+    #m-reo { left: 240px; top: 276px; width: 1440px; height: 528px; z-index: 5; opacity: 0; }
+    #m-sq { position: absolute; inset: 0; transform-origin: 50% 85%; }
+    #m-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+    #m-sub { left: 0; top: 850px; width: 1920px; text-align: center; font-size: 56px; font-weight: 500; letter-spacing: -0.01em; color: #3f3f46; opacity: 0; z-index: 6; }
+    #m-sub .gr { background: linear-gradient(90deg, #f7a35c, #f2784b 55%, #ee6a5b); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 600; }
+  </style>
+
+  <div id="root" data-composition-id="meet" data-width="1920" data-height="1080">
+    <!-- A: Greenleaf Solar (green, rounded) -->
+    <div id="m-siteA" class="abs m-gsite" style="--bg:#14532D;--fg:#ffffff;--ac:#86EFAC;--acfg:#052E16" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:540px;top:330px;width:560px;height:560px;border-radius:50%;background:var(--ac);opacity:.16"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="border-radius:50% 0 50% 0"></span>Greenleaf Solar</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" data-layout-allow-overlap data-layout-allow-occlusion>Power your home<br />with the sun</div>
+      <div class="abs gs-cta" style="border-radius:37px" data-layout-allow-overlap>Get a free quote</div>
+    </div>
+    <!-- B: Bluepeak Energy (light, blue, square) -->
+    <div id="m-siteB" class="abs m-gsite" style="--bg:#EAF1FF;--fg:#0B1F4B;--ac:#2563EB;--acfg:#ffffff" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:-40px;top:420px;width:420px;height:210px;border-radius:24px;background:var(--ac);opacity:.12;transform:rotate(-10deg)"></div>
+      <div class="abs" style="left:640px;top:460px;width:380px;height:190px;border-radius:24px;background:var(--ac);opacity:.12;transform:rotate(8deg)"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="border-radius:8px"></span>Bluepeak Energy</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" data-layout-allow-overlap data-layout-allow-occlusion>Clean power,<br />priced clearly</div>
+      <div class="abs gs-cta" style="border-radius:12px" data-layout-allow-overlap>Request a quote</div>
+    </div>
+    <!-- C: Amberline Power (dark, amber, sharp) -->
+    <div id="m-siteC" class="abs m-gsite" style="--bg:#111113;--fg:#ffffff;--ac:#FACC15;--acfg:#111113" data-layout-allow-overflow>
+      <div class="abs gs-hero"></div>
+      <div class="abs" style="left:-80px;top:560px;width:1120px;height:70px;background:var(--ac);transform:rotate(-7deg)"></div>
+      <div class="abs gs-bar"><div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div><div class="abs" style="left:150px;top:12px;width:660px;height:32px;border-radius:16px;background:#f4f4f5"></div></div>
+      <div class="abs gs-logo"><span class="gs-mark" style="transform:rotate(45deg) scale(.8)"></span>Amberline Power</div>
+      <div class="abs gs-nav" style="left:560px;width:70px"></div><div class="abs gs-nav" style="left:650px;width:90px"></div><div class="abs gs-nav" style="left:760px;width:60px"></div>
+      <div class="abs gs-h1" style="text-transform:uppercase;font-size:58px;letter-spacing:-0.01em" data-layout-allow-overlap data-layout-allow-occlusion>Solar that<br />pays you back</div>
+      <div class="abs gs-cta" style="border-radius:4px;text-transform:uppercase;letter-spacing:.06em;font-size:24px" data-layout-allow-overlap>Plan my roof</div>
+    </div>
+
+    <div id="m-site" class="abs" data-layout-allow-overflow>
+      <div id="m-hero" class="abs"></div>
+      <div id="m-shade" class="abs"></div>
+      <div id="m-chrome" class="abs">
+        <div class="abs m-dot" style="left:24px"></div><div class="abs m-dot" style="left:52px"></div><div class="abs m-dot" style="left:80px"></div>
+        <div id="m-url" class="abs"></div>
+      </div>
+      <div id="m-logo" class="abs">
+        <svg viewBox="0 0 32 32" width="38" height="38" aria-hidden="true"><defs><linearGradient id="m-sun" x1="0" x2="1" y1="0" y2="1"><stop offset="0" stop-color="#f7a35c"/><stop offset="1" stop-color="#ee6a5b"/></linearGradient></defs><rect width="32" height="32" rx="9" fill="url(#m-sun)"/><path d="M8 19a8 8 0 0 1 16 0" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M6 23h20" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M16 7v2.5M9.5 9.8l1.6 1.8M22.5 9.8l-1.6 1.8" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>
+        Sonnfeld
+      </div>
+      <div class="abs m-nav" style="left:560px; width:70px"></div><div class="abs m-nav" style="left:650px; width:90px"></div><div class="abs m-nav" style="left:760px; width:60px"></div>
+      <div id="m-h1" class="abs" data-layout-allow-overlap data-layout-allow-occlusion>Clean energy<br />for your home</div>
+      <div id="m-pill" class="abs">Plan my home →</div>
+    </div>
+
+    <div id="m-bub" class="abs m-side"><div class="m-edge" id="m-edge1"></div>How much would solar cost me?</div>
+    <div id="m-card" class="abs m-side"><div class="m-edge" id="m-edge2"></div><div class="t">Ready offer</div><div class="b" style="width:300px"></div><div class="b" style="width:240px"></div><div class="b" style="width:270px"></div></div>
+
+    <div id="m-reo" class="abs" data-layout-allow-overflow>
+      <div id="m-sq"><svg id="m-svg" viewBox="0 0 600 220" width="1440" height="528" role="img" aria-label="Reonic becomes reo"></svg></div>
+    </div>
+
+    <div id="m-sub" class="abs">An <span class="gr">agentic</span> companion for installers.</div>
+  </div>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    /* ---------------------------------------------------------------------------
+       reo: a 1:1 port of app/src/ReoIntro.tsx (+ ReoAvatar geometry) as a pure function of time.
+       render(local seconds) sets SVG attributes only; nothing here reads a clock.
+       --------------------------------------------------------------------------- */
+    const INK = "#141414", PINK = "#FF6B7A", ORANGE = "#FF9A3C";
+    const R = 30, RI = 17.7;
+    const topBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 0 ${px} ${py + R}A${RI} ${R} 0 0 1 ${px - RI} ${py}Z`;
+    const bottomBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 1 ${px} ${py - R}A${RI} ${R} 0 0 0 ${px - RI} ${py}Z`;
+    const EYE_X = 18, EYE_Y = 2, BROW_LIFT = -44, BROW_SPREAD = 1.14;
+    const browTransform = (lift, spread, rot) => `translate(0 ${lift}) translate(0 -9) scale(${spread}) translate(0 9) rotate(${rot})`;
+    const LEFT_ARM = [-42, 16, -62, 30], RIGHT_ARM = [42, 10, 62, -8];
+    const FOOT = { x: 22, y: 52, rx: 14, ry: 9 };
+
+    const T = {
+      slide: [250, 1050], glide: [1050, 1500], turn: [1500, 1950], brows: [1950, 2450], collapse: [1950, 2250],
+      eyes: [2100, 2550], feet: [2450, 2800], arms: [2550, 2900], wave: [2900, 3900], shift: [2900, 3400],
+      r: [3150, 3550], e: [3300, 3650], o: [3400, 3750], tag: [3650, 4050],
+    };
+    const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+    const seg = (t, [a, b]) => clamp((t - a) / (b - a));
+    const lerp = (a, b, p) => a + (b - a) * p;
+    const inOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+    const outBack = (p, s = 1.70158) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+    const inOutBack = (p, s = 1.70158 * 1.525) =>
+      p < 0.5 ? (Math.pow(2 * p, 2) * ((s + 1) * 2 * p - s)) / 2 : (Math.pow(2 * p - 2, 2) * ((s + 1) * (p * 2 - 2) + s) + 2) / 2;
+
+    const W = 600, H = 220, CY = 110, START_X = 99, ERASE_X = 520, END_X = W / 2, END_S = 1.25;
+    const LOCK_X = 161, WM_X = 288, WM_BASE = 150, WM_XH = 70, WM_EO_W = 160, WM_RIGHT = WM_X + WM_XH + 6 + WM_EO_W;
+    const k = WM_XH / 30;
+    const P = (u, v) => `${(WM_X + u * k).toFixed(2)} ${(WM_BASE + (v - 6) * k).toFixed(2)}`;
+    const R_PATH = `M${P(30, -24)}A${30 * k} ${30 * k} 0 0 0 ${P(0, 6)}A${30 * k} ${15 * k} 0 0 1 ${P(30, 6 - 15)}Z`;
+
+    const BLADES = [
+      { d: topBlade(6, -30), role: "brow", side: 1 },
+      { d: bottomBlade(6, 30), role: "brow", side: -1 },
+      { d: topBlade(27, -30), role: "eye", side: 1 },
+      { d: bottomBlade(27, 30), role: "eye", side: -1 },
+    ];
+
+    const svg = document.getElementById("m-svg");
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="m-gb" gradientUnits="userSpaceOnUse" x1="-55" y1="55" x2="55" y2="-55"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="m-gl" gradientUnits="userSpaceOnUse" x1="-70" y1="-70" x2="70" y2="70"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="m-wm" gradientUnits="userSpaceOnUse" x1="${WM_X}" y1="${WM_BASE - WM_XH}" x2="${WM_RIGHT}" y2="${WM_BASE}"><stop class="rs0" offset="0" stop-color="${PINK}"/><stop class="rs1" offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <clipPath id="m-erase"><rect id="m-eraseRect" x="0" y="0" width="${W}" height="${H}"/></clipPath>
+      </defs>
+      <g clip-path="url(#m-erase)" id="m-reonicG"><text x="190" y="154" font-family="Geist, Inter, sans-serif" font-weight="500" font-size="124" letter-spacing="-2" textLength="361" lengthAdjust="spacingAndGlyphs" fill="${INK}">Reonic</text></g>
+      <g id="m-streaks" stroke="${INK}" stroke-linecap="round" stroke-width="3"><line/><line/><line/></g>
+      <g id="m-ic">
+        <g id="m-feet" fill="url(#m-gl)"><ellipse rx="${FOOT.rx}" ry="${FOOT.ry}"/><ellipse rx="${FOOT.rx}" ry="${FOOT.ry}"/></g>
+        <g id="m-armL"><line stroke="url(#m-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g id="m-armR"><line stroke="url(#m-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g id="m-body"><rect x="-50" y="-50" width="100" height="100" rx="26" fill="${INK}"/><rect id="m-tint" x="-50" y="-50" width="100" height="100" rx="26" fill="url(#m-gb)" opacity="0"/></g>
+        ${BLADES.map((b, i) => `<path id="m-bl${i}" d="${b.d}" fill="#fff" stroke-width="7" stroke-linejoin="round" paint-order="stroke"/>`).join("")}
+        ${[-1, 1].map((s, i) => `<g id="m-eye${i}" opacity="0"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="${INK}"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g>`).join("")}
+      </g>
+      <g id="m-wmk">
+        <path id="m-rp" d="${R_PATH}" fill="url(#m-wm)"/>
+        <text id="m-e" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#m-wm)" x="${WM_X + WM_XH + 6}" y="${WM_BASE}">e</text>
+        <text id="m-o" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#m-wm)" x="${WM_X + WM_XH + 6 + WM_EO_W / 2}" y="${WM_BASE}">o</text>
+        <text id="m-tag" x="${WM_RIGHT}" y="${WM_BASE + 34}" text-anchor="end" font-family="Geist, Inter, sans-serif" font-weight="500" font-size="22" fill="${INK}">by Reonic</text>
+      </g>`;
+    const $ = (id) => document.getElementById(id);
+    const el = {
+      eraseRect: $("m-eraseRect"), reonicG: $("m-reonicG"), streaks: $("m-streaks"), ic: $("m-ic"), feet: $("m-feet"),
+      armL: $("m-armL"), armR: $("m-armR"), body: $("m-body"), tint: $("m-tint"), wmk: $("m-wmk"), rp: $("m-rp"),
+      e: $("m-e"), o: $("m-o"), tag: $("m-tag"), eyes: [$("m-eye0"), $("m-eye1")], bl: BLADES.map((_, i) => $("m-bl" + i)),
+    };
+    const lines = el.streaks.querySelectorAll("line");
+    const feetEl = el.feet.querySelectorAll("ellipse");
+    const setArm = (g, sx, sy, ex, ey, angle, visible) => {
+      const ln = g.firstElementChild;
+      g.setAttribute("display", visible ? "inline" : "none");
+      g.setAttribute("transform", `rotate(${angle} ${sx} ${sy})`);
+      ln.setAttribute("x1", sx); ln.setAttribute("y1", sy); ln.setAttribute("x2", ex); ln.setAttribute("y2", ey);
+    };
+    const blinkAt = (idle) => {
+      if (idle < 600) return 1;
+      const q = ((idle - 600) % 3400) / 170;
+      return q < 1 ? 1 - 0.92 * Math.sin(Math.PI * q) : 1;
+    };
+
+    // reo takes on each installer's theme: [light stop, dark stop] per site, morphing as the site arrives
+    const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const mixHex = (a, b, p) => { const A = hex(a), B = hex(b); return "#" + A.map((v, i) => Math.round(lerp(v, B[i], p)).toString(16).padStart(2, "0")).join(""); };
+    const THEMES = { sun: [PINK, ORANGE], A: ["#1F9D55", "#6EE7A8"], B: ["#1D4ED8", "#60A5FA"], C: ["#F59E0B", "#FDE047"] };
+    const KEYS = [[0, "sun"], [9.6, "sun"], [9.95, "A"], [10.6, "A"], [10.9, "B"], [11.8, "B"], [12.1, "C"], [13.0, "C"], [13.3, "sun"]];
+    const themeAt = (local) => {
+      let i = 0;
+      while (i < KEYS.length - 1 && local >= KEYS[i + 1][0]) i++;
+      const [t0, n0] = KEYS[i], [t1, n1] = KEYS[Math.min(i + 1, KEYS.length - 1)];
+      const p = t1 === t0 ? 1 : inOutCubic(clamp((local - t0) / (t1 - t0)));
+      return [mixHex(THEMES[n0][0], THEMES[n1][0], p), mixHex(THEMES[n0][1], THEMES[n1][1], p)];
+    };
+    const stops0 = svg.querySelectorAll(".rs0"), stops1 = svg.querySelectorAll(".rs1");
+
+    // the whole scene-4 timeline in local seconds: the intro clock starts at local 2.0
+    const INTRO_AT = 2.0;
+    function render(local) {
+      const t = Math.max(0, (local - INTRO_AT) * 1000);
+      const [c0, c1] = themeAt(local);
+      stops0.forEach((n) => n.setAttribute("stop-color", c0));
+      stops1.forEach((n) => n.setAttribute("stop-color", c1));
+      const wordmarkOut = 1 - inOutCubic(seg(local, [8.0, 8.6])); // wordmark leaves, reo steps to centre
+      const reach = outBack(seg(local, [14.2, 15.1]), 1.4);       // both arms reach the two sides
+
+      const pSlide = inOutCubic(seg(t, T.slide));
+      const pGlide = inOutCubic(seg(t, T.glide));
+      const mix = inOutCubic(seg(t, T.shift)) * wordmarkOut;
+      const x = t < T.glide[0] ? lerp(START_X, ERASE_X, pSlide) : lerp(lerp(ERASE_X, END_X, pGlide), LOCK_X, mix);
+      const s = lerp(1, END_S, pGlide);
+      const dt = 16;
+      const speed = clamp((Math.abs(inOutCubic(seg(t + dt, T.slide)) - inOutCubic(seg(t - dt, T.slide))) * (ERASE_X - START_X)) / (2 * dt) / 0.9);
+
+      const pTurnRaw = seg(t, T.turn);
+      const rot = 90 * inOutBack(pTurnRaw);
+      const hop = -14 * Math.sin(Math.PI * pTurnRaw);
+      const tint = inOutCubic(clamp((pTurnRaw - 0.45) / 0.4));
+
+      const pBrow = outBack(seg(t, T.brows));
+      const pCollapse = inOutCubic(seg(t, T.collapse));
+      const pEyes = seg(t, T.eyes);
+      const eyeOpen = pEyes === 0 ? 0 : outBack(pEyes, 2.2);
+      const pFeet = outBack(seg(t, T.feet), 2.4);
+      const pArms = outBack(seg(t, T.arms), 2.4);
+      const pWave = seg(t, T.wave);
+      const wave = pWave > 0 && pWave < 1 ? 22 * Math.sin(pWave * Math.PI * 4) * (1 - pWave * 0.6) : 0;
+      const blink = blinkAt((local - INTRO_AT) * 1000 - T.tag[1]);
+
+      // Reonic wordmark, erased behind the icon
+      el.reonicG.setAttribute("display", t < T.glide[0] ? "inline" : "none");
+      el.eraseRect.setAttribute("x", x + 40);
+      el.eraseRect.setAttribute("width", Math.max(0, W - (x + 40)));
+      // streaks
+      el.streaks.setAttribute("opacity", speed > 0.05 ? speed * 0.35 : 0);
+      [-26, 0, 26].forEach((dy, i) => {
+        lines[i].setAttribute("x1", x - 58 - speed * (60 + i * 18)); lines[i].setAttribute("x2", x - 58);
+        lines[i].setAttribute("y1", CY + dy); lines[i].setAttribute("y2", CY + dy);
+      });
+      el.ic.setAttribute("transform", `translate(${x} ${CY + hop}) scale(${s})`);
+
+      el.feet.setAttribute("display", pFeet > 0 ? "inline" : "none");
+      [-1, 1].forEach((sd, i) => { feetEl[i].setAttribute("cx", FOOT.x * sd); feetEl[i].setAttribute("cy", lerp(FOOT.y - 14, FOOT.y, pFeet)); });
+      const lex = lerp(LEFT_ARM[2], -104, reach), ley = lerp(LEFT_ARM[3], 22, reach);
+      const rex = lerp(RIGHT_ARM[2], 104, reach), rey = lerp(RIGHT_ARM[3], 22, reach);
+      setArm(el.armL, LEFT_ARM[0], LEFT_ARM[1], lerp(LEFT_ARM[0], lex, pArms), lerp(LEFT_ARM[1], ley, pArms), 0, pArms > 0);
+      setArm(el.armR, RIGHT_ARM[0], RIGHT_ARM[1], lerp(RIGHT_ARM[0], rex, pArms), lerp(RIGHT_ARM[1], rey, pArms), wave * (1 - reach), pArms > 0);
+
+      el.body.setAttribute("transform", `rotate(${rot})`);
+      el.tint.setAttribute("opacity", tint);
+      BLADES.forEach((b, i) => {
+        const p = el.bl[i];
+        p.setAttribute("stroke", tint > 0.5 ? "url(#m-gb)" : INK);
+        if (b.role === "brow") {
+          p.setAttribute("transform", browTransform(BROW_LIFT * pBrow, lerp(1, BROW_SPREAD, pBrow), rot));
+          p.setAttribute("opacity", 1);
+        } else {
+          const bcx = 17 * b.side, bcy = 7, kk = lerp(1, 0.15, pCollapse);
+          const cx = lerp(bcx, EYE_X * b.side, pCollapse), cy = lerp(bcy, EYE_Y, pCollapse);
+          p.setAttribute("transform", `translate(${cx} ${cy}) scale(${kk}) translate(${-bcx} ${-bcy}) rotate(${rot})`);
+          p.setAttribute("opacity", 1 - clamp((pCollapse - 0.55) / 0.45));
+        }
+      });
+      [-1, 1].forEach((sd, i) => {
+        el.eyes[i].setAttribute("transform", `translate(${EYE_X * sd} ${EYE_Y}) scale(1 ${Math.max(0.04, eyeOpen * blink)})`);
+        el.eyes[i].setAttribute("opacity", clamp(pEyes * 4));
+      });
+
+      // wordmark lockup: r grows from its point, e and o rise, "by Reonic"
+      const pR = seg(t, T.r), rScale = pR === 0 ? 0 : outBack(pR, 2);
+      const rise = (span) => { const p = seg(t, span); return { opacity: clamp(p * 2), dy: 16 * (1 - outBack(p, 2)) }; };
+      const pE = rise(T.e), pO = rise(T.o);
+      el.wmk.setAttribute("display", pR > 0 && wordmarkOut > 0 ? "inline" : "none");
+      el.wmk.setAttribute("opacity", wordmarkOut);
+      el.rp.setAttribute("transform", `translate(${WM_X} ${WM_BASE}) scale(${rScale}) translate(${-WM_X} ${-WM_BASE})`);
+      el.e.setAttribute("y", WM_BASE + pE.dy); el.e.setAttribute("opacity", pE.opacity);
+      el.o.setAttribute("y", WM_BASE + pO.dy); el.o.setAttribute("opacity", pO.opacity);
+      el.tag.setAttribute("opacity", inOutCubic(seg(t, T.tag)));
+    }
+
+    /* ---- HTML around reo ---- */
+    const tl = gsap.timeline({ paused: true });
+    // pure-function driver: every seek re-renders reo from the timeline time
+    const drv = { v: 0 };
+    tl.to(drv, { v: 1, duration: 16, ease: "none", onUpdate: function () { render(this.time()); } }, 0);
+    render(0);
+
+    // lockup fades in on blank paper (local 0.8-1.5), holds still until the intro clock starts at 2.0
+    tl.fromTo("#m-reo", { opacity: 0 }, { opacity: 1, duration: 0.7, ease: "power2.out" }, 0.8);
+
+    // tagline under the lockup (rise), leaves with the wordmark
+    tl.fromTo("#m-sub", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 6.3);
+    tl.to("#m-sub", { opacity: 0, filter: "blur(8px)", duration: 0.3, ease: "power2.in" }, 8.0);
+
+    // drop-in (38.2 -> 40.1): site A rises, reo lifts, then falls into its hero and lands
+    tl.fromTo("#m-siteA", { opacity: 1, y: 1100, x: 0 }, { opacity: 1, y: 0, duration: 1.0, ease: "power3.out" }, 8.2);
+    tl.fromTo("#m-reo", { y: 0, scale: 1 }, { y: -420, scale: 0.55, duration: 0.9, ease: "power3.inOut" }, 8.3);
+    tl.to("#m-reo", { y: -450, duration: 0.3, ease: "power2.out" }, 9.2);   // anticipation
+    tl.to("#m-reo", { y: 150, duration: 0.6, ease: "power3.in" }, 9.5);       // the drop
+    tl.to("#m-sq", { scaleY: 0.86, scaleX: 1.1, duration: 0.1, ease: "power2.out" }, 10.1); // impact squash
+    tl.to("#m-sq", { scaleY: 1, scaleX: 1, duration: 0.45, ease: "back.out(2.6)" }, 10.2);
+
+    // carousel (40.5 -> 43.6): sites slide through the centre, reo stays and takes each theme (render() morphs the colour)
+    tl.to("#m-siteA", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 10.5);
+    tl.fromTo("#m-siteB", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 10.5);
+    tl.to("#m-siteB", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 11.7);
+    tl.fromTo("#m-siteC", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 11.7);
+    tl.to("#m-siteC", { x: -1500, duration: 0.7, ease: "power3.inOut" }, 12.9);
+    tl.fromTo("#m-site", { opacity: 1, x: 1500 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.inOut" }, 12.9);
+
+    // the gap returns (43.6 -> 44.9): Sonnfeld recedes, reo grows and centres, the two sides slide in
+    tl.to("#m-site", { scale: 0.55, duration: 1.0, ease: "power3.inOut" }, 13.6);
+    tl.to("#m-site", { opacity: 0, duration: 0.6, ease: "power2.inOut" }, 14.0); // clears the stage for the two sides
+    tl.to("#m-reo", { y: 20, scale: 1.0, duration: 1.0, ease: "power3.inOut" }, 13.6);
+    tl.fromTo("#m-bub", { opacity: 0, x: -200 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 13.9);
+    tl.fromTo("#m-card", { opacity: 0, x: 200 }, { opacity: 1, x: 0, duration: 0.7, ease: "power3.out" }, 14.1);
+    // hands arrive (render() reaches 14.2-15.1); both sides light up in the sunset edge
+    tl.to(["#m-edge1", "#m-edge2"], { opacity: 1, duration: 0.5, ease: "power2.out" }, 14.9);
+
+    window.__timelines["meet"] = tl;
+  </script>
+</template>
