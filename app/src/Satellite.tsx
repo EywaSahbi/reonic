@@ -6,6 +6,7 @@ import type { RoofLocation } from "./types";
 // Tiles and outline share one Web-Mercator pixel space, so the outline sits exactly on the building.
 const W = 640, H = 380; // same shape as the drawn house (320 x 190)
 const TILE = 256, MAX_ZOOM = 19; // Esri has real imagery up to 19 in Germany; 20 is a placeholder
+const FILL = 0.6, MAX_UPSCALE = 2; // beyond zoom 19 we enlarge: house fills ~60% of the frame, at most 2x (sharper than 2.5x)
 const URL = (z: number, x: number, y: number) =>
   `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 
@@ -31,20 +32,24 @@ export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: Reac
   const p = pts.map(([la, lo]) => px(la, lo, z));
   const cx = (Math.max(...p.map((q) => q[0])) + Math.min(...p.map((q) => q[0]))) / 2;
   const cy = (Math.max(...p.map((q) => q[1])) + Math.min(...p.map((q) => q[1]))) / 2;
-  const left = cx - W / 2, top = cy - H / 2;
+  const bw = Math.max(...p.map((q) => q[0])) - Math.min(...p.map((q) => q[0]));
+  const bh = Math.max(...p.map((q) => q[1])) - Math.min(...p.map((q) => q[1]));
+  const scale = Math.min(MAX_UPSCALE, Math.max(1, Math.min((FILL * W) / (bw || 1), (FILL * H) / (bh || 1))));
+  const vw = W / scale, vh = H / scale; // the part of the zoom-z map shown in the frame
+  const left = cx - vw / 2, top = cy - vh / 2;
   const tiles: { x: number; y: number }[] = [];
-  for (let x = Math.floor(left / TILE); x <= Math.floor((left + W) / TILE); x++)
-    for (let y = Math.floor(top / TILE); y <= Math.floor((top + H) / TILE); y++) tiles.push({ x, y });
+  for (let x = Math.floor(left / TILE); x <= Math.floor((left + vw) / TILE); x++)
+    for (let y = Math.floor(top / TILE); y <= Math.floor((top + vh) / TILE); y++) tiles.push({ x, y });
   const outline = loc.outline?.length ? p.map(([x, y]) => `${x - left},${y - top}`).join(" ") : "";
 
   return (
     <figure className="house satellite" aria-label={`Satellite view of ${loc.label}`}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" className="satellite-frame">
+      <svg viewBox={`0 0 ${vw} ${vh}`} role="img" className="satellite-frame">
         {tiles.map(({ x, y }, i) => (
           <image key={`${x}-${y}`} href={URL(z, x, y)} x={x * TILE - left} y={y * TILE - top} width={TILE} height={TILE}
             onError={i === 0 ? () => setFailed(true) : undefined} />
         ))}
-        {outline && <polygon points={outline} className="satellite-outline" />}
+        {outline && <polygon points={outline} className="satellite-outline" vectorEffect="non-scaling-stroke" />}
       </svg>
       <figcaption>Your building, outlined as used for the roof estimate · Imagery © Esri, Maxar, Earthstar Geographics</figcaption>
     </figure>
