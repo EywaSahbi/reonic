@@ -9,7 +9,7 @@
 | [reproduce_score.py](reproduce_score.py) | re-runs the engine on the dataset from its `train`-fitted parameters and re-scores `val`/`test` |
 | [STATUS.md](STATUS.md) | backlog and what is verified |
 
-What was reproduced (see the report for the exact runs): a fresh clone passes all tests without API keys, the 9 harness scenarios pass in scripted mode, and the published validation numbers match a fresh run with 0 missing predictions.
+What was reproduced (see the report for the exact runs): a fresh clone builds and runs without API keys, and the published validation numbers match a fresh run with 0 missing predictions.
 
 ```bash
 # services already running

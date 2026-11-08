@@ -10,7 +10,7 @@ This folder turns the two installers' raw CSVs into **one row per project** (the
 |---|---|---|
 | Raw CSVs → one expert design per project, inputs under the engine's `HomeFacts` names | [`build.py`](build.py) | `processed/projects.parquet`, `processed/split.csv` (1,098 train / 238 val / 235 test, by customer, no leakage) |
 | What experts deliver for similar homes (train only) | [`benchmarks.py`](benchmarks.py) | `processed/benchmarks.json` (reo's flags) |
-| Hard-case homes for the harness evals | [`scenarios.py`](scenarios.py) | `processed/scenarios.json` |
+| Hard-case homes built from `train` | [`scenarios.py`](scenarios.py) | `processed/scenarios.json` |
 | Engine predictions vs experts | [`score.py`](score.py) | JSON reports in `reports/` |
 | Per-installer comparison with and without profile | [`installers.py`](installers.py) | `reports/installer_style_val.md` |
 | Reality-check report with charts | [`report.py`](report.py) | `reports/reality_check_*.md` + PNGs |

@@ -2,7 +2,7 @@
 
 The engine turns what a homeowner tells reo (`HomeFacts`, [CONTRACT.md](CONTRACT.md)) into a complete, priced and explained design. It is **deterministic**: rules + physics + parameters measured on the expert designs (train split only) and on public data. No LLM, no state, no randomness. Same input, same output.
 
-Everything below is built, tested (65 tests) and served on `:8000`. Every outside number is listed with its source in [SOURCES.md](SOURCES.md); the build log is [PLAN.md](PLAN.md), the live backlog [STATUS.md](STATUS.md).
+Everything below is built and served on `:8000`. Every outside number is listed with its source in [SOURCES.md](SOURCES.md); the build log is [PLAN.md](PLAN.md), the live backlog [STATUS.md](STATUS.md).
 
 ## Overview
 

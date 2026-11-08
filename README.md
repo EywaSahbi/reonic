@@ -32,7 +32,7 @@
 
 | Folder | What lives there | Open |
 |---|---|---|
-| **app/** | the web UI: white-label installer website with the reo advisor, and the planner workspace (roof editor, design studio, offer pack) | [**app/README.md**](app/README.md) |
+| **app/** | the web UI: white-label installer website with the reo advisor, and the planner workspace (roof editor, design studio, next steps with agent traces) | [**app/README.md**](app/README.md) |
 | **reo/** | the reo backend: LLM layer, conversation, agent harness, roof vision, plan store, handoff | [**reo/README.md**](reo/README.md) |
 | **engine/** | the deterministic design core: sizing, pricing, hourly economics, reasons, locks | [**engine/README.md**](engine/README.md) |
 | **data/** | expert designs, the fixed train/val/test split, scoring, benchmarks, reality-check reports | [**data/README.md**](data/README.md) |
@@ -141,7 +141,7 @@ All parameters are fitted on the `train` split only and chosen on `val`; the eng
 - **Customer conversation**: fixed, impact-ordered question flow, instant chip turns without an LLM, voice in/out, bill reading by vision, a goal planner ("lowest bill", "stay under €X"), a heat-pump comparison with running cost and CO₂ for gas/oil/district homes. Persona and flow are plain files in [experience/](experience/README.md), loaded at runtime.
 - **An agent harness, not a pile of prompts**: every capability is a *skill* (prompt + allowed tools + budget + output schema) on one runtime. Tools have effect classes — `read`, `propose`, `execute` — and **`execute` (book a visit, send the quote) can never be called by a model**: only the planner's approve click runs it. Guards in code check that every number in a model's output matches a tool result of that run. Every step lands in a trace the UI shows live.
 - **Evidence without leaks**: flags such as "battery larger than 85% of similar homes" use aggregate benchmarks built from training homes; individual homes never reach a customer or an LLM.
-- **Works without luck**: with no API key (or on any LLM error) a scripted mode produces the same screens and the same approval workflow, so the demo cannot depend on the network. Harness evals on nine hard-case homes pass 9/9 in scripted mode.
+- **Works without luck**: with no API key (or on any LLM error) a scripted mode produces the same screens and the same approval workflow, so the demo cannot depend on the network.
 - **Models**: chat on Haiku 5.5, offer agent and planner Q&A on Sonnet 5.5, roof tracing on Opus 5.5.
 
 ---
@@ -150,9 +150,9 @@ All parameters are fitted on the `train` split only and chosen on `val`; the eng
 
 [app/](app/README.md)
 
-- **Inbox → plan detail**: customer, design, price breakdown, reasons per component, confidence, flags against similar homes, offer pack with replayable agent trace.
-- **Roof editor**: the real satellite photo and the traced outline, with the PV modules **already placed** on the roof. Drag, rotate, add and remove modules, undo, reset to automatic placement; overlapping modules or ones outside the outline turn red. The module *count* feeds the engine, so price and savings re-derive; moving a module changes no number.
-- **Design studio**: 3D build mode for modules and hardware sizes (inverter, battery, heat pump, wallbox).
+- **Inbox → plan detail**: customer, summary sections (Home, Proposal, Assumed, To check), price breakdown, reasons per component, confidence, flags against similar homes, proposed next steps with a replayable agent trace.
+- **Your roof** tab — the roof editor: the real satellite photo and the traced outline, with the PV modules **already placed** on the roof. Drag, rotate, add and remove modules, undo, reset to automatic placement; overlapping modules or ones outside the outline turn red. The module *count* feeds the engine, so price and savings re-derive; moving a module changes no number.
+- **3D plan** tab — the design studio: 3D build mode for modules and hardware sizes (inverter, battery, heat pump, wallbox). Without map data only the studio is shown.
 - **Ask reo why**: grounded answers from the engine's reasons and what-ifs, by text or voice.
 - **Approvals**: proposed actions (book visit, send quote) wait for a planner click; finalising shows the customer the confirmed plan.
 
@@ -178,9 +178,6 @@ Open the [customer site](http://localhost:5173/) and the [planner workspace](htt
 **Checks**
 
 ```bash
-cd engine && uv run pytest                       # 65 tests
-cd reo    && uv run pytest && uv run python -m evals   # 69 tests, 9 harness scenarios
-cd data   && uv run pytest
 cd app    && npm run build
 # score the engine on homes it has not seen:
 cd engine && uv run python predict.py --split test

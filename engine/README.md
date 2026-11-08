@@ -39,7 +39,6 @@ Full shapes: [CONTRACT.md](CONTRACT.md).
 | [`dataset.py`](dataset.py), [`predict.py`](predict.py) | offline: run the engine on the dataset and write predictions for scoring |
 | [`params.json`](params.json), [`prices.json`](prices.json), [`catalog.json`](catalog.json), [`profiles.json`](profiles.json) | parameters (fitted on `train` only), price list, real products, installer profiles |
 | [`tools/`](tools/) | scripts that derive the parameters from the data and public sources |
-| [`tests/`](tests/) | 65 tests |
 | [`video-voiceover/`](video-voiceover/) | the product video's voice-over track |
 
 ## Read next

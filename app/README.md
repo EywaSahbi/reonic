@@ -7,14 +7,14 @@ Two views behind one hash route:
 | URL | View |
 |---|---|
 | `/` | **Customer site**: the white-label installer website ("Sonnfeld") with the step form / advisor reo, the live plan card (3D house, price range marked as estimate, savings, payback), heat-pump comparison, handoff |
-| `/#/installer` | **Planner workspace**: inbox of handed-over plans → plan detail with the roof editor, design studio, price breakdown, reasons, flags, offer pack, "Ask reo why", approve/reject proposed actions, finalise and send the quote |
+| `/#/installer` | **Planner workspace**: inbox of handed-over plans → plan detail with summary sections, a "Your roof" / "3D plan" switch (roof editor and design studio), price breakdown, reasons, flags, "Ask reo why", approve/reject proposed actions, finalise and send the quote |
 
 ## Highlights
 
 - **Living stage**: the advisor explains any number you tap, with voice (ElevenLabs) in and out.
 - **Roof editor** ([`src/RoofEditor.tsx`](src/RoofEditor.tsx)): the satellite photo and traced outline with the PV modules already placed; drag, add, rotate, remove, undo, reset. Only the module count is a number; it re-derives the design.
-- **Design studio** ([`src/scene/DesignStudio.tsx`](src/scene/DesignStudio.tsx)): 3D build mode for modules and hardware sizes; folds into its title bar when real map data exists.
-- **Offer pack and traces** ([`src/OfferPack.tsx`](src/OfferPack.tsx)): the offer agent's variants, checklist, draft message and a replayable step trace.
+- **Design studio** ([`src/scene/DesignStudio.tsx`](src/scene/DesignStudio.tsx)): 3D build mode for modules and hardware sizes, the "3D plan" tab next to "Your roof"; the only view when no map data exists.
+- **Agent traces** ([`src/OfferPack.tsx`](src/OfferPack.tsx)): the offer agent's proposed next steps with a replayable step trace.
 - **Offline mock** ([`src/mock.ts`](src/mock.ts)): the UI runs without a backend when `VITE_API_URL` is not set.
 
 ## Files

@@ -23,7 +23,6 @@ One small runtime that every capability runs on, with no agent framework (Anthro
 | [`skills.py`](harness/skills.py), [`skills/`](harness/skills/) | a skill = prompt + allowed tools + budget + output schema (`offer_prep`, `installer_qa`, `bill_reader`, `goal_planner`) |
 | [`guards.py`](harness/guards.py) | guardrails in code: grounding (every number in the output matches a tool result of the same run), budgets, no execute without approval |
 | [`runner.py`](harness/runner.py) | one loop for every skill, every step recorded as a trace the UI shows (SSE) |
-| [`evals/`](evals/) | harness evals on data's hard-case scenarios (9/9 pass, scripted) |
 
 ## Files
 
@@ -35,7 +34,6 @@ One small runtime that every capability runs on, with no agent framework (Anthro
 | [`engine.py`](engine.py) | thin client for the engine; the only way numbers enter reo |
 | [`voice.py`](voice.py) | ElevenLabs speech-to-text and text-to-speech, spoken-number rules |
 | [`demo_guard.py`](demo_guard.py) | access code and admission limits for the deployed demo |
-| `test_*.py` | 69 tests (fake engine, no keys needed) |
 
 ## Read next
 
