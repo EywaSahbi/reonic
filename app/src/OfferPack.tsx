@@ -106,7 +106,7 @@ function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
   v: Variant; recommended: boolean; chosen: boolean; disabled: boolean; busy: boolean; onChoose: () => void;
 }) {
   const c = v.design.components;
-  const e = v.design.economics as typeof v.design.economics & { bill_after_eur_per_month?: number; bill_today_eur_per_month?: number };
+  const e = v.design.economics;
   const rows: [string, string][] = [
     ["Solar", c.pv.recommended ? `${num(c.pv.size)} kWp` : "–"],
     ["Battery", c.battery.recommended ? `${num(c.battery.size)} kWh` : "–"],
@@ -125,9 +125,7 @@ function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
         {rows.map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}
         <div><dt>Own power</dt><dd>{Math.round(e.autarky_pct)}%</dd></div>
         <div><dt>Payback</dt><dd>{e.payback_years == null ? "–" : `~${Math.round(e.payback_years)} yrs`}</dd></div>
-        {e.bill_after_eur_per_month != null && (
-          <div><dt>Bill / month</dt><dd>{e.bill_today_eur_per_month != null ? `${eur(e.bill_today_eur_per_month)} → ` : ""}{e.bill_after_eur_per_month < 0 ? `${eur(-e.bill_after_eur_per_month)} credit` : eur(e.bill_after_eur_per_month)}</dd></div>
-        )}
+        <div><dt>Range</dt><dd>{eur(v.design.price.range_eur[0])}–{eur(v.design.price.range_eur[1]).slice(1)}</dd></div>
       </dl>
       <p className="op-why">{v.why}</p>
       <button className={chosen ? "btn-ghost small op-inuse" : "btn-small op-use"} disabled={disabled || chosen} onClick={onChoose}>

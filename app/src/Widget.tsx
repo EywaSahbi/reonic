@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { api } from "./api";
 import type { Ask, GoalResult, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
@@ -9,13 +9,14 @@ import { AddressLookup, RoofResultCard, type RoofResult } from "./AddressLookup"
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
+type ChatMessage = Message & { roofResult?: RoofResult };   // roofResult: the roof box that stays under this reply
 const readSaved = () => { try { return localStorage.getItem(SESSION_KEY); } catch { return null; } };
 const writeSaved = (id: string | null) => { try { if (id) localStorage.setItem(SESSION_KEY, id); else localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } };
 const stamp = () => new Date().toISOString();
 
 // The reo chat widget: messages, quick-reply chips, inline input for `ask`, live plan card, handoff.
 export function Widget({ onClose, variant }: { onClose: () => void; variant?: "stage" }) {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [chips, setChips] = useState<string[]>([]);
   const [ask, setAsk] = useState<Ask | undefined>();
@@ -71,7 +72,9 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     setChips([]);
     try {
       const t = await p();
-      setMessages((m) => [...m, ...t.messages]);
+      // the roof box belongs to the reply it came with: it stays under that message while the chat goes on below it
+      const attach = (x: Message, i: number): ChatMessage => (t.roof && i === t.messages.length - 1 ? { ...x, roofResult: { roof: t.roof, facts: t.plan.facts } } : x);
+      setMessages((m) => [...m, ...t.messages.map(attach)]);
       roofReturn.current = null;
       setPlan(t.plan);
       setChips(t.suggestions);
@@ -230,16 +233,18 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
         <div className="chat">
           <div className="chat-log" aria-live="polite">
             {messages.map((m, i) => (
-              m.role === "reo" && i === latestAdvisorIndex ? (
-                <div key={i} className="reo-message">
-                  <span className="reo-message-avatar" aria-hidden><ReoAvatar size={104} greet={false} interactive={false} /></span>
-                  <div className="bubble bubble-reo">{m.text}</div>
-                </div>
-              ) : <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>
+              <Fragment key={i}>
+                {m.role === "reo" && i === latestAdvisorIndex ? (
+                  <div className="reo-message">
+                    <span className="reo-message-avatar" aria-hidden><ReoAvatar size={104} greet={false} interactive={false} /></span>
+                    <div className="bubble bubble-reo">{m.text}</div>
+                  </div>
+                ) : <div className={`bubble bubble-${m.role}`}>{m.text}</div>}
+                {m.roofResult && <RoofResultCard result={m.roofResult} onChange={!handedOver && !busy && m.roofResult.roof === roofResult?.roof ? openRoofLookup : undefined} />}
+              </Fragment>
             ))}
             {busy && <div className="bubble bubble-reo typing"><span /><span /><span /></div>}
             {lookingUpRoof && <div className="address-progress" role="status">Looking up your building and estimating the sunny roof area…</div>}
-            {roofResult && <RoofResultCard result={roofResult} onChange={!handedOver && !busy ? openRoofLookup : undefined} />}
             {goalResult && <div className="goal-result"><strong>Matched to your goal · {goalResult.goal.replace("_", " ")}</strong><GoalVariant variant={goalResult.recommendation} /><div className="goal-alternatives">{goalResult.alternatives.map((v) => <GoalVariant key={v.name} variant={v} />)}</div></div>}
             {error && <div className="chat-error">Something went wrong: {error}</div>}
             {handoffOpen && !handedOver && (

@@ -2,8 +2,34 @@ import { useEffect, useRef, useState } from "react";
 import "./voice.css";
 
 // Push-to-talk for reo (reo/VOICE.md): tap to talk, tap again to send. Records webm/opus (or mp4 on Safari),
-// stops by itself after 30 s. The audio goes to reo only; reo talks to ElevenLabs, the browser never sees a key.
+// stops by itself after 30 s, or 1.5 s after the customer stops speaking (silence detection on the mic level). The audio goes to reo only; reo talks to ElevenLabs, the browser never sees a key.
 const MAX_MS = 30_000;
+const LEVEL = 0.02;        // mic level (RMS, 0..1) above which we count it as speech
+const SILENCE_MS = 1_500;  // quiet this long after speech = the customer is done
+const NO_SPEECH_MS = 8_000; // nothing said at all: give up instead of sending silence
+
+/** Calls onSilence once speech was heard and then stopped, or onNoSpeech if nothing is heard at all. Returns a cleanup. */
+function watchSpeech(stream: MediaStream, onSilence: () => void, onNoSpeech: () => void): () => void {
+  const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!Ctx) return () => {};
+  const ctx = new Ctx();
+  const analyser = ctx.createAnalyser();
+  analyser.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  const t0 = Date.now();
+  let heardAt = 0;
+  let lastLoud = 0;
+  const id = window.setInterval(() => {
+    analyser.getFloatTimeDomainData(buf);
+    const rms = Math.sqrt(buf.reduce((s, x) => s + x * x, 0) / buf.length);
+    const now = Date.now();
+    if (rms > LEVEL) { heardAt ||= now; lastLoud = now; }
+    if (heardAt && now - lastLoud >= SILENCE_MS) onSilence();
+    else if (!heardAt && now - t0 >= NO_SPEECH_MS) onNoSpeech();
+  }, 100);
+  return () => { window.clearInterval(id); void ctx.close().catch(() => {}); };
+}
 
 function pickMime(): string | undefined {
   const types = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"];
@@ -20,11 +46,15 @@ export function MicButton({ disabled, onRecorded, onError, onStart }: {
   const [elapsed, setElapsed] = useState(0);
   const rec = useRef<MediaRecorder | null>(null);
   const timer = useRef<number | undefined>(undefined);
+  const unwatch = useRef<(() => void) | null>(null);
+  const discard = useRef(false);
 
   useEffect(() => () => stopAll(), []);
 
   function stopAll() {
     window.clearInterval(timer.current);
+    unwatch.current?.();
+    unwatch.current = null;
     if (rec.current && rec.current.state !== "inactive") rec.current.stop();
   }
 
@@ -49,9 +79,12 @@ export function MicButton({ disabled, onRecorded, onError, onStart }: {
       setRecording(false);
       window.clearInterval(timer.current);
       const blob = new Blob(chunks, { type: r.mimeType || mime || "audio/webm" });
+      if (discard.current) { discard.current = false; onError("I didn't hear anything. Tap the mic and try again, or type."); return; }
       if (blob.size > 0) onRecorded(blob);
     };
     rec.current = r;
+    discard.current = false;
+    unwatch.current = watchSpeech(stream, stopAll, () => { discard.current = true; stopAll(); });
     r.start();
     onStart?.();
     setRecording(true);
@@ -72,7 +105,7 @@ export function MicButton({ disabled, onRecorded, onError, onStart }: {
       onClick={() => (recording ? stopAll() : start())}
       aria-label={recording ? "Stop and send voice message" : "Talk to the energy advisor"}
       aria-pressed={recording}
-      title={recording ? "Tap to send" : "Tap to talk"}
+      title={recording ? "Stops when you stop speaking, or tap to send" : "Tap to talk"}
     >
       {recording ? (
         <span className="mic-rec"><span className="mic-dot" />{Math.floor(elapsed / 1000)}s</span>
