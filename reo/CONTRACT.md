@@ -149,3 +149,16 @@ State rules (v1.3, cleanup 2026-11-08; no shape changes):
 - A run cut off by a reo restart shows `status: "failed"` (last step `interrupted`) and its pack `failed`; `/prepare` again.
 
 `Action.status` gains `"rejected"`. Effect classes: models only ever call `read` and `propose` tools; `execute` tools (`calendar.book`, `crm.create_task`, `quote.send`) run only from `/approve`. Installer edits re-run the guards on an existing pack and mark variants `stale: true` (`Variant.stale?: boolean`) instead of silently changing them.
+
+## Demo access and laptop admission limits (v1.5)
+
+Enabled only when REO_DEMO_PIN is set on the backend. All HTTP routes except GET /health and OPTIONS require X-Demo-Pin; planner routes additionally require the existing Bearer token. No PIN/token in URLs. GET /demo/access returns {ok:true} after PIN verification without creating a session. Health adds demo_auth_required and demo_limits, never secret values. CORS exposes Retry-After.
+
+Defaults (environment-configurable, single process/worker):
+- REO_MAX_ACTIVE_SESSIONS=5; REO_SESSION_IDLE_SECONDS=900. Creation/resumption occupies a slot, activity refreshes it, idle slots expire without deleting saved plans. Excess returns 429, Retry-After:30. Invalid session IDs and failed creations release new slots.
+- REO_MAX_CONCURRENT_RUNS=2. Includes synchronous goal/bill/planner skills and background offers. Reject excess with 429/Retry-After:5 before starting a run; handoff remains drafting if capacity is full. Run leases release even on exceptions; completed offer runs read from persistent storage rather than accumulating in the live registry.
+- REO_MAX_CONCURRENT_MUTATIONS=2 and REO_MAX_INFLIGHT_REQUESTS=12 (includes SSE) reject work instead of creating an unbounded queue.
+- REO_MAX_REQUESTS_PER_MINUTE=240, including health/invalid-PIN requests. Wrong PINs: 5 failures per source IP and 12 globally per rolling minute; valid PINs are not locked out by these failure counters. Excess returns 429/Retry-After:60.
+- REO_MAX_BODY_BYTES=8388608 (8 MiB multipart); non-multipart bodies additionally capped at 64 KiB. Declared and chunked uploads are bounded before application processing; excess returns 413.
+
+These are conservative demo admission settings, not a measured hardware maximum or a guarantee against memory pressure caused by other programs. State/counters reset at restart; do not run multiple workers. The shared four-digit demo PIN is an invitation gate, not per-user identity. Keep the separate planner token.

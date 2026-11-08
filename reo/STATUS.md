@@ -64,3 +64,7 @@ Not covered: engine downtime only with the fake engine (did not stop Ege's engin
 - Roof lookup: OpenStreetMap (EywaSahbi's choice over Google Solar: free, no key). Overpass was at capacity, so building outlines come from the OSM map API (0.4 s). Sunny face = footprint (flat) or footprint / cos 35° / 2 (pitched), said as an estimate. Address goes to OSM (third party), only for that lookup; results cached in roof_cache.json (gitignored).
 - Similar projects never go to the customer or the LLM (hard rule 5); flags are aggregate and may (persona).
 - Promised app (ACK on board): `Plan.summary?`, `GET /prices` passthrough, locks persist across `/edit` (merged per field); instant chip turns without LLM; zero-fact first design.
+
+## Task-specific app ownership exception: demo PIN/capacity
+
+Raneem explicitly authorized app to finish this backend work in chat. Added demo_guard.py (PIN check, wrong-attempt throttle, bounded request/body/session admission), GET /demo/access and public health configuration. Defaults: 5 active sessions/15min idle, 2 harness runs, 2 simultaneous mutations, 12 inflight incl SSE, 240 requests/min, 8 MiB multipart and 64 KiB JSON. Limits activate with REO_DEMO_PIN only. Planner Bearer remains separate. Runner leases prevent launching excess jobs and release on failures; busy handoff stays drafting. Finished offer runs leave live RUNS registry, with persistent SSE replay preserved. CONTRACT v1.5 documents env/header/error behavior. Full existing suite plus initial guard tests: 40 passed; further overload/error regression checks added.

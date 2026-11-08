@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 import anthropic
 
 import llm
+import demo_guard
 from harness import guards
 from harness.tools import REGISTRY, Ctx
 
@@ -36,12 +37,13 @@ def _design_summary(r: dict) -> str | None:
 
 
 class Runner:
-    def __init__(self, skill, ctx: Ctx, trigger: str):
+    def __init__(self, skill, ctx: Ctx, trigger: str, lease=None):
         self.skill, self.ctx = skill, ctx
         self.known: list[float] = guards.collect(ctx.facts)
         self.t0 = time.time()
         self.run = {"id": uuid.uuid4().hex[:10], "skill": skill.name, "plan_id": ctx.plan["id"], "trigger": trigger,
                     "status": "running", "steps": [], "output": None, "model": "scripted", "started_at": _now(), "duration_s": None}
+        self._lease = lease or demo_guard.reserve_run()
         RUNS[self.run["id"]] = self.run
 
     # ---------- recording ----------
@@ -144,6 +146,12 @@ class Runner:
         self.check()
 
     def go(self) -> dict:
+        try:
+            return self._go()
+        finally:
+            self._lease.release()
+
+    def _go(self) -> dict:
         try:
             if not (self.skill.loop and self.run_llm()):
                 if self.run["model"] != "scripted":

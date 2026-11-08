@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import BaseModel
 
 import engine
+import demo_guard
 import evidence
 import flow
 import llm
@@ -59,9 +60,11 @@ async def installer_auth(request, call_next):
     return await call_next(request)
 
 
+app.add_middleware(demo_guard.DemoGuard)
+
 ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173"] + \
           [o.strip().rstrip("/") for o in os.getenv("REO_ALLOWED_ORIGINS", "").split(",") if o.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware, allow_origins=ORIGINS, allow_methods=["*"], allow_headers=["*"], expose_headers=["Retry-After"])
 _lock = threading.Lock()
 
 
@@ -360,7 +363,13 @@ class Handoff(BaseModel):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "llm": bool(os.getenv("ANTHROPIC_API_KEY")), "voice": voice.enabled(), "engine": engine.healthy()}
+    return {"ok": True, "llm": bool(os.getenv("ANTHROPIC_API_KEY")), "voice": voice.enabled(), "engine": engine.healthy(),
+            "demo_auth_required": demo_guard.enabled(), "demo_limits": demo_guard.limits() if demo_guard.enabled() else None}
+
+
+@app.get("/demo/access")
+def demo_access():
+    return {"ok": True}
 
 
 @app.post("/sessions")
@@ -368,15 +377,20 @@ def start_session(_: dict | None = None):
     with _lock:
         db = _load()
         pid = uuid.uuid4().hex[:10]
-        design = engine.design({}, None, CUSTOMER_PRICES) or engine.offline_design()  # zero-fact first design
-        plan = {"id": pid, "status": "drafting", "customer": {}, "facts": {}, "design": design, "transcript": [],
-                "flags": [], "installer_edits": [],
-                "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}
-        db["plans"][pid] = plan
-        db["state"][pid] = {"skipped": [], "offered": False, "last_ask": "total_demand_kwh", "locks": {}, "prices": {}}
-        m = reo_msg(plan, GREETING)
-        _save(db)
-        return {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS["total_demand_kwh"], "ask": flow.ui_ask(flow.OPENING_ASK)}
+        demo_guard.admit_session(pid)
+        try:
+            design = engine.design({}, None, CUSTOMER_PRICES) or engine.offline_design()  # zero-fact first design
+            plan = {"id": pid, "status": "drafting", "customer": {}, "facts": {}, "design": design, "transcript": [],
+                    "flags": [], "installer_edits": [],
+                    "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}
+            db["plans"][pid] = plan
+            db["state"][pid] = {"skipped": [], "offered": False, "last_ask": "total_demand_kwh", "locks": {}, "prices": {}}
+            m = reo_msg(plan, GREETING)
+            _save(db)
+            return {"messages": [m], "plan": out(plan), "suggestions": flow.CHIPS["total_demand_kwh"], "ask": flow.ui_ask(flow.OPENING_ASK)}
+        except BaseException:
+            demo_guard.release_session(pid)
+            raise
 
 
 @app.post("/sessions/{pid}/messages")
@@ -500,15 +514,20 @@ def handoff(pid: str, body: Handoff):
         plan, _ = _get(db, pid)
         if plan["status"] != "drafting":  # a repeated handoff (double click, retry) must not reopen the plan or restart prep
             return out(plan)
-        plan["status"] = "handed_over"
-        plan["customer_design"] = plan["design"]  # what the customer agreed to; the planner edits plan["design"]
-        plan["customer"] = {"name": body.name, **({"email": body.email} if body.email else {})}
-        attach_evidence(plan)
-        reo_msg(plan, f"Done. Your plan is with Sonnfeld, {body.name}. "
-                      "You'll see the final quote here once your planner has confirmed it.")
-        plan["updated_at"] = now()
-        _save(db)
-    start_offer_prep(pid, "handoff")  # trigger: handoff -> offer_prep (runs in the background)
+        lease = demo_guard.reserve_run()
+        try:
+            plan["status"] = "handed_over"
+            plan["customer_design"] = plan["design"]  # what the customer agreed to; the planner edits plan["design"]
+            plan["customer"] = {"name": body.name, **({"email": body.email} if body.email else {})}
+            attach_evidence(plan)
+            reo_msg(plan, f"Done. Your plan is with Sonnfeld, {body.name}. "
+                          "You'll see the final quote here once your planner has confirmed it.")
+            plan["updated_at"] = now()
+            _save(db)
+        except BaseException:
+            lease.release()
+            raise
+    start_offer_prep(pid, "handoff", lease)  # trigger: handoff -> offer_prep (runs in the background)
     return out(_get(_read(), pid)[0])
 
 
@@ -671,41 +690,49 @@ PREPARING = {"status": "preparing", "variants": [], "recommended": "Recommended"
              "prepared_at": None, "run_id": None}
 
 
-def start_offer_prep(pid: str, trigger: str) -> str:
-    with _lock:
-        db = _load()
-        plan, st = _get(db, pid)
-        ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
-        runner = Runner(SKILLS["offer_prep"], ctx, trigger)
-        plan["offer_pack"] = {**PREPARING, "run_id": runner.run["id"]}
-        db.setdefault("runs", {})[runner.run["id"]] = json.loads(json.dumps(runner.run))  # findable after a restart
-        _save(db)
-    threading.Thread(target=_finish_offer, args=(pid, runner, STORE), daemon=True).start()
-    return runner.run["id"]
+def start_offer_prep(pid: str, trigger: str, lease=None) -> str:
+    lease = lease or demo_guard.reserve_run()
+    try:
+        with _lock:
+            db = _load()
+            plan, st = _get(db, pid)
+            ctx = htools.Ctx(json.loads(json.dumps(plan)), json.loads(json.dumps(st)), list(db.get("calendar", [])))
+            runner = Runner(SKILLS["offer_prep"], ctx, trigger, lease=lease)
+            plan["offer_pack"] = {**PREPARING, "run_id": runner.run["id"]}
+            db.setdefault("runs", {})[runner.run["id"]] = json.loads(json.dumps(runner.run))
+            _save(db)
+        threading.Thread(target=_finish_offer, args=(pid, runner, STORE), daemon=True).start()
+        return runner.run["id"]
+    except BaseException:
+        lease.release()
+        raise
 
 
 def _finish_offer(pid: str, runner: Runner, store: Path) -> None:
     run = runner.go()
-    with _lock:
-        db = _load(store)  # the store the run started on, even if STORE changed meanwhile
-        plan = db["plans"].get(pid)
-        if plan is None:
-            return
-        db.setdefault("runs", {})[run["id"]] = run
-        if (plan.get("offer_pack") or {}).get("run_id") != run["id"]:  # a newer prepare replaced this run
+    try:
+        with _lock:
+            db = _load(store)  # the store the run started on, even if STORE changed meanwhile
+            plan = db["plans"].get(pid)
+            if plan is None:
+                return
+            db.setdefault("runs", {})[run["id"]] = run
+            if (plan.get("offer_pack") or {}).get("run_id") != run["id"]:  # a newer prepare replaced this run
+                _save(db, store)
+                return
+            pack = run["output"] or {**PREPARING, "status": "failed", "run_id": run["id"]}
+            if pack.get("status") == "preparing":
+                pack["status"] = "failed"
+            plan["offer_pack"] = {**pack, "duration_s": run["duration_s"], "prepared_at": now()}
+            st = db["state"][pid]
+            basis = (runner.ctx.facts, runner.ctx.st.get("locks") or {}, runner.ctx.st.get("prices") or {})
+            if basis != (plan["facts"], st.get("locks") or {}, st.get("prices") or {}):  # planner edited while reo prepared
+                for v in plan["offer_pack"]["variants"]:
+                    v["stale"] = True
+                _refresh_draft(db, plan)
             _save(db, store)
-            return
-        pack = run["output"] or {**PREPARING, "status": "failed", "run_id": run["id"]}
-        if pack.get("status") == "preparing":
-            pack["status"] = "failed"
-        plan["offer_pack"] = {**pack, "duration_s": run["duration_s"], "prepared_at": now()}
-        st = db["state"][pid]
-        basis = (runner.ctx.facts, runner.ctx.st.get("locks") or {}, runner.ctx.st.get("prices") or {})
-        if basis != (plan["facts"], st.get("locks") or {}, st.get("prices") or {}):  # planner edited while reo prepared
-            for v in plan["offer_pack"]["variants"]:
-                v["stale"] = True
-            _refresh_draft(db, plan)
-        _save(db, store)
+    finally:
+        RUNS.pop(run["id"], None)
 
 
 def _run(rid: str) -> dict:
