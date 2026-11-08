@@ -11,7 +11,8 @@ export default function House3D({ design, facts }: { design: Design; facts: Home
   const pv = design.components.pv;
   const roof = useMemo(() => roofFrom(facts), [facts.roof_width_m, facts.roof_length_m, facts.roof_area_sqm, facts.roof_tilt_deg]); // eslint-disable-line react-hooks/exhaustive-deps
   const need = pv.recommended ? pv.quantity ?? 0 : 0;
-  const cells = useMemo(() => roofCells(roof, pv.max_modules, need), [roof, pv.max_modules, need]);
+  // customer view: panels only on the front (sunny) face; the caption says when not all of them are drawn (EywaSahbi)
+  const cells = useMemo(() => roofCells(roof, pv.max_modules, need).filter((c) => c.face === 0), [roof, pv.max_modules, need]);
   const panels = enginePanels(design, cells);
   const items = defaultItems(design, roof);
   const count = pv.recommended ? pv.quantity ?? null : 0;
