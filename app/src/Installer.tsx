@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api, USING_MOCK } from "./api";
 import { getInstallerToken, setInstallerToken } from "./auth";
 import { OfferPackPanel, RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
+
+const DesignStudio = lazy(() => import("./scene/DesignStudio"));
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -202,6 +204,10 @@ function PlanDetail({ id }: { id: string }) {
         </div>
       )}
       {error && <div className="chat-error">{error}</div>}
+
+      <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
+        <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks) => edit({ locks })} />
+      </Suspense>
 
       <div className="detail-grid">
         <section className="card">

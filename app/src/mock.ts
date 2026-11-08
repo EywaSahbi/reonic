@@ -98,6 +98,7 @@ function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRI
     c.recommended = lock.recommended;
     if (lock.size !== undefined) c.size = lock.size;
     if (!lock.recommended) c.size = null;
+    if (k === "pv") c.quantity = c.size ? Math.round((c.size * 1000) / 430) : undefined; // same module rule as above
     c.reasons = ["set by planner", ...c.reasons].slice(0, 3);
   }
 

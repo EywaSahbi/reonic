@@ -1,6 +1,31 @@
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
 import { House } from "./House";
 import { Satellite } from "./Satellite";
+import { lazy, Suspense, useState } from "react";
+
+const House3D = lazy(() => import("./scene/House3D"));
+let gl: boolean | null = null;
+const webglOk = () => {
+  if (gl === null) { try { const c = document.createElement("canvas"); gl = !!(c.getContext("webgl2") || c.getContext("webgl")); } catch { gl = false; } }
+  return gl;
+};
+
+/** 3D house (engine design drawn on the roof) with the satellite photo as a second view once an address was found. */
+function HouseView({ plan }: { plan: Plan }) {
+  const [view, setView] = useState<"3d" | "photo">("3d");
+  const flat = <House design={plan.design} />;
+  const three = webglOk() ? <Suspense fallback={flat}><House3D design={plan.design} facts={plan.facts} /></Suspense> : flat;
+  if (!plan.roof_location) return three;
+  return (
+    <div className="house-views">
+      {view === "3d" ? three : <Satellite loc={plan.roof_location} fallback={flat} />}
+      <div className="house-toggle" role="tablist" aria-label="House view">
+        <button role="tab" aria-selected={view === "3d"} onClick={() => setView("3d")}>3D plan</button>
+        <button role="tab" aria-selected={view === "photo"} onClick={() => setView("photo")}>Your roof</button>
+      </div>
+    </div>
+  );
+}
 import { HeatingComparison } from "./HeatingComparison";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -30,7 +55,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
 
   return (
     <aside className="plan" aria-label="Your plan">
-      {plan.roof_location ? <Satellite loc={plan.roof_location} fallback={<House design={d} />} /> : <House design={d} />}
+      <HouseView plan={plan} />
       <div className="plan-head">
         <span className="plan-kicker">
           {economics.bill_today_eur_per_month != null && economics.bill_after_eur_per_month != null ? "Your monthly bill · before → after" : quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}

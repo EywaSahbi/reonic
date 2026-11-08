@@ -35,6 +35,7 @@ export type Component = {
   unit: "kWp" | "kWh" | "kW";
   range: [number, number] | null;
   quantity?: number;
+  max_modules?: number; // pv only, roof known: modules the roof holds (engine/CONTRACT.md)
   confidence: "low" | "medium" | "high";
   locked: boolean;
   reasons: string[];
