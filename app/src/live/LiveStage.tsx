@@ -138,21 +138,25 @@ export default function LiveStage({ plan, say, trace, busy, tall, onMore }: {
   const allDone = trace.length > 0 && trace.every((x) => x.state !== "run");
   useEffect(() => { setQuiet(false); if (!allDone) return; const t = setTimeout(() => setQuiet(true), 5000); return () => clearTimeout(t); }, [trace, allDone]);
   const loc = plan?.roof_location;
+  // A freshly found roof makes "Your roof" glow until the customer looks at it (EywaSahbi); the photo hides the advisor.
+  const [fresh, setFresh] = useState(false);
+  useEffect(() => { if (loc?.label) setFresh(true); }, [loc?.label]);
+  const showPhoto = (on: boolean) => { setPhoto(on); if (on) setFresh(false); };
 
   return (
     <section className={`live-stage ${tall ? "is-tall" : ""}`} aria-label="Your home, built as you answer">
       <div className="live-canvas">
         <Canvas shadows dpr={[1, 2]} camera={{ position: [27, 18, 32], fov: 28 }} gl={{ antialias: true, alpha: true }}>
           <HouseScene roof={roof} cells={cells} panels={panels} items={items} />
-          <Guide to={to} say={say} busy={busy} side={say?.spot === "roof"} wait={waitFor(say, panels.size)} onMore={onMore} />
+          {!photo && <Guide to={to} say={say} busy={busy} side={say?.spot === "roof"} wait={waitFor(say, panels.size)} onMore={onMore} />}
           <OrbitControls autoRotate={!say} autoRotateSpeed={0.35} enablePan={false} enableZoom={false} minPolarAngle={0.7} maxPolarAngle={1.2} minAzimuthAngle={-0.9} maxAzimuthAngle={1.4} target={[1.6, 2, 1.4]} />
         </Canvas>
       </div>
       {photo && loc && <div className="live-photo"><Satellite loc={loc} fallback={null} /></div>}
       {loc && (
         <div className="live-seg" role="tablist" aria-label="View">
-          <button role="tab" aria-selected={!photo} onClick={() => setPhoto(false)}>Your plan</button>
-          <button role="tab" aria-selected={photo} onClick={() => setPhoto(true)}>Your roof</button>
+          <button role="tab" aria-selected={!photo} onClick={() => showPhoto(false)}>Your plan</button>
+          <button role="tab" aria-selected={photo} className={fresh && !photo ? "is-glow" : undefined} onClick={() => showPhoto(true)}>Your roof</button>
         </div>
       )}
       {trace.length > 0 && (
