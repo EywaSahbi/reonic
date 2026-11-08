@@ -225,6 +225,7 @@
   "roof_edge_margin_m": 0.3,
   "heatpump_full_load_hours": 2000,
   "heating_demand_default_kwh": 15800.0,
+  "heating_oil_kwh_per_litre": 10.0,
   "heat_demand_kwh_per_sqm_by_built_year": {
     "_note": "rough heating demand by construction period, consistent with published ranges: before 1978 unrenovated 200-300, 1978-2000 120-200, 2000-2015 70-120, new builds 30-70 kWh/m²a",
     "1978": 200,
@@ -522,6 +523,7 @@
   "_sources": {
     "k_ev_kwh_per_km": "ADAC Ecotest values incl. charging losses span 0.155 (Hyundai Ioniq 6) to 0.204 (NIO ET7) kWh/km; 0.18 is the middle",
     "co2_kg_per_kwh": "UBA German electricity mix 2025 (estimate) 344 g/kWh; gas 201 g and heating oil 266 g per kWh of fuel (UBA emission factors, combustion). District heating and 'other' have no single official factor, so no CO2 is shown for them",
+    "heating_oil_kwh_per_litre": "heating oil EL: lower heating value about 10 kWh per litre (common conversion on German heating-oil bills and in the GEG / BAFA guidance)",
     "price_band_share": "owner decision 2026-11-08: the price range uses half of the sourced min-max distance on each side of the mid price (a typical band, not the cheapest and dearest quote at once); prices.json keeps the full sourced low / high",
     "cop": "Fraunhofer ISE field test of air-water heat pumps in existing homes: seasonal performance factor 3.3 (WP-QS im Bestand, 2024 interim; final 2025 reported 3.4; WPsmart 2020: 3.1)",
     "module": "Jinko Tiger Neo JKM430N-54HL4R datasheet: 430 W, 1,762 × 1,134 mm = 2.0 m²",

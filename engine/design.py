@@ -46,7 +46,7 @@ def price_of(key, overrides):
     if key in overrides:
         return (overrides[key],) * 3
     mid, lo, hi = PRICES[key], PRICES.get(f"{key}_low", PRICES[key]), PRICES.get(f"{key}_high", PRICES[key])
-    share = PARAMS["price_band_share"]       # typical band: only this share of the sourced min-max distance from the mid
+    share = overrides.get("price_band_share", PARAMS["price_band_share"])   # typical band: this share of the sourced min-max distance from the mid
     return mid, mid - share * (mid - lo), mid + share * (hi - mid)
 
 
@@ -55,7 +55,7 @@ def labour(key, overrides):
     if key in overrides:
         return (overrides[key],) * 3
     lo, mid, hi = CATALOG["labour"][key]
-    share = PARAMS["price_band_share"]
+    share = overrides.get("price_band_share", PARAMS["price_band_share"])   # reo's customer view asks for a narrower band
     return mid, mid - share * (mid - lo), mid + share * (hi - mid)
 
 
@@ -367,8 +367,23 @@ def fit_budget(facts: dict, locks: dict, overrides: dict, base: dict, installer:
     return locks, f"even the smallest sensible design is above your budget of €{budget:,.0f}"
 
 
+def heat_from_bill(facts: dict) -> dict:
+    """The customer's heating bill -> heat demand: gas / other kWh x boiler efficiency, oil litres x kWh per litre x
+    boiler efficiency, district heat kWh as delivered. An explicit heating_demand_kwh wins."""
+    if facts.get("heating_demand_kwh") is not None:
+        return facts
+    fuel = facts.get("heating_fuel_kwh")
+    if not fuel and facts.get("heating_oil_litres"):
+        fuel = facts["heating_oil_litres"] * PARAMS["heating_oil_kwh_per_litre"]
+    if not fuel or fuel <= 0:
+        return facts
+    eff = 1.0 if facts.get("heating_type") == "district" else PRICES["boiler_efficiency"]
+    return {**facts, "heating_demand_kwh": round(fuel * eff)}
+
+
 def design(facts: dict, locks: dict | None = None, overrides: dict | None = None, installer: str | None = None) -> dict:
     locks, overrides = locks or {}, overrides or {}
+    facts = heat_from_bill(facts)
     base = core(facts, locks, overrides, installer)
     user_locks = dict(locks)
     locks, budget_note = fit_budget(facts, locks, overrides, base, installer)
@@ -501,6 +516,7 @@ def explain(facts: dict, locks: dict | None, overrides: dict | None, component: 
             installer: str | None = None) -> dict:
     """Reasons plus what-ifs for one component: on / off and one size step down / up, each with deltas."""
     locks, overrides = locks or {}, overrides or {}
+    facts = heat_from_bill(facts)
     base = design(facts, locks, overrides, installer)
     b = core(facts, locks, overrides, installer)
     c = base["components"][component]

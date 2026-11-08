@@ -267,3 +267,14 @@ def test_roi_is_solar_and_battery_only():
     ev = {"total_demand_kwh": 4500, "ev_planned": True}
     wb_on, wb_off = (post(ev, locks={"wallbox": {"recommended": on}})["economics"] for on in (True, False))
     assert wb_on["payback_years"] == wb_off["payback_years"]
+
+
+def test_heat_from_the_heating_bill():
+    """Gas kWh or oil litres from the bill become the heat demand (no 'median heat demand' assumption)."""
+    gas = post({**GAS_HOME, "heating_demand_kwh": None, "heating_fuel_kwh": 20000}, locks={"heatpump": {"recommended": True}})
+    assert not any(a["field"] == "heating_demand_kwh" for a in gas["assumptions"])
+    assert round(gas["heating_comparison"]["cost_now_eur_per_year"]) == round(20000 * 0.12)    # = the bill: kWh x gas price
+    oil = post({"total_demand_kwh": 4500, "heating_type": "oil", "heating_oil_litres": 2000}, locks={"heatpump": {"recommended": True}})
+    assert round(oil["heating_comparison"]["cost_now_eur_per_year"]) == round(2000 * 10 * 0.14)
+    band = lambda share: post(GAS_HOME, prices={"price_band_share": share})["price"]["range_eur"]
+    assert band(0.25)[1] - band(0.25)[0] < band(0.5)[1] - band(0.5)[0]

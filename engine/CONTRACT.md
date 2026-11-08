@@ -16,6 +16,8 @@ type HomeFacts = {
   house_built_year?: number;
   heating_type?: "gas" | "oil" | "heatpump" | "electric" | "district" | "other";
   heating_demand_kwh?: number;          // heat per year; else house_size_sqm × typical demand by house_built_year
+  heating_fuel_kwh?: number;            // from the heating bill (gas / district / other kWh): heat = × boiler_efficiency (district × 1)
+  heating_oil_litres?: number;          // from the oil bill: heat = litres × heating_oil_kwh_per_litre (10) × boiler_efficiency
   has_ev?: boolean; ev_planned?: boolean; ev_km_per_year?: number;
   ev_km_per_week?: number; ev_km_per_day?: number;   // customer's estimate; used when ev_km_per_year is absent (×52, ×365)
   roof_area_sqm?: number; roof_orientation_deg?: number; roof_tilt_deg?: number;   // 180 = south
@@ -46,6 +48,7 @@ type PriceList = Record<string, number>;   // keys as returned by GET /prices; e
 // installation rates). GET /prices now returns only subsidy, feed-in and fuel rates. Overridable keys in `prices`:
 // module_eur, inverter_eur, mounting_eur_per_module, battery_eur, wallbox_device_eur, heatpump_device_eur and the labour keys of catalog.json.
 // `inverter_kw` in prices picks the inverter model (0 / absent = smallest that carries the array). Wallbox price follows its size (11 / 22 kW).
+// `price_band_share` in prices (0..1, default params.json 0.5) sets how much of the sourced min-max distance the range uses (reo's customer view: 0.25).
                                            // Overriding `<key>` fixes that price (low = high = the override).
 
 type Design = {
