@@ -223,7 +223,7 @@ def test_heating_comparison_gas_and_electric():
     assert hc["heat_kwh"] == 18000 and hc["energy_factor"] == round(3.3 / 0.9, 1)
     assert hc["cost_now_eur_per_year"] == 2400 and abs(hc["cost_factor"] - 2400 / hc["cost_heatpump_eur_per_year"]) < 0.02
     assert hc["co2_now_kg_per_year"] == round(18000 / 0.9 * 0.201) and 0 < hc["co2_reduction_pct"] < 100
-    assert post({"total_demand_kwh": 4500, "heating_type": "electric"})["heating_comparison"] is None
+    assert post({"total_demand_kwh": 4500, "heating_type": "heatpump"})["heating_comparison"] is None   # electric: see test_electric_heating_gets_heatpump_comparison
     assert post({"total_demand_kwh": 4500})["heating_comparison"] is None
 
 
@@ -278,3 +278,12 @@ def test_heat_from_the_heating_bill():
     assert round(oil["heating_comparison"]["cost_now_eur_per_year"]) == round(2000 * 10 * 0.14)
     band = lambda share: post(GAS_HOME, prices={"price_band_share": share})["price"]["range_eur"]
     assert band(0.25)[1] - band(0.25)[0] < band(0.5)[1] - band(0.5)[0]
+
+
+def test_electric_heating_gets_heatpump_comparison():
+    """Direct electric heating: same tariff, the heat pump needs 1 / COP of the power for the same heat."""
+    d = post({"total_demand_kwh": 4500, "heating_type": "electric", "heating_fuel_kwh": 12000}, locks={"heatpump": {"recommended": True}})
+    hc = d["heating_comparison"]
+    assert d["components"]["heatpump"]["recommended"] and hc["fuel"] == "electric" and hc["heat_kwh"] == 12000
+    assert hc["energy_factor"] == hc["cop"] and hc["heatpump_cheaper"] and round(hc["cost_factor"], 1) == hc["cop"]
+    assert hc["co2_reduction_pct"] == round(100 * (1 - 1 / hc["cop"]), 1)

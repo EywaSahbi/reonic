@@ -377,7 +377,7 @@ def heat_from_bill(facts: dict) -> dict:
         fuel = facts["heating_oil_litres"] * PARAMS["heating_oil_kwh_per_litre"]
     if not fuel or fuel <= 0:
         return facts
-    eff = 1.0 if facts.get("heating_type") == "district" else PRICES["boiler_efficiency"]
+    eff = 1.0 if facts.get("heating_type") in ("district", "electric") else PRICES["boiler_efficiency"]
     return {**facts, "heating_demand_kwh": round(fuel * eff)}
 
 
@@ -467,18 +467,19 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
 
 
 def heating_comparison(base: dict, overrides: dict):
-    """Today's fossil / district heating vs an air-water heat pump on grid power, per year (None for electric or unknown heating).
+    """Today's fossil / district / direct electric heating vs an air-water heat pump on grid power, per year (None for heat pump or unknown).
 
     energy_factor = COP ÷ efficiency of the old system; cost_factor = old cost per kWh of heat ÷ heat-pump cost per kWh of heat.
     Grid power only: own solar makes the heat pump cheaper and cleaner still (the design's economics count that).
     """
     h = base["home"]
-    if h.heating_type not in FUEL:
+    if h.heating_type not in FUEL and h.heating_type != "electric":
         return None
     p = PARAMS
     heat, note = heat_demand(base["facts"], h)
-    eff = 1.0 if h.heating_type == "district" else price_of("boiler_efficiency", overrides)[0]
-    fuel_price = price_of(FUEL[h.heating_type], overrides)[0]
+    # direct electric heating: 1 kWh of power -> 1 kWh of heat, on the same tariff as the heat pump (EywaSahbi)
+    eff = 1.0 if h.heating_type in ("district", "electric") else price_of("boiler_efficiency", overrides)[0]
+    fuel_price = h.electricity_price_eur_per_kwh if h.heating_type == "electric" else price_of(FUEL[h.heating_type], overrides)[0]
     hp_kwh = heat / p["cop"]
     cost_now = heat / eff * fuel_price
     cost_hp = hp_kwh * h.electricity_price_eur_per_kwh
@@ -490,7 +491,7 @@ def heating_comparison(base: dict, overrides: dict):
            "co2_now_kg_per_year": None, "co2_heatpump_kg_per_year": None, "co2_reduction_pct": None,
            "note": note["note"] if note else None}
     ef = p["co2_kg_per_kwh"]
-    fuel_key = {"gas": "gas", "oil": "oil"}.get(h.heating_type)
+    fuel_key = {"gas": "gas", "oil": "oil", "electric": "electricity"}.get(h.heating_type)
     if fuel_key:
         now, hp = heat / eff * ef[fuel_key], hp_kwh * ef["electricity"]
         out.update(co2_now_kg_per_year=round(now), co2_heatpump_kg_per_year=round(hp),
