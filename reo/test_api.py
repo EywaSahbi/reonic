@@ -195,6 +195,15 @@ def test_address_suggest_and_picked_point(tmp_path, monkeypatch):
     assert seen == {"lat": 52.539, "n": "12"} and t["ask"]["field"] == "roof_dims"  # picked point: no geocoding
 
 
+def test_demo_address_needs_street_and_number_and_relations_join():
+    import roof
+    assert roof._mock("Musterstraße 12, München")["source"] == "demo data" and roof._mock("Musterstr. 12")
+    assert roof._mock("Hauptstraße 40, 21729 Freiburg (Elbe)") is None          # a real Hauptstraße is looked up for real
+    a, b, c = (0.0, 0.0), (0.0, 1.0), (1.0, 1.0)
+    rings = roof._rings([[a, b], [c, b], [c, (1.0, 0.0), a]])                  # outline split over 3 ways, one reversed
+    assert len(rings) == 1 and len(rings[0]) == 4
+
+
 def test_roof_geometry():
     import roof
     assert abs(roof.area_sqm([(0, 0), (0, 0.0001), (0.0001, 0.0001), (0.0001, 0)]) - 123.6) < 1

@@ -34,8 +34,9 @@ def _norm(s: str) -> str:
 
 
 def _mock(address: str) -> dict | None:
+    """Demo address by street AND house number ("Musterstraße 12"), so a real Hauptstraße 40 is looked up for real."""
     for a in json.loads((HERE / "addresses.json").read_text(encoding="utf-8"))["addresses"]:
-        if a["match"] in _norm(address):
+        if _norm(a["label"].split(",")[0]) in _norm(address):
             return {"label": a["label"], "facts": dict(a["facts"]), "say": a["say"], "source": "demo data"}
     return None
 
@@ -97,9 +98,53 @@ def _building(lat: float, lon: float, number: str | None) -> dict | None:
         dist = math.hypot((cy - lat) * 111000, (cx - lon) * 111000 * math.cos(math.radians(lat)))
         found.append({"id": w.get("id"), "tags": tags, "poly": poly, "dist": dist,
                       "inside": _inside(lat, lon, poly), "match": bool(number) and tags.get("addr:housenumber") == number})
+    if not any(b["inside"] or b["match"] for b in found):   # big buildings (Reichstag, town halls) are multipolygon relations
+        for rel in x.iter("relation"):
+            tags = {t.get("k"): t.get("v") for t in rel.iter("tag")}
+            if "building" in tags and tags.get("type") == "multipolygon" and (b := _relation(rel.get("id"), tags, lat, lon, number)):
+                found.append(b)
     found.sort(key=lambda b: (not b["inside"], not b["match"], b["dist"]))
     best = found[0] if found else None
     return best if best and (best["inside"] or best["match"] or best["dist"] <= 30) else None
+
+
+def _rings(ways: list[list[tuple[float, float]]]) -> list[list[tuple[float, float]]]:
+    """Join a multipolygon's member ways end to end into closed rings (OSM splits long outlines over several ways)."""
+    rings, rest = [], [w[:] for w in ways if len(w) >= 2]
+    while rest:
+        cur = rest.pop(0)
+        while cur[0] != cur[-1]:
+            nxt = next((i for i, w in enumerate(rest) if cur[-1] in (w[0], w[-1])), None)
+            if nxt is None:
+                break
+            w = rest.pop(nxt)
+            cur += (w if w[0] == cur[-1] else w[::-1])[1:]
+        if cur[0] == cur[-1] and len(cur) >= 4:
+            rings.append(cur[:-1])
+    return rings
+
+
+def _relation(rid: str, tags: dict, lat: float, lon: float, number: str | None) -> dict | None:
+    """A building stored as a multipolygon relation: outline = outer rings, area = outer minus inner (courtyards)."""
+    r = httpx.get(f"https://api.openstreetmap.org/api/0.6/relation/{rid}/full", headers=UA, timeout=8)
+    r.raise_for_status()
+    x = ET.fromstring(r.content)
+    nodes = {n.get("id"): (float(n.get("lat")), float(n.get("lon"))) for n in x.iter("node")}
+    ways = {w.get("id"): [nodes[nd.get("ref")] for nd in w.iter("nd") if nd.get("ref") in nodes] for w in x.iter("way")}
+    rel = next((e for e in x.iter("relation") if e.get("id") == rid), None)
+    if rel is None:
+        return None
+    members = [(m.get("role") or "outer", ways.get(m.get("ref"), [])) for m in rel.iter("member") if m.get("type") == "way"]
+    outer = _rings([w for role, w in members if role == "outer"])
+    inner = _rings([w for role, w in members if role == "inner"])
+    if not outer:
+        return None
+    poly = next((o for o in outer if _inside(lat, lon, o)), max(outer, key=area_sqm))
+    cy, cx = sum(p[0] for p in poly) / len(poly), sum(p[1] for p in poly) / len(poly)
+    return {"id": f"r{rid}", "tags": tags, "poly": poly, "inside": any(_inside(lat, lon, o) for o in outer),
+            "dist": math.hypot((cy - lat) * 111000, (cx - lon) * 111000 * math.cos(math.radians(lat))),
+            "match": bool(number) and tags.get("addr:housenumber") == number,
+            "area": max(0.0, sum(map(area_sqm, outer)) - sum(map(area_sqm, inner)))}
 
 
 _SUGGEST: dict[str, list] = {}   # shortcut: in-memory cache of type-ahead answers, fine for one demo process
@@ -112,7 +157,7 @@ def suggest(q: str, limit: int = 5) -> list[dict]:
     if len(nq) < 3:
         return []
     demo = [{"label": a["label"]} for a in json.loads((HERE / "addresses.json").read_text(encoding="utf-8"))["addresses"]
-            if a["match"] in nq or _norm(a["label"]).startswith(nq)]
+            if _norm(a["label"]).startswith(nq) or _norm(a["label"].split(",")[0]) in nq]
     if nq not in _SUGGEST:
         try:
             r = httpx.get("https://photon.komoot.io/api/", headers=UA, timeout=4,
@@ -158,7 +203,7 @@ def lookup(address: str, point: dict | None = None) -> dict | None:
         return None
     if b is None:
         return None
-    footprint = area_sqm(b["poly"])
+    footprint = b.get("area") or area_sqm(b["poly"])   # relations: outer minus courtyards
     roof_type = SHAPES.get(b["tags"].get("roof:shape", ""))
     sunny = sunny_area(footprint, roof_type)
     region = next((code for names, code in scripted.STATE_NAMES
