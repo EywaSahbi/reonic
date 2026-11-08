@@ -271,7 +271,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               )}
               <form className="composer" onSubmit={(e) => { e.preventDefault(); say(text); }}>
                 {voiceOn && <MicButton disabled={busy || !id} onRecorded={sendVoice} onStart={() => { reoAudio.stop(); setNotice(null); }} onError={setNotice} />}
-                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message the energy advisor" />
+                <input value={text} onChange={(e) => setText(e.target.value)} placeholder={ask?.input === "number" ? `${ask.prompt}${/kwh/i.test(ask.prompt) ? " · e.g. 4500" : ""}` : voiceOn ? "Type or tap the mic…" : "Type a message…"} disabled={busy || !id} aria-label="Message the energy advisor" />
                 <button type="submit" disabled={busy || !text.trim()}>Send</button>
               </form>
             </div>
@@ -319,6 +319,7 @@ function AskInput({ ask, onFacts, onAddress, onSkip }: {
   onSkip: () => void;
 }) {
   const skip = SKIPPABLE.has(ask.field) ? <button type="button" className="btn-ghost small ask-skip" onClick={onSkip}>Skip</button> : null;
+  if (ask.input === "number") return skip; // the customer types the number in the normal composer; reo reads a bare number as the answer
   return <><AskField ask={ask} onFacts={onFacts} onAddress={onAddress} />{skip}</>;
 }
 
