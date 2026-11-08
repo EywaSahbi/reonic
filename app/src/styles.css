@@ -328,7 +328,8 @@ h1, h2, h3 { color: var(--ink); }
 .satellite { padding: 6px; }
 .house.satellite svg.satellite-frame { border-radius: calc(var(--radius) - 4px); overflow: hidden; background: var(--paper-sand); }
 .satellite-outline { fill: rgba(247, 163, 92, 0.18); stroke: #f7a35c; stroke-width: 3; stroke-linejoin: round; }
-.satellite figcaption { margin-top: 6px; }
+.satellite { position: relative; }
+.satellite-credit { position: absolute; right: 10px; bottom: 9px; font-size: 9px; line-height: 1; padding: 2px 4px; border-radius: 3px; color: rgba(255,255,255,.85); background: rgba(0,0,0,.35); pointer-events: none; } /* Esri requires attribution */
 .house svg { display: block; width: 100%; height: auto; overflow: visible; }
 .house figcaption { font-size: 12px; color: var(--ink-500); text-align: center; margin-top: 2px; }
 .house figcaption strong { color: var(--ink); font-weight: 600; }

@@ -264,7 +264,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                   onAddress={lookupRoof}
                 />
               )}
-              {visibleChips.length > 0 && !busy && (
+              {billRead && visibleChips.length > 0 && !busy && ( /* suggestion chips removed (EywaSahbi); only the bill confirmation stays */
                 <div className="chips">
                   {visibleChips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
                 </div>

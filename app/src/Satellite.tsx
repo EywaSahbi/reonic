@@ -51,7 +51,7 @@ export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: Reac
         ))}
         {outline && <polygon points={outline} className="satellite-outline" vectorEffect="non-scaling-stroke" />}
       </svg>
-      <figcaption>Your building, outlined as used for the roof estimate · Imagery © Esri, Maxar, Earthstar Geographics</figcaption>
+      <span className="satellite-credit">© Esri, Maxar, Earthstar Geographics</span>
     </figure>
   );
 }

@@ -62,9 +62,6 @@ export function House({ design }: { design: Design }) {
           <circle cx="268" cy="170" r="5" className="h-wheel" /><circle cx="294" cy="170" r="5" className="h-wheel" />
         </g>
       </svg>
-      <figcaption>
-        {!pvOn ? "No panels yet" : panels === null ? <><strong>{c.pv.size}</strong> kWp of solar</> : <><strong>{panels}</strong> panels{panels > MAX ? ` (roof shows ${MAX})` : ""}</>}
-      </figcaption>
     </figure>
   );
 }

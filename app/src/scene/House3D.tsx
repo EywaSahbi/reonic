@@ -9,14 +9,20 @@ import { defaultItems, enginePanels, roofCells, roofFrom } from "./layout";
 // Read-only; drag to look around. Lazy-loaded from PlanCard so the website's first paint stays light.
 export default function House3D({ design, facts }: { design: Design; facts: HomeFacts }) {
   const pv = design.components.pv;
-  const roof = useMemo(() => roofFrom(facts), [facts.roof_width_m, facts.roof_length_m, facts.roof_area_sqm, facts.roof_tilt_deg]); // eslint-disable-line react-hooks/exhaustive-deps
   const need = pv.recommended ? pv.quantity ?? 0 : 0;
-  // customer view: panels only on the front (sunny) face; the caption says when not all of them are drawn (EywaSahbi)
+  // The drawn front face is an approximation of the engine's roof: widen it until all of the engine's modules fit,
+  // so the picture shows exactly the panel count on the plan card (EywaSahbi).
+  const roof = useMemo(() => {
+    const r = roofFrom(facts);
+    // first a taller face (one more row, house stays compact for the camera), then a longer one
+    while (r.width < 40 && roofCells(r).filter((c) => c.face === 0).length < need) { if (r.slope < 7) r.slope += 0.5; else r.width += 0.5; }
+    return r;
+  }, [facts.roof_width_m, facts.roof_length_m, facts.roof_area_sqm, facts.roof_tilt_deg, need]); // eslint-disable-line react-hooks/exhaustive-deps
+  // customer view: panels only on the front (sunny) face, all of the engine's modules (EywaSahbi)
   const cells = useMemo(() => roofCells(roof, pv.max_modules, need).filter((c) => c.face === 0), [roof, pv.max_modules, need]);
   const panels = enginePanels(design, cells);
   const items = defaultItems(design, roof);
   const count = pv.recommended ? pv.quantity ?? null : 0;
-  const hidden = count != null && count > cells.length ? count - cells.length : 0;
 
   return (
     <figure className="house house-3d" aria-label={`3D view of your home with ${count ?? "some"} solar panels${items.battery ? ", a battery" : ""}${items.heatpump ? ", a heat pump" : ""}${items.wallbox ? ", a wallbox" : ""}`}>
@@ -26,10 +32,6 @@ export default function House3D({ design, facts }: { design: Design; facts: Home
           <OrbitControls autoRotate autoRotateSpeed={0.6} enablePan={false} enableZoom={false} minPolarAngle={0.6} maxPolarAngle={1.25} target={[0, 2, 0]} />
         </Canvas>
       </div>
-      <figcaption>
-        {!count ? "No panels yet" : <><strong>{count}</strong> panels{hidden ? ` (${count - hidden} shown)` : ""}</>}
-        <span className="muted"> · drag to look around</span>
-      </figcaption>
     </figure>
   );
 }
