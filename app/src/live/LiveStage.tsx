@@ -54,7 +54,7 @@ function Guide({ to, say, busy, side, onMore }: { to: [number, number, number]; 
       <Html zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
         <div className={`guide ${moving ? "is-moving" : ""} ${side ? "is-side" : ""}`}>
           {say && (
-            <div className="guide-bubble" key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
+            <div className={`guide-bubble ${busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
               <p>{say.text}</p>
               {say.lines && say.lines.length > 0 && <ul>{say.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
               {say.more && onMore && <button type="button" className="guide-more" onClick={() => onMore(say.more!)}>Ask more ›</button>}

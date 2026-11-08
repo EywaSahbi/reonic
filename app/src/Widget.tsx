@@ -24,6 +24,7 @@ const TITLE: Record<string, string> = {
 };
 const DIMS_ASK: Ask = { field: "roof_dims" as keyof HomeFacts, prompt: "Roof size", input: "dimensions" };
 const ROOF_SKIP = ["roof_area_sqm", "roof_dims"];
+const cardKey = (a: Ask) => String(a.field) + a.input;
 
 export function Widget({ onClose, variant }: { onClose: () => void; variant?: "stage" }) {
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -41,8 +42,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   async function run(p: () => Promise<Turn>, from?: Ask, kind: Kind = "other") {
     setBusy(true);
     setError(null);
-    setSay(null);
-    setTrace(pendingSteps(kind));
+    setDir("fwd");
+    setTrace(pendingSteps(kind));   // the advisor's last line stays until the new one replaces it
     try {
       const t = await p();
       setTrace(kind === "start" ? [] : doneSteps(kind, t));
@@ -103,6 +104,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     const prev = back.at(-1);
     if (!prev) return;
     setBack((b) => b.slice(0, -1));
+    setDir("back");
     setAsk(prev);
     setNote(null);
     setHandoffOpen(false);
@@ -122,6 +124,33 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     }
   }
 
+  // Crossfade between questions: the answered card slides out while the next slides in (reversed for Back).
+  // The outgoing card keeps its React key, so it keeps its state (the tile you tapped stays lit) while it leaves.
+  const [leaving, setLeaving] = useState<Ask | null>(null);
+  const [dir, setDir] = useState<"fwd" | "back">("fwd");
+  const shown = useRef<Ask | undefined>(undefined);
+  useEffect(() => {
+    const prev = shown.current;
+    shown.current = ask;
+    if (!prev || !ask || cardKey(prev) === cardKey(ask)) return;
+    setLeaving(prev);
+    const t = setTimeout(() => setLeaving(null), 520);
+    return () => clearTimeout(t);
+  }, [ask]);
+  const card = (a: Ask, out: boolean) => (
+    <div className={`step-card ${out ? "is-leaving" : "is-current"} ${busy && !out ? "is-busy" : ""}`} key={cardKey(a)} aria-hidden={out || undefined}>
+      {!out && note && <p className="step-note">{note}</p>}
+      <h2 className="step-title">{TITLE[a.field] ?? a.prompt}</h2>
+      <StepInput ask={a} busy={busy || out} onFacts={facts} onAddress={(addr, point) => id && run(() => api.sendAddress(id, addr, point), a, "address")}
+        suggest={(q) => (id ? api.suggestAddress(id, q).then((r) => r.suggestions) : Promise.resolve([]))}
+        onDims={() => { setDir("fwd"); setBack((b) => [...b, a]); setAsk(DIMS_ASK); setNote(null); }} />
+      {!out && error && <div className="chat-error">Something went wrong: {error}</div>}
+      <div className="step-foot">
+        {back.length > 0 && !out ? <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button> : <span />}
+      </div>
+    </div>
+  );
+
   const drafting = plan?.status === "drafting";
   const results = !!plan && (!drafting || !ask);   // flow done (no ask) or already handed over
   const step = ask ? STEP[ask.field] ?? 1 : STEPS;
@@ -137,49 +166,45 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
       </div>
 
       <div className="widget-body">
-        {!plan ? <div className="stepper"><div className="step-card is-busy" aria-busy /></div> : results ? (
-          <div className="results">
-            <div className="results-main">
-              {drafting && back.length > 0 && <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button>}
-              {plan.status === "handed_over" && <div className="sent-banner">✓ Sent to Sonnfeld. Your final quote appears here once your planner has confirmed it.</div>}
-              {plan.status === "quoted" && <div className="sent-banner">✓ Your planner has confirmed your plan.</div>}
-              <Suspense fallback={<div className="live-stage is-tall" />}>
-                <LiveStage plan={plan} say={say} trace={trace} busy={busy} tall onMore={askMore} />
-              </Suspense>
-              {!busy && <p className="explain-hint">Tap any number to see why.</p>}
-              <PlanCard plan={plan}
-                onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
-                onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>), undefined, "toggle") : undefined}
-                onExplain={onExplain} />
-              {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
-              {error && <div className="chat-error">Something went wrong: {error}</div>}
-            </div>
-            <PlanChat plan={plan} onPlan={setPlan} ask={chatAsk} />
+        {/* One flow container for steps and results: the 3D stage is always its first child, so it stays mounted
+            (no reload, no flash) from the first question to the final plan. */}
+        <div className={`flow ${results ? "results is-results" : "live-split is-steps"}`}>
+          <div className="flow-stage">
+            <Suspense fallback={<div className="live-stage" />}>
+              <LiveStage plan={plan} say={say} trace={trace} busy={busy} tall={results} onMore={results ? askMore : undefined} />
+            </Suspense>
+            {results && !busy && <p className="explain-hint">Tap any number to see why.</p>}
           </div>
-        ) : ask && (
-          <div className="live-split">
-          <Suspense fallback={<div className="live-stage" />}>
-            <LiveStage plan={plan} say={say} trace={trace} busy={busy} />
-          </Suspense>
-          <div className="stepper">
-            <div className={`step-card ${busy ? "is-busy" : ""}`} key={String(ask.field) + ask.input}>
-              <div className="step-progress" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step}>
-                <span>Step {step} of {STEPS}</span>
-                <div className="step-bar"><i style={{ transform: `scaleX(${step / STEPS})` }} /></div>
+          {results && plan ? (
+            <>
+              <div className="results-main">
+                {drafting && back.length > 0 && <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button>}
+                {plan.status === "handed_over" && <div className="sent-banner">✓ Sent to Sonnfeld. Your final quote appears here once your planner has confirmed it.</div>}
+                {plan.status === "quoted" && <div className="sent-banner">✓ Your planner has confirmed your plan.</div>}
+                <PlanCard plan={plan}
+                  onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
+                  onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>), undefined, "toggle") : undefined}
+                  onExplain={onExplain} />
+                {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
+                {error && <div className="chat-error">Something went wrong: {error}</div>}
               </div>
-              {note && <p className="step-note">{note}</p>}
-              <h2 className="step-title">{TITLE[ask.field] ?? ask.prompt}</h2>
-              <StepInput ask={ask} busy={busy} onFacts={facts} onAddress={(a, point) => id && run(() => api.sendAddress(id, a, point), ask, "address")}
-                suggest={(q) => (id ? api.suggestAddress(id, q).then((r) => r.suggestions) : Promise.resolve([]))}
-                onDims={() => { setBack((b) => [...b, ask]); setAsk(DIMS_ASK); setNote(null); }} />
-              {error && <div className="chat-error">Something went wrong: {error}</div>}
-              <div className="step-foot">
-                {back.length > 0 ? <button type="button" className="step-back" onClick={goBack} disabled={busy}>‹ Back</button> : <span />}
+              <PlanChat plan={plan} onPlan={setPlan} ask={chatAsk} />
+            </>
+          ) : (
+            <div className="stepper">
+              <div className="step-shell">
+                <div className="step-progress" role="progressbar" aria-valuemin={1} aria-valuemax={STEPS} aria-valuenow={step}>
+                  <span>Step {step} of {STEPS}</span>
+                  <div className="step-bar"><i style={{ transform: `scaleX(${plan ? step / STEPS : 0})` }} /></div>
+                </div>
+                <div className={`step-stack dir-${dir}`}>
+                  {leaving && card(leaving, true)}
+                  {ask && card(ask, false)}
+                </div>
               </div>
             </div>
-          </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -210,6 +235,7 @@ function StepInput({ ask, busy, onFacts, onAddress, onDims, suggest }: {
   const [width, setWidth] = useState("");
   const [length, setLength] = useState("");
   const [hits, setHits] = useState<AddressSuggestion[]>([]);
+  const [chosen, setChosen] = useState<string | null>(null);   // the tile you tapped stays lit while the answer goes out
   const picked = useRef(false);
 
   // Address type-ahead: from 3 characters, 250 ms after the last keystroke; the latest answer wins.
@@ -226,8 +252,8 @@ function StepInput({ ask, busy, onFacts, onAddress, onDims, suggest }: {
     return <>
       <div className="step-tiles">
         {options.map((o) => (
-          <button key={o} type="button" className="step-tile" disabled={busy}
-            onClick={() => onFacts(ask.input === "boolean" ? { [ask.field]: o === "Yes" } as Partial<HomeFacts> : choiceFacts(ask, o))}>
+          <button key={o} type="button" className={`step-tile ${chosen === o ? "is-chosen" : ""}`} disabled={busy} aria-pressed={chosen === o}
+            onClick={() => { setChosen(o); onFacts(ask.input === "boolean" ? { [ask.field]: o === "Yes" } as Partial<HomeFacts> : choiceFacts(ask, o)); }}>
             {iconFor(o)}<span>{label(o)}</span>
           </button>
         ))}
