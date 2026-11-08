@@ -26,6 +26,10 @@ const EMPTY: Design = {
   assumptions: [], missing_inputs: [], params_version: "",
 };
 
+/** How long the scene's own motion takes before the advisor speaks (matches HouseScene's queue and drive). */
+const waitFor = (say: Say | null, panels: number) =>
+  !say ? 0 : say.spot === "roof" ? Math.min(2400, 450 + panels * 70) : say.spot === "car" ? 1900 : say.spot === "heatpump" || say.spot === "battery" ? 800 : 0;
+
 function spotPoint(spot: Spot, roof: Roof, items: ReturnType<typeof defaultItems>): [number, number, number] {
   const { length: L, depth: D } = houseDims(roof);
   const t = (roof.tilt * Math.PI) / 180;
@@ -39,7 +43,16 @@ function spotPoint(spot: Spot, roof: Roof, items: ReturnType<typeof defaultItems
 }
 
 /** The advisor in the scene: glides to its spot, bubble above. An HTML overlay, so it stays crisp at any zoom. */
-function Guide({ to, say, busy, side, onMore }: { to: [number, number, number]; say: Say | null; busy: boolean; side: boolean; onMore?: (q: string) => void }) {
+function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, number, number]; say: Say | null; busy: boolean; side: boolean; wait: number; onMore?: (q: string) => void }) {
+  // Let the house move first (panels land, the car parks), then speak. Taps on numbers answer at once.
+  const [say, setSay] = useState<Say | null>(next);
+  const [hush, setHush] = useState(false);   // the previous line fades away while the scene moves
+  useEffect(() => {
+    if (!next || next.lines || next.more || wait <= 0) { setHush(false); setSay(next); return; }
+    setHush(true);
+    const t = setTimeout(() => { setHush(false); setSay(next); }, wait);
+    return () => clearTimeout(t);
+  }, [next?.key]); // eslint-disable-line react-hooks/exhaustive-deps
   const g = useRef<THREE.Group>(null);
   const target = useMemo(() => new THREE.Vector3(...to), [to[0], to[1], to[2]]); // eslint-disable-line react-hooks/exhaustive-deps
   const [moving, setMoving] = useState(false);
@@ -54,7 +67,7 @@ function Guide({ to, say, busy, side, onMore }: { to: [number, number, number]; 
       <Html zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
         <div className={`guide ${moving ? "is-moving" : ""} ${side ? "is-side" : ""}`}>
           {say && (
-            <div className={`guide-bubble ${busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
+            <div className={`guide-bubble ${hush ? "is-hidden" : busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
               <p>{say.text}</p>
               {say.lines && say.lines.length > 0 && <ul>{say.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
               {say.more && onMore && <button type="button" className="guide-more" onClick={() => onMore(say.more!)}>Ask more ›</button>}
@@ -93,8 +106,8 @@ export default function LiveStage({ plan, say, trace, busy, tall, onMore }: {
       <div className="live-canvas">
         <Canvas shadows dpr={[1, 2]} camera={{ position: [27, 18, 32], fov: 28 }} gl={{ antialias: true, alpha: true }}>
           <HouseScene roof={roof} cells={cells} panels={panels} items={items} />
-          <Guide to={to} say={say} busy={busy} side={say?.spot === "roof"} onMore={onMore} />
-          <OrbitControls autoRotate autoRotateSpeed={0.35} enablePan={false} enableZoom={false} minPolarAngle={0.7} maxPolarAngle={1.2} minAzimuthAngle={-0.9} maxAzimuthAngle={1.4} target={[0, 2.2, 0]} />
+          <Guide to={to} say={say} busy={busy} side={say?.spot === "roof"} wait={waitFor(say, panels.size)} onMore={onMore} />
+          <OrbitControls autoRotate autoRotateSpeed={0.35} enablePan={false} enableZoom={false} minPolarAngle={0.7} maxPolarAngle={1.2} minAzimuthAngle={-0.9} maxAzimuthAngle={1.4} target={[1.6, 2, 1.4]} />
         </Canvas>
       </div>
       {photo && loc && <div className="live-photo"><Satellite loc={loc} fallback={null} /></div>}

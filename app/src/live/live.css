@@ -176,3 +176,5 @@
 }
 .step-card.is-leaving .step-tile:not(.is-chosen) { opacity: 0.38; transform: scale(0.98); }
 .step-card.is-leaving .step-tile.is-chosen::after { opacity: 0; }
+.guide-bubble.is-hidden { opacity: 0; transform: translateY(4px) scale(0.97); transition: opacity 0.3s var(--spring), transform 0.3s var(--spring); pointer-events: none; }
+.guide-bubble.is-hidden, .guide-bubble.is-stale { animation: none; }

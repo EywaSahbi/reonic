@@ -13,6 +13,27 @@ const C = {
   leaf: "#5fa04e", leafDark: "#4b8a3f", trunk: "#8a6142", hedge: "#6aa95a", ghost: "#ffffff", hover: "#f7a35c",
 };
 
+// ---------- motion: things arrive the way they would on site ----------
+const reduced = () => typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
+/** Lands and settles with two small bounces. */
+export function bounceOut(t: number) {
+  const n = 7.5625, d = 2.75;
+  if (t < 1 / d) return n * t * t;
+  if (t < 2 / d) return n * (t -= 1.5 / d) * t + 0.75;
+  if (t < 2.5 / d) return n * (t -= 2.25 / d) * t + 0.9375;
+  return n * (t -= 2.625 / d) * t + 0.984375;
+}
+const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+// Modules that appear together queue up one after another (in roof order); a single planner edit lands at once.
+let queueAt = 0, queueN = 0;
+function queueSlot(gapMs: number): number {
+  const now = performance.now();
+  if (now - queueAt > 180) queueN = 0;
+  queueAt = now;
+  return now + (reduced() ? 0 : queueN++ * gapMs);
+}
+
 let panelTex: THREE.CanvasTexture | null = null;
 function panelTexture() {
   if (panelTex) return panelTex;
@@ -67,6 +88,10 @@ export function HouseScene({ roof, cells, panels, items, events, free }: Props) 
       </mesh>
       <mesh position={[0, 0.005, D / 2 + (lotZ / 2 - D / 2) / 2]} receiveShadow><boxGeometry args={[1.4, 0.02, lotZ / 2 - D / 2]} /><meshStandardMaterial color={C.path} /></mesh>
       <mesh position={[L / 2 + 3, 0.006, D / 2 - 1 + (lotZ / 2 - D / 2 + 1) / 2]} receiveShadow><boxGeometry args={[3.2, 0.02, lotZ / 2 - D / 2 + 1]} /><meshStandardMaterial color={C.drive} /></mesh>
+      {/* the street in front of the lot: where the car arrives from */}
+      <mesh position={[0, -0.6, lotZ / 2 + 1.5]} receiveShadow><boxGeometry args={[lotX + 0.2, 1, 3]} /><meshStandardMaterial color={C.soil} /></mesh>
+      <mesh position={[0, -0.04, lotZ / 2 + 1.5]} receiveShadow><boxGeometry args={[lotX + 0.2, 0.08, 3]} /><meshStandardMaterial color="#8d9196" /></mesh>
+      <mesh position={[0, 0.005, lotZ / 2 + 1.5]}><boxGeometry args={[lotX - 1, 0.01, 0.12]} /><meshStandardMaterial color="#f4f1e8" /></mesh>
 
       <Trees lotX={lotX} lotZ={lotZ} />
       <HouseBody L={L} D={D} rise={rise} flat={roof.flat} />
@@ -75,7 +100,7 @@ export function HouseScene({ roof, cells, panels, items, events, free }: Props) 
       {items.heatpump && <Placed spot={items.heatpump} k="heatpump" events={events}><HeatPump /></Placed>}
       {items.battery && <Placed spot={items.battery} k="battery" events={events} faceWall={L}><Battery /></Placed>}
       {items.wallbox && <Placed spot={items.wallbox} k="wallbox" events={events} faceWall={L}><Wallbox /></Placed>}
-      {items.wallbox && <Car position={[L / 2 + 3, 0, D / 2 + 2.2]} />}
+      {items.wallbox && <Car position={[L / 2 + 3, 0, D / 2 + 2.2]} street={lotZ / 2 + 1.5} startX={-lotX / 2 - 1} />}
     </group>
   );
 }
@@ -144,10 +169,16 @@ function RoofFaces({ roof, L, D, cells, panels, events, free }: { roof: Roof; L:
 function CellMesh({ cell, on, flat, events }: { cell: Cell; on: boolean; flat: boolean; events?: SceneEvents }) {
   const ref = useRef<THREE.Group>(null);
   const tilt = flat ? 0.26 : 0; // flat roofs: modules on low racks
+  const landAt = useRef<number | null>(null);   // when this module starts falling (queued)
+  useEffect(() => { landAt.current = on ? queueSlot(70) : null; }, [on]);
   useFrame((_, dt) => {
     const g = ref.current; if (!g) return;
-    const target = on ? 1 : 0.001;
-    g.scale.setScalar(THREE.MathUtils.damp(g.scale.x, target, 10, dt));
+    if (!on) { g.scale.setScalar(THREE.MathUtils.damp(g.scale.x, 0.001, 12, dt)); g.position.z = 0; return; }
+    const start = landAt.current ?? 0;
+    const p = clamp01((performance.now() - start) / 650);
+    if (p <= 0) { g.scale.setScalar(0.001); return; }
+    g.scale.setScalar(1);
+    g.position.z = (1 - bounceOut(p)) * 3.2;   // falls onto the roof along its normal, settles with a bounce
   });
   const hover = events && events.hoverCell === cell.id;
   const showGhost = events && !on;
@@ -216,13 +247,16 @@ function FreeRoof({ free, events }: { free: FreeRoofProps; events?: SceneEvents 
 /** A component standing on the lot. Selected = soft ring; in the studio it can be grabbed and dragged. */
 function Placed({ spot, k, events, faceWall, children }: { spot: Spot; k: ItemKey; events?: SceneEvents; faceWall?: number; children: React.ReactNode }) {
   const ref = useRef<THREE.Group>(null);
-  const appear = useRef(0);
+  const born = useRef(performance.now() + (reduced() ? -10000 : 250));   // after the advisor turns to it
   useFrame((_, dt) => {
     const g = ref.current; if (!g) return;
     g.position.x = THREE.MathUtils.damp(g.position.x, spot[0], 18, dt);
     g.position.z = THREE.MathUtils.damp(g.position.z, spot[1], 18, dt);
-    appear.current = THREE.MathUtils.damp(appear.current, 1, 8, dt);
-    g.scale.setScalar(appear.current);
+    const p = clamp01((performance.now() - born.current) / 750);
+    g.scale.setScalar(p <= 0 ? 0.001 : 1);
+    g.position.y = (1 - bounceOut(p)) * 2.6;                            // dropped in place, small bounce
+    const squash = p > 0.35 && p < 0.6 ? 1 - Math.sin(((p - 0.35) / 0.25) * Math.PI) * 0.08 : 1;
+    g.scale.y = p <= 0 ? 0.001 : squash;
   });
   // against the side wall: turn to face outward
   const rotY = faceWall != null && Math.abs(Math.abs(spot[0]) - (faceWall / 2 + 0.25)) < 0.3 ? Math.sign(spot[0]) * Math.PI / 2 : 0;
@@ -277,14 +311,36 @@ function Wallbox() {
   );
 }
 
-function Car({ position }: { position: [number, number, number] }) {
+/** Arrives along the street, turns into the driveway and parks (eased); wheels turn while it rolls. */
+function Car({ position, street, startX }: { position: [number, number, number]; street: number; startX: number }) {
+  const g = useRef<THREE.Group>(null);
+  const wheels = useRef<(THREE.Mesh | null)[]>([]);
+  const born = useRef(performance.now() + (reduced() ? -10000 : 200));
+  const [px, , pz] = position;
+  const leg1 = Math.abs(px - startX), leg2 = Math.abs(street - pz), total = leg1 + leg2;
+  useFrame(() => {
+    const o = g.current; if (!o) return;
+    const p = clamp01((performance.now() - born.current) / 2600);
+    const d = easeOutCubic(p) * total;
+    const prevX = o.position.x, prevZ = o.position.z;
+    const x = d < leg1 ? startX + d : px;
+    const z = d < leg1 ? street : street - (d - leg1);
+    // facing +x along the street, turning to face the house: blend over 1.5 m either side of the corner
+    o.rotation.y = Math.PI / 2 + clamp01((d - (leg1 - 1.5)) / 3) * (Math.PI / 2);
+    o.position.set(x, position[1], z);
+    o.visible = p > 0;
+    const moved = Math.hypot(x - prevX, z - prevZ);
+    wheels.current.forEach((w) => { if (w) w.rotation.x -= moved / 0.33; });
+  });
   return (
-    <group position={position}>
+    <group ref={g} position={[startX, position[1], street]} visible={false}>
       <mesh position={[0, 0.55, 0]} castShadow><boxGeometry args={[1.8, 0.6, 4.1]} /><meshStandardMaterial color={C.car} /></mesh>
       <mesh position={[0, 1.08, -0.2]} castShadow><boxGeometry args={[1.6, 0.5, 2.2]} /><meshStandardMaterial color={C.car} /></mesh>
       <mesh position={[0, 1.08, -0.2]}><boxGeometry args={[1.62, 0.36, 2.0]} /><meshStandardMaterial color="#2a3442" roughness={0.2} /></mesh>
-      {[[-0.9, 1.3], [0.9, 1.3], [-0.9, -1.3], [0.9, -1.3]].map(([x, z]) => (
-        <mesh key={`${x}${z}`} position={[x, 0.33, z]} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.33, 0.33, 0.25, 20]} /><meshStandardMaterial color="#26282c" /></mesh>
+      {[[-0.9, 1.3], [0.9, 1.3], [-0.9, -1.3], [0.9, -1.3]].map(([x, z], i) => (
+        <group key={`${x}${z}`} position={[x, 0.33, z]}>
+          <mesh ref={(m) => { wheels.current[i] = m; }} rotation={[0, 0, Math.PI / 2]} castShadow><cylinderGeometry args={[0.33, 0.33, 0.25, 12]} /><meshStandardMaterial color="#26282c" flatShading /></mesh>
+        </group>
       ))}
     </group>
   );
