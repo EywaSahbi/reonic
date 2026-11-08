@@ -1,6 +1,8 @@
 param(
     [switch]$Protected,
-    [string]$FrontendOrigin = 'https://sonnfeld-reo.vercel.app'
+    [string]$FrontendOrigin = 'https://sonnfeld-reo.vercel.app',
+    [ValidateRange(1, 20)][int]$MaxActiveSessions = 5,
+    [ValidateRange(1, 4)][int]$MaxAgentRuns = 2
 )
 # Start the existing Python services on loopback only. Does not expose a public tunnel.
 $ErrorActionPreference = 'Stop'
@@ -19,6 +21,13 @@ if ($Protected) {
     $env:REO_INSTALLER_TOKEN = [System.IO.File]::ReadAllText($tokenFile).Trim()
     if ($env:REO_INSTALLER_TOKEN.Length -lt 19) { throw 'Installer token file is empty or too short.' }
     $env:REO_ALLOWED_ORIGINS = $FrontendOrigin
+    $demoPinFile = Join-Path $runtimeDir 'demo-pin.txt'
+    if (Test-Path -LiteralPath $demoPinFile) {
+        $env:REO_DEMO_PIN = [System.IO.File]::ReadAllText($demoPinFile).Trim()
+        if (-not $env:REO_DEMO_PIN) { throw 'Demo PIN file is empty.' }
+        $env:REO_MAX_ACTIVE_SESSIONS = [string]$MaxActiveSessions
+        $env:REO_MAX_CONCURRENT_RUNS = [string]$MaxAgentRuns
+    }
 }
 
 
@@ -30,7 +39,14 @@ foreach ($service in @(@{Name='engine';Port=8000}, @{Name='reo';Port=8001})) {
             if ($Protected -and $service.Name -eq 'reo') {
                 $protectedStatus = (Invoke-WebRequest 'http://127.0.0.1:8001/plans' -SkipHttpErrorCheck).StatusCode
                 if ($protectedStatus -ne 401) { throw 'Existing reo has no installer access guard. Restart it before protected startup.' }
-                $checkToken = Invoke-WebRequest 'http://127.0.0.1:8001/plans' -Headers @{Authorization="Bearer $env:REO_INSTALLER_TOKEN"} -SkipHttpErrorCheck
+                if ($env:REO_DEMO_PIN -and -not $health.demo_auth_required) { throw 'Existing reo does not enforce the requested demo PIN. Restart it with this configuration.' }
+                $authHeaders = @{Authorization="Bearer $env:REO_INSTALLER_TOKEN"}
+                if ($env:REO_DEMO_PIN) { $authHeaders['X-Demo-Pin'] = $env:REO_DEMO_PIN }
+                if ($env:REO_DEMO_PIN) {
+                    $pinOnly = Invoke-WebRequest 'http://127.0.0.1:8001/plans' -Headers @{'X-Demo-Pin'=$env:REO_DEMO_PIN} -SkipHttpErrorCheck
+                    if ($pinOnly.StatusCode -ne 401) { throw 'Existing reo does not require the separate planner token.' }
+                }
+                $checkToken = Invoke-WebRequest 'http://127.0.0.1:8001/plans' -Headers $authHeaders -SkipHttpErrorCheck
                 if ($checkToken.StatusCode -ne 200) { throw 'Existing reo uses a different installer token. Restart with this configuration.' }
             }
             Write-Host "$($service.Name) already healthy on $($service.Port); reusing it."; continue }
