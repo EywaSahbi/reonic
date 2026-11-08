@@ -114,3 +114,11 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Reviewed/pulled Eywa's 8d3cee9, built frontend and ran auth checks; isolated delete regression passes. Restarted protected reo; live schema exposes DELETE /plans/{pid}, PIN and caps preserved. No real plan deleted during verification.
 - Vercel blocked direct deployment from Eywa-authored HEAD because the author is not permitted in this project. This owner-authored integration record follows review/testing; original author/commit remains intact. Retrying deployment from the integration commit.
 - Git auto-deployment remains disconnected: Vercel failed private-repo access during setup. Current publication is CLI/app-only; do not assume pushes publish. Preserve no-dataset-upload rule if configuring future automation.
+
+## 3D house + planner design studio (8 Nov, 6a4025e)
+
+- three.js via @react-three/fiber 8 + drei 9 (React 18). Plan, geometry rules and open checks: `app/docs-3d.md`.
+- Customer plan card: 3D house drawn from the engine design (lazy, SVG fallback without WebGL); satellite photo is a second tab when `roof_location` exists.
+- Planner: "Design studio" card under the offer pack: palette drag-and-drop, Paint/Erase modules, move components, Apply → locks via PATCH /plans/{id}. Numbers only from the engine.
+- Ege (engine) approved to edit app/ for voice auto-stop, plan card price headline, address box position (board ACK).
+- Decision: studio placement turns into locks only for components that differ from the engine design (pv size = modules × engine kWp/module), so an untouched studio never locks anything.

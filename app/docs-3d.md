@@ -35,10 +35,15 @@ No contract change for reo or engine. `max_modules` is in engine/CONTRACT.md alr
 
 ## Done when
 
-- [ ] Customer plan card shows the 3D house; panel count = engine count; works in mock mode.
-- [ ] Planner can drag panels/battery/heat pump/wallbox in and out, apply, and see the engine's re-derived design.
-- [ ] `npm run build` passes; desktop + mobile checked in the browser; bundle split so the customer site's first load is not slower.
-- [ ] Board DONE to qa with SHA.
+- [x] Customer plan card shows the 3D house; panel count = engine count; works in mock mode (desktop + 375 px checked).
+- [x] Planner can add/remove modules, add/remove/move battery, heat pump, wallbox; Apply round-trip verified in mock (24 → 23 modules: PV 10.5 → 10.06 kWp, total re-derived).
+- [x] `npm run build` + `node scripts/check-scene.mjs` pass; three.js is a lazy chunk (~229 kB gzip), main bundle unchanged.
+- [x] Board DONE to qa (6a4025e).
+
+## Not verified yet
+
+- Click-drag *painting* across several cells and HTML5 drag from the palette (the browser automation only sends click-level events; single clicks and palette clicks verified). Try by hand.
+- Live reo + engine round trip (mock only so far); the deployed Vercel build has not been redeployed with this.
 
 ## Later (if time)
 
