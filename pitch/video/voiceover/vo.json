@@ -146,7 +146,7 @@
       "id": "21-edit",
       "start": 81.8,
       "until": 85.9,
-      "text": "The planner moves, adds or removes modules, and the price re-derives instantly.",
+      "text": "The planner moves, adds or removes modules, and the price follows.",
       "on screen": "drag, three adds, remove (78.7-86.8)"
     },
     {
@@ -181,14 +181,14 @@
       "id": "26-agent",
       "start": 101.6,
       "until": 106.8,
-      "text": "reo is an agent, not a chatbot: an engine for the numbers, the calendar, the CRM, WhatsApp.",
+      "text": "reo is an agent, not a chatbot: the engine, calendar, CRM and WhatsApp.",
       "on screen": "reo floats, tool tiles land one by one"
     },
     {
       "id": "27-vision",
       "start": 106.9,
       "until": 109.4,
-      "text": "Our vision: one companion for every installer.",
+      "text": "One companion for every installer.",
       "on screen": "all lines pulse, the word Vision"
     },
     {
