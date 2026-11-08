@@ -34,7 +34,6 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
   const [roofResult, setRoofResult] = useState<RoofResult>();
   const [lookingUpRoof, setLookingUpRoof] = useState(false);
   const roofReturn = useRef<{ ask?: Ask; chips: string[] } | null>(null);
-  const billInput = useRef<HTMLInputElement>(null);
   const reoAudio = useReoAudio();
 
   // Mic only when reo can do voice (ElevenLabs key set in reo/.env), or forced with ?voice=1.
@@ -171,18 +170,6 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     run(() => api.sendMessage(id, s), s);
   }
 
-  async function uploadBill(file?: File) {
-    if (!id || !file) return;
-    setBusy(true); setError(null); setChips([]); setAsk(undefined);
-    try {
-      const t = await api.sendBill(id, file);
-      setMessages((m) => [...m, { role: "customer", text: "Uploaded an electricity bill", at: stamp() }, ...t.messages]);
-      setPlan(t.plan); setChips(t.suggestions); setAsk(t.ask); setBillRead(t.bill);
-      setGoalResult(t.goal_result);
-    } catch (e) { setError(errText(e)); }
-    finally { setBusy(false); if (billInput.current) billInput.current.value = ""; }
-  }
-
   async function handoff(name: string, email?: string) {
     if (!plan) return;
     setBusy(true);
@@ -278,12 +265,6 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                   {visibleChips.map((c) => <button key={c} className="chip" onClick={() => say(c)}>{c}</button>)}
                 </div>
               )}
-              {!billRead && !handedOver && <div className="customer-tools">
-                <button type="button" className="chip" onClick={openRoofLookup} disabled={busy}>⌖ Find my roof</button>
-                <button type="button" className="chip" onClick={() => billInput.current?.click()} disabled={busy}>▧ Add a bill photo</button>
-                <input ref={billInput} type="file" accept="image/*,.pdf" hidden onChange={(e) => uploadBill(e.target.files?.[0])} />
-                {[["Keep it under €20,000", "Keep it under €20,000"], ["As independent as possible", "As independent as possible"], ["Lowest monthly bill", "Lowest monthly bill"]].map(([label, value]) => <button key={value} type="button" className="chip" disabled={busy} onClick={() => say(value)}>{label}</button>)}
-              </div>}
               {notice && <div className="voice-hint">{notice}</div>}
               {reoAudio.speaking && (
                 <div className="speaking"><span className="mic-dot" /> Speaking <button type="button" onClick={reoAudio.stop}>Stop</button></div>
