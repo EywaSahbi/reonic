@@ -2,6 +2,8 @@
 
 REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]  # engine HomeFacts.region
 
+FOSSIL = {"gas", "oil", "district", "other"}   # heating that a heat pump could replace: the heat pump is offered as an option
+
 # Prompts per field. The order is fixed by next_question() below (customer-backend flow of 2026-11-08).
 QUESTIONS = [
     (("total_demand_kwh", "annual_demand_kwh"), {"field": "total_demand_kwh", "input": "number",
@@ -19,6 +21,9 @@ QUESTIONS = [
     (("heating_type",), {"field": "heating_type", "input": "choice",
                          "options": ["gas", "oil", "heatpump", "electric", "district", "other"],
                          "prompt": "How do you heat today? It decides whether a heat pump fits."}),
+    (("heatpump_option",), {"field": "heatpump_option", "input": "choice",
+                            "options": ["Yes, show me the heat pump option", "No, keep my plan"],
+                            "prompt": "Would you like to consider the heat pump option?"}),
     (("has_existing_pv",), {"field": "has_existing_pv", "input": "choice", "options": ["Yes, I have solar", "No solar yet"],
                             "prompt": "Do you already have solar on the roof?"}),
     (("existing_pv_kwp",), {"field": "existing_pv_kwp", "input": "number",
@@ -54,7 +59,7 @@ OPENING_ASK = KWH_ASK
 def ui_ask(ask: dict) -> dict:
     """The Turn.ask shape for the app: short prompt label, no explanation sentence."""
     label = {"num_inhabitants": "People in your home", "total_demand_kwh": "Yearly electricity use (kWh)", "roof_dims": "Roof width × length (m)", "building_type": "Type of house", "heating_type": "How do you heat today?", "has_ev": "Electric car?",
-             "roof_area_sqm": "Your address (we measure the roof from the map)", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
+             "roof_area_sqm": "Your address (we measure the roof from the map)", "region": "Federal state", "has_existing_pv": "Solar already on the roof?", "heatpump_option": "Heat pump option", "existing_pv_kwp": "Existing solar (kWp)", "roof_type": "Roof shape", "house_size_sqm": "Living space (m²)",
              "electricity_price_eur_per_kwh": "Price per kWh (€)", "budget_eur": "Budget (€)"}
     out = {k: v for k, v in ask.items() if k != "prompt"}
     out["prompt"] = label.get(ask["field"], ask["prompt"])
@@ -79,9 +84,13 @@ def next_question(facts: dict, design: dict | None = None, skipped: set[str] = f
             return ASK["region"]
         if "region" in skipped and "roof_dims" not in skipped:
             return ASK["roof_dims"]
-    for field in ("has_ev", "heating_type", "has_existing_pv"):
+    for field in ("has_ev", "heating_type"):
         if not known(*next(k for k, a in QUESTIONS if a["field"] == field)) and field not in skipped:
             return ASK[field]
+    if facts.get("heating_type") in FOSSIL and "heatpump_option" not in skipped:   # "skipped" also holds closed asks
+        return ASK["heatpump_option"]
+    if not known("has_existing_pv") and "has_existing_pv" not in skipped:
+        return ASK["has_existing_pv"]
     if facts.get("has_existing_pv") and not known("existing_pv_kwp") and "existing_pv_kwp" not in skipped:
         return ASK["existing_pv_kwp"]
     return None

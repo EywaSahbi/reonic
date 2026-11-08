@@ -12,11 +12,12 @@ def fake_design(facts, locks=None, prices=None):
     pv = 10.5 if ev else 8.2
     locks = locks or {}
     bat = locks.get("battery", {}).get("size", 10)
+    hp = (locks.get("heatpump") or {}).get("recommended", False)
     comp = lambda rec, size, unit, why: {"recommended": rec, "size": size if rec else None, "unit": unit, "range": None,
                                          "confidence": "medium", "locked": False, "reasons": [why]}
-    total = 18900 + (3000 if ev else 0) + (bat - 10) * 900
+    total = 18900 + (3000 if ev else 0) + (bat - 10) * 900 + (20000 if hp else 0)
     return {"components": {"pv": comp(True, pv, "kWp", "demand"), "battery": comp(True, bat, "kWh", "evening use"),
-                           "heatpump": comp(False, None, "kW", "heating unknown"), "wallbox": comp(bool(ev), 11, "kW", "EV")},
+                           "heatpump": comp(hp, 8, "kW", "heating unknown"), "wallbox": comp(bool(ev), 11, "kW", "EV")},
             "price": {"items": [{"label": "PV modules", "qty": 20, "unit": "pc", "unit_price_eur": 300, "total_eur": 6000}],
                       "total_eur": total, "range_eur": [total - 1800, total + 1900]},
             "economics": {"total_demand_kwh": 4500, "self_consumption_pct": 60, "autarky_pct": 70,
@@ -29,9 +30,16 @@ def fake_design(facts, locks=None, prices=None):
             if not facts.get("heating_type") else [], "params_version": "test"}
 
 
+def fake_explain(facts, component, locks=None, prices=None):
+    return {"reasons": [], "what_if": [{"change": "add heat pump", "effect": "", "locks": {},
+                                         "delta": {"price_eur": 20000, "annual_savings_eur": 300, "payback_years": 1, "autarky_pct": 0,
+                                                   "bill_after_eur_per_month": 0}}]}
+
+
 def client(tmp_path, monkeypatch, engine_up=True):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(api, "STORE", tmp_path / "plans.json")
+    monkeypatch.setattr(engine, "explain", fake_explain)
     monkeypatch.setattr(engine, "design", fake_design if engine_up else (lambda *a, **k: None))
     return TestClient(api.app)
 
@@ -61,7 +69,13 @@ def test_demo_flow(tmp_path, monkeypatch):
     t = c.post(f"/sessions/{pid}/messages", json={"text": "Gas"}).json()  # chip
     assert t["plan"]["facts"]["heating_type"] == "gas"
     assert "heat pump" in t["messages"][0]["text"] and "€2,180" in t["messages"][0]["text"]  # engine's heating_comparison
-    assert t["ask"]["field"] == "has_existing_pv"
+    assert "still stands" in t["messages"][0]["text"] and "€20,000 more" in t["messages"][0]["text"]
+    assert t["ask"]["field"] == "heatpump_option" and not t["plan"]["design"]["components"]["heatpump"]["recommended"]
+    assert t["heatpump_option"]["with"]["components"]["heatpump"]["recommended"] and "heatpump_option" not in t["plan"]["facts"]
+
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "No, keep my plan"}).json()   # chip
+    assert "without a heat pump" in t["messages"][0]["text"] and not t["plan"]["design"]["components"]["heatpump"]["recommended"]
+    assert t["ask"]["field"] == "has_existing_pv" and "heatpump_option" not in t
 
     t = c.post(f"/sessions/{pid}/messages", json={"text": "No solar yet"}).json()  # chip
     assert t["plan"]["facts"]["has_existing_pv"] is False
@@ -196,3 +210,23 @@ def test_customer_engine_calls_carry_the_reveal_locks(tmp_path, monkeypatch):
     assert "electricity use" in first["pv"]["reasons"][0] and "installer" not in first["wallbox"]["reasons"][0]
     c.post(f"/sessions/{pid}/messages", json={"text": "we use about 4,500 kWh a year"})
     assert set(seen[-1]) == {"wallbox", "heatpump"}
+
+
+def test_heatpump_option_yes_by_typing_and_by_tap(tmp_path, monkeypatch):
+    c = client(tmp_path, monkeypatch)
+    for answer in (lambda pid: c.post(f"/sessions/{pid}/messages", json={"text": "yes please"}).json(),
+                   lambda pid: c.post(f"/sessions/{pid}/facts", json={"facts": {"heatpump_option": True}}).json()):
+        pid = c.post("/sessions", json={}).json()["plan"]["id"]
+        c.post(f"/sessions/{pid}/facts", json={"facts": {"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "gas"}})
+        t = c.post(f"/sessions/{pid}/messages", json={"text": "hi"}).json()
+        assert t["ask"]["field"] == "heatpump_option"
+        t = answer(pid)
+        assert t["plan"]["design"]["components"]["heatpump"]["recommended"] and "now includes the heat pump" in t["messages"][0]["text"]
+        assert "heatpump_option" not in t["plan"]["facts"] and t["ask"]["field"] == "has_existing_pv"
+
+
+def test_electric_heating_has_no_heatpump_step(tmp_path, monkeypatch):
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/facts", json={"facts": {"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric"}}).json()
+    assert t["ask"]["field"] == "has_existing_pv" and "heatpump_option" not in t

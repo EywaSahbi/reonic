@@ -48,6 +48,16 @@ NUMBER_FIELDS = {"total_demand_kwh", "num_inhabitants", "roof_area_sqm", "existi
                  "electricity_price_eur_per_kwh", "budget_eur"}   # a bare number answers these asks
 
 
+def heatpump_answer(text: str) -> bool | None:
+    """Answer to the heat pump option ask: chip text or a typed yes / no, else None."""
+    t = text.strip().lower()
+    if re.search(r"^(yes|ja|yeah|sure|ok|okay|gern|please|show)\b|heat pump option", t):
+        return True
+    if re.search(r"^(no|nein|nope|not|keep|nö)\b", t):
+        return False
+    return None
+
+
 def chip(text: str) -> dict | None:
     """Exact chip tap -> {"facts", "intent", "topic"}, or None if this is free text."""
     t = text.strip().lower()
@@ -177,6 +187,17 @@ def headline(d: dict) -> str:
     items = parts[0] if len(parts) == 1 else ", ".join(parts[:-1]) + " and " + parts[-1]
     lo, hi = d["price"]["range_eur"]
     return f"I'd suggest {items}. That would cost roughly {eur(lo)}–{eur(hi)[1:]} (estimate)."
+
+
+def heatpump_option_text(without: dict, with_: dict, delta: dict) -> str:
+    """The between-step: the plan stands, the heat pump version is prepared. All numbers are from the two engine designs and /explain."""
+    lo, hi = with_["price"]["range_eur"]
+    kw = with_["components"]["heatpump"]["size"]
+    more = f"{eur(abs(delta['price_eur']))} {'more' if delta['price_eur'] >= 0 else 'less'}"
+    saving = f", saving about €{rnd(with_['economics']['annual_savings_eur'], 10):,} a year" if with_["economics"]["annual_savings_eur"] > 0 else ""
+    n = str(rnd(kw))
+    return (f"Your plan above still stands. I've also prepared a version with {a_n(n)} {n} kW heat pump: roughly {eur(lo)}–{eur(hi)[1:]} "
+            f"(estimate), {more}{saving}.")
 
 
 def heating_advice(d: dict) -> str | None:

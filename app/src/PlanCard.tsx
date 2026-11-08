@@ -1,7 +1,7 @@
-import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
+import { COMPONENT_KEYS, isOffline, type ComponentKey, type HomeFacts, type Plan } from "./types";
 import { House } from "./House";
 import { Satellite } from "./Satellite";
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 const House3D = lazy(() => import("./scene/House3D"));
 let gl: boolean | null = null;
@@ -39,7 +39,22 @@ const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("e
 
 // Live plan card: components, sizes, price range that narrows as facts arrive, reasons, assumptions.
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
+// The inputs the customer can give, as groups of facts (any one fact of a group counts). The precision bar is
+// answered / INPUTS.length: deterministic, and it only moves forward (kept per plan in a ref).
+const INPUTS: [string, (keyof HomeFacts)[]][] = [
+  ["yearly use", ["total_demand_kwh", "annual_demand_kwh", "num_inhabitants"]],
+  ["roof size", ["roof_area_sqm", "roof_width_m"]],
+  ["state", ["region"]],
+  ["roof direction", ["roof_orientation_deg"]],
+  ["electric car", ["has_ev", "ev_planned"]],
+  ["heating", ["heating_type"]],
+  ["heat demand", ["heating_demand_kwh", "house_size_sqm"]],
+  ["existing solar", ["has_existing_pv"]],
+  ["electricity price", ["electricity_price_eur_per_kwh"]],
+];
+
 export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => void }) {
+  const reached = useRef<{ id: string; n: number }>({ id: plan.id, n: 0 });
   const d = plan.design;
   if (isOffline(d)) {
     return (
@@ -53,7 +68,10 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
   }
   const quoted = plan.status === "quoted";
   const [lo, hi] = d.price.range_eur;
-  const spreadPct = d.price.total_eur ? ((hi - lo) / d.price.total_eur) * 100 : 0;
+  const answered = INPUTS.filter(([, keys]) => keys.some((k) => plan.facts[k] != null)).length;
+  if (reached.current.id !== plan.id) reached.current = { id: plan.id, n: 0 };
+  reached.current.n = Math.max(reached.current.n, answered);            // never moves back
+  const given = reached.current.n;
   const prev = plan.history.length > 1 ? plan.history[plan.history.length - 2].total_eur : null;
 
   return (
@@ -73,11 +91,12 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
             <small>estimate{prev && prev !== d.price.total_eur ? ` · was about ${eur(prev)}` : ""}</small>
           </div>
         )}
-        {!quoted && (
-          <div className="precision" title="The bar fills as we learn more about your home">
-            <span style={{ transform: `scaleX(${Math.min(100, Math.max(10, 100 - spreadPct * 2)) / 100})` }} />
+        {!quoted && (<>
+          <div className="precision" role="progressbar" aria-valuemin={0} aria-valuemax={INPUTS.length} aria-valuenow={given}>
+            <span style={{ transform: `scaleX(${Math.max(0.04, given / INPUTS.length)})` }} />
           </div>
-        )}
+          <p className="precision-note">Precision: {given} of {INPUTS.length} inputs given. Every answer you add narrows the range.</p>
+        </>)}
       </div>
 
       <ul className="components">

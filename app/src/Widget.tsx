@@ -1,15 +1,16 @@
 import { Fragment, useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { Ask, GoalResult, HomeFacts, Message, Plan, Turn } from "./types";
+import type { Ask, GoalResult, HeatpumpOption, HomeFacts, Message, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
 import { MicButton, useReoAudio, voiceForced } from "./Voice";
 import { ReoAvatar } from "./ReoAvatar";
 import { AddressLookup, RoofResultCard, type RoofResult } from "./AddressLookup";
+import { HeatpumpOptionCard } from "./HeatpumpOptionCard";
 
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const SESSION_KEY = "reo-session-id";
-type ChatMessage = Message & { roofResult?: RoofResult };   // roofResult: the roof box that stays under this reply
+type ChatMessage = Message & { roofResult?: RoofResult; hpOption?: HeatpumpOption };   // roofResult: the roof box that stays under this reply
 const readSaved = () => { try { return localStorage.getItem(SESSION_KEY); } catch { return null; } };
 const writeSaved = (id: string | null) => { try { if (id) localStorage.setItem(SESSION_KEY, id); else localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ } };
 const stamp = () => new Date().toISOString();
@@ -72,8 +73,13 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     setChips([]);
     try {
       const t = await p();
-      // the roof box belongs to the reply it came with: it stays under that message while the chat goes on below it
-      const attach = (x: Message, i: number): ChatMessage => (t.roof && i === t.messages.length - 1 ? { ...x, roofResult: { roof: t.roof, facts: t.plan.facts } } : x);
+      // the roof box sits between the customer's address and reo's reply and stays there while the chat goes on below
+      const last = t.messages.length - 1;
+      const attach = (x: Message, i: number): ChatMessage => ({
+        ...x,
+        ...(t.roof && i === 0 ? { roofResult: { roof: t.roof, facts: t.plan.facts } } : {}),    // shown above reo's reply
+        ...(t.heatpump_option && i === last ? { hpOption: t.heatpump_option } : {}),            // shown under reo's reply
+      });
       setMessages((m) => [...m, ...t.messages.map(attach)]);
       roofReturn.current = null;
       setPlan(t.plan);
@@ -235,13 +241,14 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
           <div className="chat-log" aria-live="polite">
             {messages.map((m, i) => (
               <Fragment key={i}>
+                {m.roofResult && <RoofResultCard result={m.roofResult} onChange={!handedOver && !busy && m.roofResult.roof === roofResult?.roof ? openRoofLookup : undefined} />}
                 {m.role === "reo" && i === latestAdvisorIndex ? (
                   <div className="reo-message">
                     <span className="reo-message-avatar" aria-hidden><ReoAvatar size={104} greet={false} interactive={false} /></span>
                     <div className="bubble bubble-reo">{m.text}</div>
                   </div>
                 ) : <div className={`bubble bubble-${m.role}`}>{m.text}</div>}
-                {m.roofResult && <RoofResultCard result={m.roofResult} onChange={!handedOver && !busy && m.roofResult.roof === roofResult?.roof ? openRoofLookup : undefined} />}
+                {m.hpOption && <HeatpumpOptionCard option={m.hpOption} />}
               </Fragment>
             ))}
             {busy && <div className="bubble bubble-reo typing"><span /><span /><span /></div>}
@@ -263,6 +270,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                   ask={ask}
                   onFacts={(f, label) => id && run(() => api.sendFacts(id, f), label)}
                   onAddress={lookupRoof}
+                  onSkip={() => say("Skip")}
                 />
               )}
               {billRead && visibleChips.length > 0 && !busy && ( /* suggestion chips removed (EywaSahbi); only the bill confirmation stays */
@@ -315,12 +323,25 @@ function choiceFacts(ask: Ask, o: string): Partial<HomeFacts> {
     return { has_ev: false, ev_planned: false };
   }
   if (ask.field === "has_existing_pv") return { has_existing_pv: /^yes/i.test(o) };
+  if ((ask.field as string) === "heatpump_option") return { heatpump_option: /^yes/i.test(o) } as Partial<HomeFacts>;   // reo keeps it out of the home facts
   const n = parseInt(o, 10); // numeric choices like "4" or "5+" (experience/flow.md Stage 1)
   return { [ask.field]: Number.isFinite(n) && /^\d/.test(o) ? n : o } as Partial<HomeFacts>;
 }
 
 // Inline input for Turn.ask.
-function AskInput({ ask, onFacts, onAddress }: {
+const SKIPPABLE = new Set(["total_demand_kwh", "num_inhabitants", "region", "roof_dims"]);   // reo moves on with a typical value
+
+function AskInput({ ask, onFacts, onAddress, onSkip }: {
+  ask: Ask;
+  onFacts: (f: Partial<HomeFacts>, label: string) => void;
+  onAddress: (a: string) => void;
+  onSkip: () => void;
+}) {
+  const skip = SKIPPABLE.has(ask.field) ? <button type="button" className="btn-ghost small ask-skip" onClick={onSkip}>Skip</button> : null;
+  return <><AskField ask={ask} onFacts={onFacts} onAddress={onAddress} />{skip}</>;
+}
+
+function AskField({ ask, onFacts, onAddress }: {
   ask: Ask;
   onFacts: (f: Partial<HomeFacts>, label: string) => void;
   onAddress: (a: string) => void;
