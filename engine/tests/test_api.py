@@ -222,3 +222,13 @@ def test_heatpump_cheaper_flag_follows_prices():
     assert post(f)["heating_comparison"]["heatpump_cheaper"] is True
     hc = post({**f, "electricity_price_eur_per_kwh": 0.60})["heating_comparison"]
     assert hc["heatpump_cheaper"] is False and hc["cost_factor"] < 1
+
+
+def test_price_range_uses_typical_band_not_extremes():
+    d = post({"total_demand_kwh": 4500, "region": "BY", "roof_orientation_deg": 180, "heating_type": "electric",
+              "electricity_price_eur_per_kwh": 0.32, "has_existing_pv": False, "has_ev": False, "roof_area_sqm": 80})
+    lo, hi = d["price"]["range_eur"]
+    assert lo < d["price"]["total_eur"] < hi and hi / lo < 1.35        # only the price-list spread is left: half of the sourced min-max
+    assert post({"total_demand_kwh": 4500})["price"]["range_eur"][1] / post({"total_demand_kwh": 4500})["price"]["range_eur"][0] < 1.6
+    fixed = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1000, "pv_base_eur": 2500})["price"]["range_eur"]
+    assert fixed[0] < fixed[1]

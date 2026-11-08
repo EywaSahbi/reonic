@@ -42,7 +42,9 @@ def price_of(key, overrides):
     """(mid, low, high) for one price key; an installer override fixes all three."""
     if key in overrides:
         return (overrides[key],) * 3
-    return PRICES[key], PRICES.get(f"{key}_low", PRICES[key]), PRICES.get(f"{key}_high", PRICES[key])
+    mid, lo, hi = PRICES[key], PRICES.get(f"{key}_low", PRICES[key]), PRICES.get(f"{key}_high", PRICES[key])
+    share = PARAMS["price_band_share"]       # typical band: only this share of the sourced min-max distance from the mid
+    return mid, mid - share * (mid - lo), mid + share * (hi - mid)
 
 
 def battery_for(pv_kwp, bands):

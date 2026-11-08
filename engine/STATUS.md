@@ -31,6 +31,8 @@ Remaining (not changed): `bill_today_eur_per_month` with a planned EV includes t
 
 Heating comparison (2026-11-08, after human OK for the new question order): `heating_comparison` in `/design` for gas / oil / district / other: energy factor (COP ÷ boiler efficiency), yearly running cost now vs heat pump on grid power, CO2 now vs heat pump (gas, oil only; UBA factors in SOURCES.md). Grid power only; own solar improves it. Open: app/reo ACK for their side of the new flow.
 
+Price range (2026-11-08, owner decision): `price.range_eur` uses a typical band, `params.json` `price_band_share` 0.5 = half of the sourced min-max distance on each side of the mid price; before, every item took its cheapest / dearest sourced price at once. Default 4,500 kWh home: €11,900–22,600 -> €13,700–20,300; with all inputs known €13,700–17,500. `prices.json` low / high and `/prices` unchanged; installer overrides still fix a price.
+
 ## Published
 
 - `CONTRACT.md` v1: `ev_km_per_week`, `ev_km_per_day` (f38af8a), `total_demand_kwh` (336060e), `region` (718cd3f); `building_type`, `roof_type`, `bundle`, monthly bills, `_low` / `_high` prices, `/explain` live (7055607)
