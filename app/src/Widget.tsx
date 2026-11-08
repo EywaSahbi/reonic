@@ -78,14 +78,14 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   useEffect(() => { if (plan?.id) writeSaved(plan.id); }, [plan?.id]);
 
-  // After an address lookup reo has Claude check the roof on the satellite photo in the background (3-7 s): poll briefly so
+  // After an address lookup reo has Claude check the roof on the satellite photo in the background (~10-15 s): poll briefly so
   // the corrected outline, roof area and plan show up at once instead of with the next answer (EywaSahbi).
   const loc = plan?.roof_location;
   useEffect(() => {
     if (!plan || plan.status !== "drafting" || !loc || loc.checked) return;
     let n = 0;
     const t = setInterval(async () => {
-      if (++n > 10) { clearInterval(t); return; }
+      if (++n > 15) { clearInterval(t); return; }   // up to 30 s: three parallel Opus traces take ~10-15 s
       try {
         const p = await api.getSession(plan.id);
         if (p.roof_location?.checked && p.roof_location.label === loc.label) {
