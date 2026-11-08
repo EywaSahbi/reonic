@@ -96,7 +96,7 @@ export type Ask = {
   options?: string[];
 };
 
-export type RoofLocation = { label: string; lat: number; lon: number; outline?: [number, number][] };
+export type RoofLocation = { label: string; lat: number; lon: number; outline?: [number, number][]; checked?: boolean };   // checked: outline redrawn by Claude from the satellite photo
 export type RoofLookup = { source: "OpenStreetMap" | "demo data"; label: string; footprint_sqm?: number };
 /** GET /sessions/{id}/address/suggest: demo addresses (label only) or a Photon hit with its point. */
 export type AddressSuggestion = { label: string; lat?: number; lon?: number; housenumber?: string; state?: string };

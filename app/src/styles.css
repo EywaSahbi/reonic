@@ -536,3 +536,5 @@ h1, h2, h3 { color: var(--ink); }
 .heat-bar i { display: block; height: 10px; border-radius: 9999px; background: var(--ink-400); min-width: 6px; }
 .heat-bar:last-child i { background: var(--sunset); }
 .heat-bar b { font-variant-numeric: tabular-nums; }
+.satellite-checked { position: absolute; left: 10px; top: 10px; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 9999px; color: #065f46; background: rgba(231, 248, 241, 0.92); pointer-events: none; }
+.satellite-outline.is-checked { stroke: #10b981; fill: rgba(16, 185, 129, 0.16); }

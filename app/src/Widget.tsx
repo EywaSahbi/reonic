@@ -78,6 +78,25 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   useEffect(() => { if (plan?.id) writeSaved(plan.id); }, [plan?.id]);
 
+  // After an address lookup reo has Claude check the roof on the satellite photo in the background (3-7 s): poll briefly so
+  // the corrected outline, roof area and plan show up at once instead of with the next answer (EywaSahbi).
+  const loc = plan?.roof_location;
+  useEffect(() => {
+    if (!plan || plan.status !== "drafting" || !loc || loc.checked) return;
+    let n = 0;
+    const t = setInterval(async () => {
+      if (++n > 10) { clearInterval(t); return; }
+      try {
+        const p = await api.getSession(plan.id);
+        if (p.roof_location?.checked && p.roof_location.label === loc.label) {
+          clearInterval(t);
+          setPlan((cur) => (cur && cur.id === p.id && cur.updated_at <= p.updated_at ? p : cur));   // never overwrite a newer turn
+        }
+      } catch { /* keep polling */ }
+    }, 2000);
+    return () => clearInterval(t);
+  }, [plan?.id, plan?.status, loc?.label, loc?.checked]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // After handoff, poll for the installer's final quote.
   useEffect(() => {
     if (!plan || plan.status !== "handed_over") return;

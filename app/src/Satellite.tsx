@@ -49,8 +49,9 @@ export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: Reac
           <image key={`${x}-${y}`} href={URL(z, x, y)} x={x * TILE - left} y={y * TILE - top} width={TILE} height={TILE}
             onError={i === 0 ? () => setFailed(true) : undefined} />
         ))}
-        {outline && <polygon points={outline} className="satellite-outline" vectorEffect="non-scaling-stroke" />}
+        {outline && <polygon points={outline} className={`satellite-outline ${loc.checked ? "is-checked" : ""}`} vectorEffect="non-scaling-stroke" />}
       </svg>
+      {loc.checked && <span className="satellite-checked">✓ Roof outline traced from this photo</span>}
       <span className="satellite-credit">© Esri, Maxar, Earthstar Geographics</span>
     </figure>
   );
