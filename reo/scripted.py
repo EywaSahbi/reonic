@@ -45,7 +45,7 @@ CHIP_INTENTS = {
 
 
 NUMBER_FIELDS = {"total_demand_kwh", "num_inhabitants", "roof_area_sqm", "existing_pv_kwp", "house_size_sqm",
-                 "electricity_price_eur_per_kwh", "budget_eur"}   # a bare number answers these asks
+                 "electricity_price_eur_per_kwh", "budget_eur", "heating_fuel_kwh", "heating_oil_litres"}   # a bare number answers these asks
 
 
 STREET = r"(stra(ss|ß)e|str\.?|weg|platz|allee|gasse|ring|damm|ufer|chaussee|street|road|avenue|lane)"

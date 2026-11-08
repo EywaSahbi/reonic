@@ -148,7 +148,9 @@ def reo_msg(plan: dict, text: str) -> dict:
 
 # Customer-side designs leave out the heat-pump grant: persona.md says reo never names a funding amount or a
 # post-grant price to the customer (app FYI 20:27, until Raneem decides). The planner's view keeps the grant line.
-CUSTOMER_PRICES = {"heatpump_subsidy_share": 0}
+# price_band_share 0.25: the customer's range uses a quarter of the sourced labour min-max (about +-4 %, EywaSahbi
+# 2026-11-08); the planner's view keeps the engine default (half).
+CUSTOMER_PRICES = {"heatpump_subsidy_share": 0, "price_band_share": 0.25}
 
 
 def customer_prices(st: dict) -> dict:
@@ -255,12 +257,15 @@ def customer_turn(db: dict, pid: str, parsed: dict, text: str, free_text: bool) 
         st["hp_flow"] = True
     else:
         hp_answer = None
+    wb_answer = new.pop("wallbox_option", None)          # the customer's wallbox toggle (EywaSahbi), not a home fact
+    if wb_answer is not None:
+        st["locks"]["wallbox"] = {"recommended": bool(wb_answer)}
     plan["facts"].update(new)
     sync_heatpump_lock(plan, st)
     d, ok = _design(plan, st)
     plan["design"] = d
     attach_evidence(plan)
-    if new or hp_answer is not None:
+    if new or hp_answer is not None or wb_answer is not None:
         plan["history"].append({"at": now(), "trigger": text, "total_eur": d["price"]["total_eur"]})
     changed = scripted.changes(before, d) if new and had_numbers else None
 

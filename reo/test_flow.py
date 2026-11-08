@@ -16,7 +16,9 @@ def test_question_order_kwh_known():
     f["ev_planned"] = True
     assert fields(f) == "heating_type"
     f["heating_type"] = "gas"
-    assert fields(f) is None and flow.offer_handoff(f, None)               # heating is the last question
+    assert fields(f) == "heating_fuel_kwh"                                  # yearly gas use from the bill
+    f["heating_fuel_kwh"] = 18000
+    assert fields(f) is None and flow.offer_handoff(f, None)
 
 
 def test_kwh_skipped_asks_people_then_location():
@@ -73,8 +75,11 @@ def test_heating_advice_only_claims_what_the_engine_shows():
 
 def test_no_heatpump_ask_after_heating():
     base = {"total_demand_kwh": 4500, "roof_area_sqm": 40, "has_ev": False}
-    for h in ("gas", "oil", "district", "other", "heatpump", "electric"):
+    for h in ("heatpump", "electric"):
         assert fields({**base, "heating_type": h}) is None
+    assert fields({**base, "heating_type": "oil"}) == "heating_oil_litres"
+    for h in ("gas", "district", "other"):
+        assert fields({**base, "heating_type": h}) == "heating_fuel_kwh" and fields({**base, "heating_type": h}, {"heating_fuel_kwh"}) is None
     import scripted
     assert [scripted.heatpump_answer(x) for x in ("Yes, show me the heat pump option", "yes please", "No, keep my plan", "no", "maybe")] \
         == [True, True, False, False, None]

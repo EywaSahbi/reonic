@@ -13,11 +13,12 @@ def fake_design(facts, locks=None, prices=None):
     locks = locks or {}
     bat = locks.get("battery", {}).get("size", 10)
     hp = (locks.get("heatpump") or {}).get("recommended", False)
+    wb = (locks.get("wallbox") or {}).get("recommended", bool(ev))
     comp = lambda rec, size, unit, why: {"recommended": rec, "size": size if rec else None, "unit": unit, "range": None,
                                          "confidence": "medium", "locked": False, "reasons": [why]}
     total = 18900 + (3000 if ev else 0) + (bat - 10) * 900 + (20000 if hp else 0)
     return {"components": {"pv": comp(True, pv, "kWp", "demand"), "battery": comp(True, bat, "kWh", "evening use"),
-                           "heatpump": comp(hp, 8, "kW", "heating unknown"), "wallbox": comp(bool(ev), 11, "kW", "EV")},
+                           "heatpump": comp(hp, 8, "kW", "heating unknown"), "wallbox": comp(wb, 11, "kW", "EV")},
             "price": {"items": [{"label": "PV modules", "qty": 20, "unit": "pc", "unit_price_eur": 300, "total_eur": 6000}],
                       "total_eur": total, "range_eur": [total - 1800, total + 1900]},
             "economics": {"total_demand_kwh": 4500, "self_consumption_pct": 60, "autarky_pct": 70,
@@ -70,8 +71,10 @@ def test_demo_flow(tmp_path, monkeypatch):
     assert t["plan"]["facts"]["heating_type"] == "gas"
     assert "heat pump" in t["messages"][0]["text"] and "€2,180" in t["messages"][0]["text"]  # engine's heating_comparison
     assert t["plan"]["design"]["components"]["heatpump"]["recommended"]   # not a heat pump yet: in the quote by default
-    assert "ask" not in t and "heatpump_option" not in t
-    assert t["suggestions"][0] == "Yes, send it"  # heating + EV known -> flow done, offer the handoff once
+    assert t["ask"]["field"] == "heating_fuel_kwh" and t["ask"]["prompt"] == "Yearly gas use (kWh)"   # from the gas bill
+    t = c.post(f"/sessions/{pid}/messages", json={"text": "18000"}).json()        # a bare number answers it
+    assert t["plan"]["facts"]["heating_fuel_kwh"] == 18000 and "ask" not in t and "heatpump_option" not in t
+    assert t["suggestions"][0] == "Yes, send it"  # heating + its use known -> flow done, offer the handoff once
 
     t = c.post(f"/sessions/{pid}/facts", json={"facts": {"heatpump_option": False}}).json()   # the customer's toggle
     assert not t["plan"]["design"]["components"]["heatpump"]["recommended"] and "heatpump_option" not in t["plan"]["facts"]
@@ -288,3 +291,15 @@ def test_electric_heating_has_no_heatpump_step(tmp_path, monkeypatch):
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     t = c.post(f"/sessions/{pid}/facts", json={"facts": {"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "heating_type": "electric"}}).json()
     assert "ask" not in t and "heatpump_option" not in t
+
+
+def test_wallbox_toggle_and_heating_use_skip(tmp_path, monkeypatch):
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    facts = lambda f, skip=None: c.post(f"/sessions/{pid}/facts", json={"facts": f, **({"skip": skip} if skip else {})}).json()
+    t = facts({"total_demand_kwh": 4500, "roof_area_sqm": 50, "has_ev": False, "ev_planned": True, "heating_type": "oil"})
+    assert t["ask"]["field"] == "heating_oil_litres"                         # oil: litres from the oil bill
+    assert "ask" not in facts({}, ["heating_oil_litres"])                    # "Don't know"
+    wb = lambda t: t["plan"]["design"]["components"]["wallbox"]["recommended"]
+    assert not wb(facts({"wallbox_option": False})) and wb(facts({"wallbox_option": True}))
+    assert "wallbox_option" not in c.get(f"/sessions/{pid}").json()["facts"]

@@ -38,7 +38,8 @@ log = logging.getLogger("reo.llm")
 HEATING = ["gas", "oil", "heatpump", "electric", "district", "other"]
 FACT_TYPES = {
     "total_demand_kwh": float, "annual_demand_kwh": float, "num_inhabitants": int, "house_size_sqm": float, "house_built_year": int,
-    "heating_type": str, "heating_demand_kwh": float, "has_ev": bool, "ev_planned": bool,
+    "heating_type": str, "heating_demand_kwh": float, "heating_fuel_kwh": float, "heating_oil_litres": float,
+    "has_ev": bool, "ev_planned": bool,
     "ev_km_per_year": float, "ev_km_per_week": float, "ev_km_per_day": float,
     "roof_area_sqm": float, "roof_orientation_deg": float, "roof_tilt_deg": float,
     "electricity_price_eur_per_kwh": float, "has_existing_pv": bool, "existing_pv_kwp": float,

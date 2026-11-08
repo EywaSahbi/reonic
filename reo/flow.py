@@ -21,6 +21,9 @@ QUESTIONS = [
     (("heating_type",), {"field": "heating_type", "input": "choice",
                          "options": ["gas", "oil", "heatpump", "electric", "district", "other"],
                          "prompt": "How do you heat today? It decides whether a heat pump fits."}),
+    (("heating_fuel_kwh",), {"field": "heating_fuel_kwh", "input": "number",
+                             "prompt": "Yearly gas use (kWh)"}),       # prompt per heating type in next_question
+    (("heating_oil_litres",), {"field": "heating_oil_litres", "input": "number", "prompt": "Yearly heating oil (litres)"}),
     (("heatpump_option",), {"field": "heatpump_option", "input": "choice",
                             "options": ["Yes, show me the heat pump option", "No, keep my plan"],
                             "prompt": "Would you like to consider the heat pump option?"}),
@@ -86,6 +89,13 @@ def next_question(facts: dict, design: dict | None = None, skipped: set[str] = f
     for field in ("has_ev", "heating_type"):
         if not known(*next(k for k, a in QUESTIONS if a["field"] == field)) and field not in skipped:
             return ASK[field]
+    # heating use from the bill (gas / district / other kWh, oil litres): the engine turns it into the heat demand,
+    # so the heating comparison and the heat pump size are not the 'median heat demand' assumption
+    heating = facts.get("heating_type")
+    use = "heating_oil_litres" if heating == "oil" else "heating_fuel_kwh"
+    if heating in FOSSIL and not known("heating_fuel_kwh", "heating_oil_litres", "heating_demand_kwh") and use not in skipped:
+        return ASK[use] if use == "heating_oil_litres" else \
+            {**ASK[use], "prompt": {"district": "Yearly district heat (kWh)", "other": "Yearly heating energy (kWh)"}.get(heating, "Yearly gas use (kWh)")}
     return None   # heat pump: no ask, it is in the quote by default and the customer toggles it (api.sync_heatpump_lock)
 
 
