@@ -109,7 +109,7 @@ def lookup(address: str) -> dict | None:
         return hit
     key = _norm(address)
     cached = _cache().get(key)
-    if cached:
+    if cached and "lat" in cached:  # older entries lack the location for the satellite view: look up again
         return cached
     try:
         g = _geocode(address)
@@ -132,7 +132,9 @@ def lookup(address: str) -> dict | None:
     say = (f"the building outline in OpenStreetMap is about {round(footprint)} m², so with {shape} that is roughly "
            f"{round(sunny)} m² of roof facing the sun (estimate)")
     res = {"label": g.get("display_name", address), "facts": facts, "say": say, "source": "OpenStreetMap",
-           "footprint_sqm": round(footprint, 1), "osm_way": b["id"]}
+           "footprint_sqm": round(footprint, 1), "osm_way": b["id"],
+           # where the building is, for the satellite view on the customer's plan card (their own address only)
+           "lat": float(g["lat"]), "lon": float(g["lon"]), "outline": [[round(la, 7), round(lo, 7)] for la, lo in b["poly"]]}
     c = _cache()
     c[key] = res
     CACHE.write_text(json.dumps(c, ensure_ascii=False, indent=1), encoding="utf-8")

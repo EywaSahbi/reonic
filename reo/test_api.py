@@ -162,3 +162,16 @@ def test_kwh_skip_goes_through_people_then_state_then_dimensions(tmp_path, monke
     assert say("No")["ask"]["field"] == "heating_type"
     t = say("electric")
     assert "heat pump would be worth" not in t["messages"][0]["text"] and t["ask"]["field"] == "has_existing_pv"
+
+
+def test_address_sets_roof_location_for_the_satellite_view(tmp_path, monkeypatch):
+    import roof
+    c = client(tmp_path, monkeypatch)
+    hit = {"label": "Teststraße 1, 01069 Dresden", "facts": {"roof_area_sqm": 40}, "say": "about 40 m²", "source": "OpenStreetMap",
+           "footprint_sqm": 65.0, "lat": 51.05, "lon": 13.74, "outline": [[51.05, 13.74], [51.0501, 13.74], [51.0501, 13.7402]]}
+    monkeypatch.setattr(roof, "lookup", lambda a: hit if a.startswith("Test") else None)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Teststraße 1, 01069 Dresden"}).json()
+    assert t["plan"]["roof_location"] == {"label": hit["label"], "lat": 51.05, "lon": 13.74, "outline": hit["outline"]}
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Nirgendwo 9"}).json()
+    assert "roof_location" not in t["plan"]  # a new address without a building: back to the drawn house

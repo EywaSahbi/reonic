@@ -495,6 +495,10 @@ def send_address(pid: str, body: Address):
         db = _load()
         plan, st = _get(db, pid)
         plan["transcript"].append({"role": "customer", "text": body.address, "at": now()})
+        if plan["status"] == "drafting":  # the satellite view follows the latest address (none for demo addresses)
+            plan.pop("roof_location", None)
+            if hit and "lat" in hit:
+                plan["roof_location"] = {"label": hit["label"], "lat": hit["lat"], "lon": hit["lon"], "outline": hit["outline"]}
         if hit is None:
             st["last_ask"] = "roof_dims"
             m = reo_msg(plan, "I couldn't find that building on the map. You can enter the roof's width and length instead, or skip it.")

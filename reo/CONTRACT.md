@@ -20,6 +20,7 @@ type Plan = {
   installer_edits: { at: string; change: string; before: unknown; after: unknown }[];
   history: { at: string; trigger: string; total_eur: number }[];   // how the design evolved
   updated_at: string;
+  roof_location?: { label: string; lat: number; lon: number; outline: [number, number][] };  // last address lookup that found the building (OSM, [lat, lon] outline); none for demo addresses; app shows a satellite view
   summary?: string;                      // installer paragraph (flow.md 'Plan summary'), set once handed over
 };
 

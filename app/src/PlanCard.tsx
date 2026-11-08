@@ -1,5 +1,6 @@
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
 import { House } from "./House";
+import { Satellite } from "./Satellite";
 import { HeatingComparison } from "./HeatingComparison";
 
 const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
@@ -29,7 +30,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
 
   return (
     <aside className="plan" aria-label="Your plan">
-      <House design={d} />
+      {plan.roof_location ? <Satellite loc={plan.roof_location} fallback={<House design={d} />} /> : <House design={d} />}
       <div className="plan-head">
         <span className="plan-kicker">
           {economics.bill_today_eur_per_month != null && economics.bill_after_eur_per_month != null ? "Your monthly bill · before → after" : quoted ? "Confirmed quote" : plan.status === "handed_over" ? "With your planner" : "Your plan so far"}

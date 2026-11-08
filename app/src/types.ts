@@ -84,6 +84,7 @@ export type Plan = {
   updated_at: string;
   summary?: string; // reo's installer paragraph, set once handed over
   offer_pack?: OfferPack; // installer endpoints only (reo v1.1)
+  roof_location?: RoofLocation; // set by an address lookup that found the building: satellite view on the plan card
 };
 
 export type Ask = {
@@ -93,6 +94,7 @@ export type Ask = {
   options?: string[];
 };
 
+export type RoofLocation = { label: string; lat: number; lon: number; outline?: [number, number][] };
 export type RoofLookup = { source: "OpenStreetMap" | "demo data"; label: string; footprint_sqm?: number };
 
 export type Turn = { roof?: RoofLookup; messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask; bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false }; goal_result?: GoalResult };

@@ -1,0 +1,52 @@
+import { useState, type ReactNode } from "react";
+import type { RoofLocation } from "./types";
+
+// Satellite picture of the customer's own building (Esri World Imagery tiles, no key) with the OpenStreetMap outline
+// reo used for the roof estimate drawn on top. Replaces the drawn house once an address was found.
+// Tiles and outline share one Web-Mercator pixel space, so the outline sits exactly on the building.
+const W = 640, H = 380; // same shape as the drawn house (320 x 190)
+const TILE = 256, MAX_ZOOM = 19; // Esri has real imagery up to 19 in Germany; 20 is a placeholder
+const URL = (z: number, x: number, y: number) =>
+  `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
+
+// World pixel coordinates at zoom z.
+function px(lat: number, lon: number, z: number): [number, number] {
+  const n = TILE * 2 ** z, r = (lat * Math.PI) / 180;
+  return [((lon + 180) / 360) * n, ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n];
+}
+
+export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+
+  const pts = loc.outline?.length ? loc.outline : [[loc.lat, loc.lon] as [number, number]];
+  // Zoom: the largest at which the building plus a margin still fits the frame.
+  let z = MAX_ZOOM;
+  for (; z > 15; z--) {
+    const p = pts.map(([la, lo]) => px(la, lo, z));
+    const w = Math.max(...p.map((q) => q[0])) - Math.min(...p.map((q) => q[0]));
+    const h = Math.max(...p.map((q) => q[1])) - Math.min(...p.map((q) => q[1]));
+    if (w <= W * 0.6 && h <= H * 0.6) break;
+  }
+  const p = pts.map(([la, lo]) => px(la, lo, z));
+  const cx = (Math.max(...p.map((q) => q[0])) + Math.min(...p.map((q) => q[0]))) / 2;
+  const cy = (Math.max(...p.map((q) => q[1])) + Math.min(...p.map((q) => q[1]))) / 2;
+  const left = cx - W / 2, top = cy - H / 2;
+  const tiles: { x: number; y: number }[] = [];
+  for (let x = Math.floor(left / TILE); x <= Math.floor((left + W) / TILE); x++)
+    for (let y = Math.floor(top / TILE); y <= Math.floor((top + H) / TILE); y++) tiles.push({ x, y });
+  const outline = loc.outline?.length ? p.map(([x, y]) => `${x - left},${y - top}`).join(" ") : "";
+
+  return (
+    <figure className="house satellite" aria-label={`Satellite view of ${loc.label}`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" className="satellite-frame">
+        {tiles.map(({ x, y }, i) => (
+          <image key={`${x}-${y}`} href={URL(z, x, y)} x={x * TILE - left} y={y * TILE - top} width={TILE} height={TILE}
+            onError={i === 0 ? () => setFailed(true) : undefined} />
+        ))}
+        {outline && <polygon points={outline} className="satellite-outline" />}
+      </svg>
+      <figcaption>Your building, outlined as used for the roof estimate · Imagery © Esri, Maxar, Earthstar Geographics</figcaption>
+    </figure>
+  );
+}
