@@ -29,7 +29,6 @@ function panelTexture() {
 }
 
 export type SceneEvents = {
-  mode: "move" | "paint" | "erase";
   hoverCell: string | null;
   selected: ItemKey | null;
   onCellDown: (id: string) => void;
@@ -155,7 +154,7 @@ function CellMesh({ cell, on, flat, events }: { cell: Cell; on: boolean; flat: b
           onPointerEnter={(e) => { e.stopPropagation(); events.onCellEnter(cell.id); }}
           onPointerLeave={() => events.onCellEnter(null)}>
           <planeGeometry args={[cell.w, cell.h]} />
-          <meshBasicMaterial color={hover ? C.hover : C.ghost} transparent opacity={showGhost ? (hover ? 0.7 : events.mode === "move" ? 0.12 : 0.28) : hover && events.mode === "erase" ? 0.5 : 0} depthWrite={false} />
+          <meshBasicMaterial color={hover ? C.hover : C.ghost} transparent opacity={showGhost ? (hover ? 0.7 : 0.28) : hover ? 0.5 : 0} depthWrite={false} />
         </mesh>
       )}
       <group ref={ref} scale={on ? 1 : 0.001} rotation={[tilt, 0, 0]}>
@@ -189,7 +188,7 @@ function Placed({ spot, k, events, faceWall, children }: { spot: Spot; k: ItemKe
   const sel = events?.selected === k;
   return (
     <group ref={ref} position={[spot[0], 0, spot[1]]} scale={0.001}
-      onPointerDown={events ? (e: ThreeEvent<PointerEvent>) => { if (events.mode !== "move") return; e.stopPropagation(); events.onItemDown(k); } : undefined}>
+      onPointerDown={events ? (e: ThreeEvent<PointerEvent>) => { e.stopPropagation(); events.onItemDown(k); } : undefined}>
       <group rotation={[0, rotY, 0]}>{children}</group>
       {events && <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]} raycast={() => null}>
         <ringGeometry args={[0.7, 0.85, 40]} /><meshBasicMaterial color={sel ? C.hover : "#ffffff"} transparent opacity={sel ? 0.95 : 0.35} />

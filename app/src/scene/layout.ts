@@ -25,6 +25,19 @@ export function roofFrom(f: HomeFacts & { roof_type?: string }): Roof {
   return { width: 11, slope: 5, tilt, flat, known: false };
 }
 
+/** The drawn front face approximates the engine's roof: grow it (one more row, then longer) until `need` modules fit,
+ * so the picture can show every module the engine counts, all on the front. */
+export function fitRoof(f: HomeFacts, need: number): Roof {
+  const r = roofFrom(f);
+  while (r.width < 40 && roofCells(r).filter((c) => c.face === 0).length < need) { if (r.slope < 7) r.slope += 0.5; else r.width += 0.5; }
+  return r;
+}
+
+/** Module spots on the front face only (nothing on the back that the plan would not count). */
+export function frontCells(r: Roof, maxModules: number | null | undefined, need: number): Cell[] {
+  return roofCells(r, maxModules ?? undefined, need).filter((c) => c.face === 0);
+}
+
 /** House footprint that carries this roof: length along the ridge, depth front to back. */
 export function houseDims(r: Roof) {
   const rad = (r.tilt * Math.PI) / 180;
