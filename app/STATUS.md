@@ -90,3 +90,10 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - Checks: production build, heating benefit/null-CO2 regression check, deployment URL guard rejection/acceptance, and laptop starter reusing healthy services passed. Windows blocked standalone ngrok; user installing official Store version. Vercel sign-in complete.
 
 - Planner authentication client implemented against reo's proposed access contract: sessionStorage token entry/lock, Bearer only on installer paths, 401 relock. SSE uses authenticated fetch streaming rather than URL query tokens. ngrok warning header applies only to ngrok hosts, including uploads/streams. check-auth.mjs verifies scoping, split CRLF frames, no URL secret, 401 clearing. Backend middleware delivery still pending as of board ACK 23:45 UTC; agent remains active on board while deploying.
+
+## Live laptop-backed production (8 Nov)
+
+- https://sonnfeld-reo.vercel.app deployed to Vercel, using https://robin-ignore-oxidation.ngrok-free.dev as the live API. No backend secrets or dataset files uploaded.
+- reo 7df79d3 running with generated planner token, allowed production origin, engine loopback-only. Token is local ignored app/.runtime/installer-token.txt; planner enters it once per tab.
+- Auth tests (2), client auth/SSE regression, production build, browser customer flow/planner gate, public anonymous 401/authenticated 200, CORS and authenticated SSE replay passed.
+- start-backend.ps1 -Protected and start-tunnel.ps1 provide guarded restart. Laptop must stay awake/online. See DEPLOYMENT.md. Existing OSM relation-outline limitation still belongs to reo; manual dimensions remain available.
