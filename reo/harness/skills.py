@@ -9,7 +9,8 @@ import scripted
 from harness.tools import Ctx
 
 PROMPTS = Path(__file__).parent / "skills"
-NAMES = ["Basic", "Recommended", "Independence"]
+NAMES = ["Basic", "Recommended", "Independence"]  # goal planner alternatives
+OFFER = "Recommended"  # the offer pack holds one quotation: the engine's own design (EywaSahbi)
 
 
 @dataclass
@@ -71,45 +72,19 @@ def _draft(name: str, d: dict, slot: str, booked: bool = False) -> str:
             f"{suggestion} {visit}\n\nBest regards,\nSonnfeld")
 
 
-def _total(ctx: Ctx, name: str) -> float:
-    return ctx.variants[name]["design"]["price"]["total_eur"] if name in ctx.variants else 0
-
-
-def _make_distinct(ctx: Ctx, call) -> None:
-    """If an anchor variant came out like Recommended, use the engine's one-step what-ifs instead (cheaper / dearer)."""
-    rec = _total(ctx, "Recommended")
-    whatifs = []
-    for comp in ("battery", "pv"):
-        whatifs += [w for w in call("engine.explain", {"component": comp}).get("what_if", []) if w.get("locks")]
-    if _total(ctx, "Basic") >= rec:
-        for w in sorted((w for w in whatifs if w["delta"]["price_eur"] < 0), key=lambda w: -w["delta"]["price_eur"]):
-            call("plan.propose_variant", {"name": "Basic", "locks": {"heatpump": {"recommended": False}, **w["locks"]}, "why": ""})
-            if _total(ctx, "Basic") < rec:
-                break
-    if _total(ctx, "Independence") <= rec:
-        for w in sorted((w for w in whatifs if w["delta"]["price_eur"] > 0), key=lambda w: (w["delta"]["autarky_pct"] <= 0, w["delta"]["price_eur"])):
-            call("plan.propose_variant", {"name": "Independence", "locks": w["locks"], "why": ""})
-            if _total(ctx, "Independence") > rec:
-                break
-
-
 def offer_scripted(ctx: Ctx, call) -> None:
     call("plan.read", {})
-    pct = call("evidence.percentile", {})
-    anchors = pct.get("anchors") or {"Basic": {"battery": {"recommended": False}, "heatpump": {"recommended": False}},
-                                     "Recommended": {}, "Independence": {}}
-    for n in NAMES:
-        call("plan.propose_variant", {"name": n, "locks": anchors.get(n, {}), "why": ""})
-    if "Recommended" not in ctx.variants:
+    call("evidence.percentile", {})  # flags vs similar homes for the planner
+    call("plan.propose_variant", {"name": OFFER, "locks": {}, "why": ""})
+    if OFFER not in ctx.variants:
         return  # engine down: completeness guard reports it
-    _make_distinct(ctx, call)
-    for n, v in ctx.variants.items():
-        v["why"] = _why(n, v["design"])
-    base = ctx.variants["Recommended"]["design"]
+    v = ctx.variants[OFFER]
+    v["why"] = _why(OFFER, v["design"])
+    base = v["design"]
     slot = call("calendar.slots", {})["slots"][0]
     name = ctx.plan["customer"].get("name") or "the customer"
     call("plan.propose_action", {"kind": "book_visit", "label": f"Book site visit {slot}", "payload": {"slot": slot}})
-    call("plan.propose_action", {"kind": "send_quote", "label": "Send quote (Recommended variant)", "payload": {"variant": "Recommended"}})
+    call("plan.propose_action", {"kind": "send_quote", "label": "Send the quote", "payload": {"variant": "Recommended"}})
     call("plan.propose_action", {"kind": "create_crm_task", "label": f"Follow up with {name} in 3 days",
                                  "payload": {"task": f"Follow up with {name}", "due_in_days": 3}})
     docs = (["roof photos"] if not ctx.facts.get("roof_area_sqm") else []) + \
@@ -122,7 +97,7 @@ def offer_scripted(ctx: Ctx, call) -> None:
     for item in _checklist(ctx.facts, base):
         call("plan.add_question", {"text": item, "kind": "site_visit"})
     call("plan.draft_message", {"text": _draft(ctx.plan["customer"].get("name", ""), base, slot)})
-    call("finish", {"recommended": "Recommended", "summary": "Three variants from the engine, actions proposed for your approval."})
+    call("finish", {"recommended": OFFER, "summary": "One quotation from the engine's design, actions proposed for your approval."})
 
 
 def offer_texts(ctx: Ctx) -> list[str]:
@@ -131,12 +106,10 @@ def offer_texts(ctx: Ctx) -> list[str]:
 
 
 def offer_missing(ctx: Ctx) -> str | None:
-    gaps = [n for n in NAMES if n not in ctx.variants]
-    if gaps:
-        return f"missing variants: {', '.join(gaps)}"
-    totals = [v["design"]["price"]["total_eur"] for v in ctx.variants.values()]
-    if len(set(totals)) < 3:
-        return "the three variants must differ (Basic cheaper, Independence dearer than Recommended)"
+    if OFFER not in ctx.variants:
+        return f"missing the {OFFER} quotation (propose it with no extra locks)"
+    if set(ctx.variants) != {OFFER}:
+        return f"only one quotation: propose {OFFER} only"
     if not ctx.draft:
         return "no draft message"
     if not any(a["kind"] == "send_quote" for a in ctx.actions):
@@ -145,14 +118,14 @@ def offer_missing(ctx: Ctx) -> str | None:
 
 
 def offer_output(ctx: Ctx, run: dict) -> dict:
-    rec = (ctx.finish or {}).get("recommended") if (ctx.finish or {}).get("recommended") in ctx.variants else "Recommended"
+    rec = OFFER
     for a in ctx.actions:
         if a["kind"] == "send_quote":
             a["payload"] = {"variant": a["payload"].get("variant", rec), "message": ctx.draft}
     trace = [{"step": i + 1, "tool": s.get("tool", s["kind"]), "summary": s["result_summary"]}
              for i, s in enumerate(x for x in run["steps"] if x["kind"] in ("tool", "guard"))]
     ready = offer_missing(ctx) is None
-    return {"status": "ready" if ready else "failed", "variants": [ctx.variants[n] for n in NAMES if n in ctx.variants],
+    return {"status": "ready" if ready else "failed", "variants": [ctx.variants[OFFER]] if OFFER in ctx.variants else [],
             "recommended": rec, "flags": ctx.flags, "site_visit_checklist": ctx.checklist, "open_questions": ctx.questions,
             "customer_message_draft": ctx.draft, "draft_for": rec, "actions": ctx.actions, "trace": trace, "run_id": run["id"],
             "model": run["model"], "summary": (ctx.finish or {}).get("summary", "")}

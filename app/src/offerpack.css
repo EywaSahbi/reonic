@@ -29,6 +29,7 @@
 
 /* variants */
 .op-variants { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.op-variants.is-single { grid-template-columns: minmax(0, 1fr); max-width: 520px; }
 .op-variant { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; display: flex; flex-direction: column; gap: 10px; background: var(--white); }
 .op-variant.is-recommended { border-color: var(--ink); }
 .op-variant.is-chosen { box-shadow: 0 0 0 2px var(--ink); background: var(--paper-warm); }

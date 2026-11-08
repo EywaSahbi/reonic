@@ -3,7 +3,7 @@ import { api } from "./api";
 import type { Action, Plan, RunStep, Variant, VariantName } from "./types";
 import "./offerpack.css";
 
-// Installer offer pack (reo/CONTRACT.md v1.1 + harness v1.2): reo's offer agent prepares 3 variants, a checklist,
+// Installer offer pack (reo/CONTRACT.md v1.1 + harness v1.2): reo's offer agent prepares one quotation, a checklist,
 // a draft message and proposed actions; the planner chooses, edits and approves. Nothing runs without a click here.
 const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
 const num = (n: number | null | undefined) => (n == null ? "–" : String(Math.round(n * 10) / 10));
@@ -44,7 +44,7 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
       <section className="card op-empty">
         <div>
           <h3>Offer pack</h3>
-          <p className="muted">reo can prepare three variants, a site-visit checklist, a draft message and next steps for you to approve.</p>
+          <p className="muted">reo can prepare a quotation, a site-visit checklist, a draft message and next steps for you to approve.</p>
         </div>
         <button className="btn-primary" disabled={!!busy || quoted} onClick={() => act("prepare", () => api.preparePlan(plan.id))}>Prepare offer pack</button>
       </section>
@@ -75,9 +75,10 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
 
       {pack.status === "ready" && (
         <>
-          <div className="op-variants">
+          {/* one quotation (reo prepares only the engine's design): no 'pick' badge, nothing to choose between */}
+          <div className={`op-variants ${pack.variants.length === 1 ? "is-single" : ""}`}>
             {pack.variants.map((v) => (
-              <VariantCard key={v.name} v={v} recommended={pack.recommended === v.name} chosen={pack.chosen === v.name}
+              <VariantCard key={v.name} v={v} single={pack.variants.length === 1} recommended={pack.recommended === v.name} chosen={pack.chosen === v.name}
                 disabled={!!busy || quoted} busy={busy === `variant-${v.name}`}
                 onChoose={() => act(`variant-${v.name}`, () => api.chooseVariant(plan.id, v.name as VariantName), true)} />
             ))}
@@ -102,8 +103,8 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
   );
 }
 
-function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
-  v: Variant; recommended: boolean; chosen: boolean; disabled: boolean; busy: boolean; onChoose: () => void;
+function VariantCard({ v, single, recommended, chosen, disabled, busy, onChoose }: {
+  v: Variant; single: boolean; recommended: boolean; chosen: boolean; disabled: boolean; busy: boolean; onChoose: () => void;
 }) {
   const c = v.design.components;
   const e = v.design.economics;
@@ -116,8 +117,8 @@ function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
   return (
     <article className={`op-variant ${recommended ? "is-recommended" : ""} ${chosen ? "is-chosen" : ""}`}>
       <div className="op-variant-top">
-        <h4>{v.name}</h4>
-        {recommended && <span className="pill pill-quoted">reo's pick</span>}
+        <h4>{single ? "Quotation" : v.name}</h4>
+        {recommended && !single && <span className="pill pill-quoted">reo's pick</span>}
         {v.stale && <span className="pill pill-handed_over" title="Facts changed after reo prepared this">outdated</span>}
       </div>
       <div className="op-price">{eur(v.design.price.total_eur)}</div>
@@ -128,9 +129,9 @@ function VariantCard({ v, recommended, chosen, disabled, busy, onChoose }: {
         <div><dt>Range</dt><dd>{eur(v.design.price.range_eur[0])}–{eur(v.design.price.range_eur[1]).slice(1)}</dd></div>
       </dl>
       <p className="op-why">{v.why}</p>
-      <button className={chosen ? "btn-ghost small op-inuse" : "btn-small op-use"} disabled={disabled || chosen} onClick={onChoose}>
+      {!single && <button className={chosen ? "btn-ghost small op-inuse" : "btn-small op-use"} disabled={disabled || chosen} onClick={onChoose}>
         {busy ? "Applying…" : chosen ? "In use" : "Use this variant"}
-      </button>
+      </button>}
     </article>
   );
 }

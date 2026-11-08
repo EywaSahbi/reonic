@@ -49,7 +49,7 @@ def test_quoted_plan_is_frozen(tmp_path, monkeypatch):
     assert c.post(f"/plans/{pid}/actions/{_quote(p)['id']}/approve", json={}).status_code == 409  # closed by finalize
     assert c.post(f"/plans/{pid}/finalize", json={}).status_code == 409
     assert c.post(f"/plans/{pid}/edit", json={"facts": {"roof_area_sqm": 30}}).status_code == 409
-    assert c.post(f"/plans/{pid}/variant", json={"name": "Basic"}).status_code == 409
+    assert c.post(f"/plans/{pid}/variant", json={"name": "Recommended"}).status_code == 409
     assert c.post(f"/plans/{pid}/prepare", json={}).status_code == 409
     total = c.get(f"/plans/{pid}").json()["design"]["price"]["total_eur"]
     t = c.post(f"/sessions/{pid}/messages", json={"text": "we use about 6,000 kWh a year"}).json()

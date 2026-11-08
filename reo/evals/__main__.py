@@ -3,7 +3,7 @@
     uv run python -m evals            # scripted planner (no API calls)
     uv run python -m evals --llm      # the skills' models (costs API calls)
 
-Per scenario, offer_prep must: ground every number, execute nothing, return three variants that differ,
+Per scenario, offer_prep must: ground every number, execute nothing, return exactly one quotation (the engine's design),
 respect the budget (time, and budget_eur if given), and leave a trace. Exit code 1 if any check fails.
 """
 import json
@@ -22,7 +22,6 @@ SCENARIOS = Path(__file__).parent.parent.parent / "data" / "processed" / "scenar
 def checks(sc: dict, run: dict) -> dict[str, bool]:
     out = run["output"] or {}
     variants = out.get("variants", [])
-    totals = [v["design"]["price"]["total_eur"] for v in variants]
     budget = sc["facts"].get("budget_eur")
     rec = next((v for v in variants if v["name"] == out.get("recommended")), None)
     guard = [s for s in run["steps"] if s.get("tool") == "grounding"]
@@ -30,7 +29,7 @@ def checks(sc: dict, run: dict) -> dict[str, bool]:
         "grounded": bool(guard) and guard[-1].get("ok", False),
         "no_execute": not any(s.get("effect") == "execute" for s in run["steps"])
                       and all(a["status"] == "proposed" for a in out.get("actions", [])),
-        "3_differ": len(variants) == 3 and len(set(totals)) == 3,
+        "one_offer": [v["name"] for v in variants] == ["Recommended"],
         "budget": run["duration_s"] <= OFFER_PREP.max_seconds and (not budget or (rec and rec["design"]["price"]["total_eur"] <= budget * 1.05)),
         "trace": len(out.get("trace", [])) >= 5,
     }
@@ -58,7 +57,7 @@ def main() -> int:
         exp = "/".join(f"{sc['expert'][k]['size']:g}" if sc["expert"][k]["recommended"] and sc["expert"][k]["size"] else "-"
                        for k in ("pv", "battery", "wallbox"))
         rows.append([sc["id"], run["model"], f"{run['duration_s']}s", *("ok" if v else "FAIL" for v in c.values()), reo, exp])
-    head = ["scenario", "model", "time", "grounded", "no_execute", "3_differ", "budget", "trace", "reo pv/bat/wb", "expert pv/bat/wb"]
+    head = ["scenario", "model", "time", "grounded", "no_execute", "one_offer", "budget", "trace", "reo pv/bat/wb", "expert pv/bat/wb"]
     widths = [max(len(str(r[i])) for r in [head, *rows]) for i in range(len(head))]
     for r in [head, *rows]:
         print("  ".join(str(x).ljust(w) for x, w in zip(r, widths)))

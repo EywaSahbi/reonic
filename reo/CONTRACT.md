@@ -152,6 +152,8 @@ State rules (v1.3, cleanup 2026-11-08; no shape changes):
 - Edits made while a pack is `preparing` mark its variants `stale` when it lands. Choosing a stale variant re-runs it on today's facts (card, plan and draft agree; `stale` cleared). A newer `/prepare` wins over an older run still finishing.
 - A run cut off by a reo restart shows `status: "failed"` (last step `interrupted`) and its pack `failed`; `/prepare` again.
 
+Offer pack holds **one quotation** (2026-11-08, EywaSahbi): `variants` = `[Recommended]` (the engine's design, no extra locks), `recommended` = `"Recommended"`; no Basic / Independence. Shapes unchanged; `/variant` still accepts `Recommended` (re-runs an outdated card). The goal planner still returns alternatives.
+
 `Action.status` gains `"rejected"`. Effect classes: models only ever call `read` and `propose` tools; `execute` tools (`calendar.book`, `crm.create_task`, `quote.send`) run only from `/approve`. Installer edits re-run the guards on an existing pack and mark variants `stale: true` (`Variant.stale?: boolean`) instead of silently changing them.
 
 ## Demo access and laptop admission limits (v1.5)

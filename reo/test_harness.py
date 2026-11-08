@@ -37,7 +37,7 @@ def test_offer_pack_and_approvals(tmp_path, monkeypatch):
     c, pid, p = setup(tmp_path, monkeypatch)
     pack = p["offer_pack"]
     assert pack["status"] == "ready" and pack["model"] == "scripted"
-    assert [v["name"] for v in pack["variants"]] == ["Basic", "Recommended", "Independence"]
+    assert [v["name"] for v in pack["variants"]] == ["Recommended"]  # one quotation
     assert all(a["status"] == "proposed" for a in pack["actions"])  # nothing executed by the agent
     run = c.get(f"/runs/{pack['run_id']}").json()
     assert run["status"] == "needs_approval"
@@ -51,16 +51,16 @@ def test_offer_pack_and_approvals(tmp_path, monkeypatch):
     p = c.post(f"/plans/{pid}/actions/{ids['book_visit']}/approve", json={"payload": {"slot": slot}}).json()
     assert slot in p["transcript"][-1]["text"]
     assert c.post(f"/plans/{pid}/actions/{ids['book_visit']}/approve", json={}).status_code == 409  # only once
-    p = c.post(f"/plans/{pid}/variant", json={"name": "Basic"}).json()
-    assert p["offer_pack"]["chosen"] == "Basic"
-    basic_total = p["design"]["price"]["total_eur"]
+    p = c.post(f"/plans/{pid}/variant", json={"name": "Recommended"}).json()
+    assert p["offer_pack"]["chosen"] == "Recommended"
+    chosen_total = p["design"]["price"]["total_eur"]
     quote = next(a for a in p["offer_pack"]["actions"] if a["kind"] == "send_quote")
-    assert "Basic" in quote["label"] and quote["payload"]["variant"] == "Basic"
+    assert "Recommended" in quote["label"] and quote["payload"]["variant"] == "Recommended"
     bat = round(p["design"]["components"]["battery"]["size"])
-    assert p["offer_pack"]["draft_for"] == "Basic" and f"{bat} kWh battery" in p["offer_pack"]["customer_message_draft"]
+    assert p["offer_pack"]["draft_for"] == "Recommended" and f"{bat} kWh battery" in p["offer_pack"]["customer_message_draft"]
     p = c.post(f"/plans/{pid}/actions/{ids['send_quote']}/approve", json={"payload": {"message": "See you soon."}}).json()
     assert p["status"] == "quoted" and "See you soon." in p["transcript"][-1]["text"]
-    assert p["design"]["price"]["total_eur"] == basic_total  # the chosen variant is quoted, not the proposal
+    assert p["design"]["price"]["total_eur"] == chosen_total  # the chosen variant is quoted, not the proposal
     steps = c.get(f"/runs/{pack['run_id']}").json()["steps"]
     assert [s["tool"] for s in steps if s.get("effect") == "execute"] == ["calendar.book", "quote.send"]
     assert c.get(f"/plans/{pid}/runs").json()[0]["id"] == pack["run_id"]
