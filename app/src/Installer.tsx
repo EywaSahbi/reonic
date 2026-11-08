@@ -41,19 +41,29 @@ function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
 
+  // deleting asks in the page's own dialog, not the browser's (EywaSahbi)
+  const [confirming, setConfirming] = useState<PlanSummary | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   async function remove(p: PlanSummary) {
-    if (!window.confirm(`Delete the plan for ${p.customer.name ?? "this customer"}? This can't be undone.`)) return;
     setDeleting(p.id);
+    setDeleteError(null);
     try {
       await api.deletePlan(p.id);
       setPlans((ps) => ps.filter((x) => x.id !== p.id));
       setSelected((s) => (s === p.id ? null : s));
+      setConfirming(null);
     } catch (e) {
-      window.alert(`Could not delete the plan: ${errText(e)}`);
+      setDeleteError(`Could not delete the plan: ${errText(e)}`);
     } finally {
       setDeleting(null);
     }
   }
+  useEffect(() => {
+    if (!confirming) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setConfirming(null); };
+    window.addEventListener("keydown", esc);
+    return () => window.removeEventListener("keydown", esc);
+  }, [confirming]);
 
   useEffect(() => {
     let alive = true;
@@ -89,7 +99,7 @@ function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
                   <span className={`pill pill-${p.status}`}>{p.status === "quoted" ? "quoted" : "new"}</span>
                   <span className="inbox-meta">{p.total_eur > 0 ? eur(p.total_eur) : "no price yet"} · {when(p.updated_at)}</span>
                 </button>
-                <button className="inbox-delete" onClick={() => remove(p)} disabled={deleting === p.id}
+                <button className="inbox-delete" onClick={() => { setDeleteError(null); setConfirming(p); }} disabled={deleting === p.id}
                   aria-label={`Delete plan for ${p.customer.name ?? "unnamed customer"}`} title="Delete plan">×</button>
               </li>
             ))}
@@ -97,6 +107,21 @@ function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
         </aside>
         <main className="detail">{selected ? <PlanDetail key={selected} id={selected} /> : <p className="muted">Select a plan.</p>}</main>
       </div>
+      {confirming && (
+        <div className="confirm-backdrop" onClick={() => setConfirming(null)}>
+          <div className="confirm-dialog card" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" onClick={(e) => e.stopPropagation()}>
+            <h3 id="confirm-title">Delete this plan?</h3>
+            <p>The plan for <b>{confirming.customer.name ?? "this customer"}</b> will be removed from your inbox. This can't be undone.</p>
+            {deleteError && <p className="confirm-error" role="alert">{deleteError}</p>}
+            <div className="confirm-actions">
+              <button className="btn-ghost" onClick={() => setConfirming(null)} autoFocus>Cancel</button>
+              <button className="btn-primary confirm-delete" onClick={() => remove(confirming)} disabled={deleting === confirming.id}>
+                {deleting === confirming.id ? "Deleting…" : "Delete plan"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
