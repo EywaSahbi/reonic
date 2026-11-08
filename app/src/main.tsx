@@ -4,6 +4,7 @@ import { App } from "./App";
 import { DemoGate } from "./DemoGate";
 import { Installer } from "./Installer";
 import { ReoIntroPreview } from "./ReoIntroPreview";
+import { ReoVestPreview } from "./ReoVestPreview";
 import "./styles.css";
 
 // Two views, one hash route: "#/installer" = planner workspace, anything else = customer site.
@@ -15,6 +16,7 @@ function Root() {
     return () => removeEventListener("hashchange", on);
   }, []);
   if (hash.startsWith("#/reo-intro")) return <ReoIntroPreview />;
+  if (hash.startsWith("#/reo-vest")) return <ReoVestPreview />;
   return hash.startsWith("#/installer") ? <Installer /> : <App />;
 }
 

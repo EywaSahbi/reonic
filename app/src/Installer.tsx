@@ -3,6 +3,8 @@ import { api, USING_MOCK } from "./api";
 import { getInstallerToken, setInstallerToken } from "./auth";
 import { RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
+import { ReoAvatar } from "./ReoAvatar";
+import "./installer.css";
 
 const DesignStudio = lazy(() => import("./scene/DesignStudio"));
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary, type PriceList } from "./types";
@@ -290,7 +292,7 @@ function Summary({ plan }: { plan: Plan }) {
   const check = d.missing_inputs.filter((m) => m.impact !== "low");
   return (
     <section className="card summary">
-      <h3>Summary</h3>
+      <h3 className="installer-reo-heading"><ReoAvatar size={32} outfit="vest" greet={false} interactive={false} title="reo" />Summary</h3>
       <div className="summary-grid">
         <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
         {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}
@@ -340,7 +342,7 @@ function AskReo({ id }: { id: string }) {
   }
   return (
     <section className="card ask-reo">
-      <h3>Ask reo why</h3>
+      <h3 className="installer-reo-heading"><ReoAvatar size={36} outfit="vest" greet={false} interactive={false} title="reo" />Ask reo why</h3>
       <div className="chips">
         {["Why this battery size?", "Why a heat pump?", "Why does it cost this much?"].map((s) => <button key={s} className="chip" disabled={busy} onClick={() => ask(s)}>{s}</button>)}
       </div>

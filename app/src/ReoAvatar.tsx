@@ -39,6 +39,8 @@ type Props = {
   /** Rendered width in px (height follows). */
   size?: number;
   variant?: ReoVariant;
+  /** Installer workwear; the customer advisor stays plain by default. */
+  outfit?: "none" | "vest";
   /** Wave the raised arm (loops while true). */
   waving?: boolean;
   /** Where reo looks, each -1..1 (x: left→right, y: up→down). Set it to steer the eyes yourself; omit it and reo follows the cursor. */
@@ -58,6 +60,7 @@ type Props = {
 export function ReoAvatar({
   size = 96,
   variant = "grapefruit",
+  outfit = "none",
   waving = false,
   look,
   still = false,
@@ -200,6 +203,9 @@ export function ReoAvatar({
         <clipPath id={`${id}-eye`}>
           <ellipse rx={12.5} ry={16.5} />
         </clipPath>
+        {outfit === "vest" && <clipPath id={`${id}-body`}>
+          <rect x={-50} y={-50} width={100} height={100} rx={26} />
+        </clipPath>}
       </defs>
 
       <g className="reo-hop">
@@ -217,6 +223,17 @@ export function ReoAvatar({
           </g>
 
           <rect x={-50} y={-50} width={100} height={100} rx={26} fill={fill} />
+
+          {/* Inside reo-breathe: the vest follows the body, with arms and face unobstructed. */}
+          {outfit === "vest" && <g clipPath={`url(#${id}-body)`} aria-hidden="true">
+            <path d="M-50 15 L-34 11 L0 34 L34 11 L50 15 V50 H-50 Z" fill="#FFD60A" />
+            <path d="M-34 11 L0 34 L34 11 M0 34 V50" fill="none" stroke="#B59B16" strokeWidth={1.5} strokeLinejoin="round" />
+            <g fill="#E5E7EB" stroke="#8B929C" strokeWidth={0.8}>
+              <path d="M-50 30 H-12 L-5 35 H-50 Z M12 30 H50 V35 H5 Z" />
+              <path d="M-50 42 H50 V47 H-50 Z" />
+            </g>
+            <rect x={26} y={22} width={10} height={5} rx={1} fill="#FF9A3C" />
+          </g>}
 
           <g className="reo-face">
             {/* eyebrows: the two inner Reonic blades, turned 90° and lifted; body-coloured outline keeps them readable off the head.

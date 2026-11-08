@@ -1,0 +1,12 @@
+.inst .installer-reo-heading { display: flex; align-items: center; gap: 8px; }
+.installer-reo-heading .reo-mascot { flex: 0 0 auto; }
+.reo-vest-preview { max-width: 760px; margin: 0 auto; padding: 64px 24px; }
+.reo-vest-preview h1 { margin: 8px 0; }
+.reo-vest-sizes { display: flex; flex-wrap: wrap; align-items: end; justify-content: center; gap: 32px; margin: 48px 0; }
+.reo-vest-sizes figure { margin: 0; text-align: center; }
+.reo-vest-sizes figcaption { margin-top: 20px; color: #686868; font-size: 13px; }
+.reo-vest-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+@media (max-width: 480px) {
+  .reo-vest-preview { padding: 32px 20px; }
+  .reo-vest-sizes { gap: 24px; }
+}

@@ -135,3 +135,11 @@ app files are free for Eywa's agents (customer / reo). Last app commits: 632d30b
 - Living advisor lives in `app/src/live/` (LiveStage, narrate.ts, live.css) + Widget.tsx (flow container: one persistent stage, crossfading step cards), PlanCard (`onExplain` tap targets), PlanChat (`ask` prop, starter chips).
 - Not verified: the bubble reveal after 632d30b was not watched (browser pane hidden pauses the 3D loop); phone-width bubble fit likewise. Mic not testable here.
 - Prod: backend on this laptop restarted on e3f5ddb (protected, via start-backend.ps1 -Protected, backup app/.runtime/plans-backup-20261108-050326.json). Vercel frontend NOT redeployed (needs `cd app && npx --yes vercel --prod` by a human). Local demo: engine :8010, reo :8011 (plan store in scratch), app :5173.
+
+## Installer vest and quiet feedback proposals (8 Nov)
+
+- `docs-installer-ideas.md`: seven small proposals after browser review of the customer handoff and planner/studio. Suggestions only; awaiting Raneem's selection.
+- `ReoAvatar` accepts `outfit="vest"` (default `none`). Flat yellow V-neck, two silver stripes and orange tag share the existing breathing/body transform. Existing face, eye, wave and wink logic is unchanged.
+- Planner Summary (32 px) and Ask reo why (36 px) use the vest with greeting/hover reactions disabled. Customer avatars remain plain and white-label. Styles isolated in `src/installer.css`; no `styles.css` changes.
+- Pitch preview: `#/reo-vest`, sizes 40 / 96 / 160 px, Wave/Wink/Pause controls. Browser checked at 1440 px and 375 px, including planner placements, wink/wave and pause controls; customer DOM confirms no vest. Existing reduced-motion CSS applies to the shared animated groups.
+- `npm run build` and `node scripts/check-scene.mjs` pass. Browser review used the existing localhost demo and a new “Installer vest review” handoff; no quote was sent. Existing planner horizontal overflow at 375 px observed and flagged for QA, outside this small outfit change. No API or engine-number logic changes. Not deployed to Vercel.
