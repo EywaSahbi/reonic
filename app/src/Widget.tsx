@@ -16,7 +16,7 @@ const writeSaved = (id: string | null) => { try { if (id) localStorage.setItem(S
 
 // Step form (EywaSahbi, 2026-11-08): one question per screen, buttons, almost no text. reo's Turn.ask decides the
 // next step; every number is the engine's and appears only on the results screen (PlanCard) after the last step.
-const STEP: Record<string, number> = { total_demand_kwh: 1, num_inhabitants: 1, roof_area_sqm: 2, roof_dims: 2, has_ev: 3, heating_type: 4 };
+const STEP: Record<string, number> = { total_demand_kwh: 1, num_inhabitants: 1, roof_area_sqm: 2, roof_dims: 2, has_ev: 3, heating_type: 4, heating_fuel_kwh: 4, heating_oil_litres: 4 };
 const STEPS = 4;
 const TITLE: Record<string, string> = {
   total_demand_kwh: "Yearly electricity use", num_inhabitants: "People at home", roof_area_sqm: "Your address",
@@ -193,6 +193,7 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
                 <PlanCard plan={plan}
                   onHandoff={drafting && !handoffOpen ? () => setHandoffOpen(true) : undefined}
                   onToggleHeatpump={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { heatpump_option: on } as Partial<HomeFacts>), undefined, "toggle") : undefined}
+                  onToggleWallbox={drafting && !busy ? (on) => id && run(() => api.sendFacts(id, { wallbox_option: on } as Partial<HomeFacts>), undefined, "toggle") : undefined}
                   onExplain={onExplain} />
                 {handoffOpen && drafting && <HandoffForm busy={busy} onSubmit={handoff} onCancel={() => setHandoffOpen(false)} />}
                 {error && <div className="chat-error">Something went wrong: {error}</div>}
@@ -307,15 +308,17 @@ function StepInput({ ask, busy, onFacts, onAddress, onDims, suggest }: {
     </form>;
   }
 
-  // number (yearly kWh)
+  // number: yearly electricity kWh, or the heating bill (gas / district kWh, oil litres)
   const n = Number(v.replace(/[.,\s]/g, ""));
+  const oil = (ask.field as string) === "heating_oil_litres";
+  const heating = oil || (ask.field as string) === "heating_fuel_kwh";
   return <form className="step-form" onSubmit={(e) => { e.preventDefault(); if (n > 0) onFacts({ [ask.field]: n } as Partial<HomeFacts>); }}>
     <div className="step-bar-input">
-      <input value={v} onChange={(e) => setV(e.target.value)} inputMode="numeric" placeholder="e.g. 4,500" aria-label={ask.prompt} autoFocus />
-      <span className="step-unit">kWh</span>
+      <input value={v} onChange={(e) => setV(e.target.value)} inputMode="numeric" placeholder={oil ? "e.g. 2,000" : heating ? "e.g. 18,000" : "e.g. 4,500"} aria-label={ask.prompt} autoFocus />
+      <span className="step-unit">{oil ? "litres" : "kWh"}</span>
       <button type="submit" className="btn-primary" disabled={!(n > 0) || busy}>Next</button>
     </div>
-    {ask.field === "total_demand_kwh" && <div className="step-links">{link("Don't know", () => onFacts({}, ["total_demand_kwh"]))}</div>}
+    {(ask.field === "total_demand_kwh" || heating) && <div className="step-links">{link("Don't know", () => onFacts({}, [ask.field as string]))}</div>}
   </form>;
 }
 

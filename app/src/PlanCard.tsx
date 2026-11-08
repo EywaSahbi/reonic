@@ -40,7 +40,7 @@ const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("e
 
 // Results screen of the step form: components, sizes, price range, savings, payback.
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
-export function PlanCard({ plan, onHandoff, onToggleHeatpump, onExplain }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void; onExplain?: (t: Topic) => void }) {
+export function PlanCard({ plan, onHandoff, onToggleHeatpump, onToggleWallbox, onExplain }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void; onToggleWallbox?: (on: boolean) => void; onExplain?: (t: Topic) => void }) {
   // With onExplain (results screen with the living stage): numbers are buttons, the advisor explains them in the scene,
   // and the house lives in the stage instead of the card.
   const tap = (t: Topic, label: string, node: React.ReactNode) => onExplain
@@ -112,9 +112,10 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump, onExplain }: { pla
                       {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
                     </>)}
                   </span>
-                  {k === "heatpump" && hpToggle && (
-                    <button type="button" role="switch" aria-checked={c.recommended} aria-label="Heat pump in my plan"
-                      className={`switch ${c.recommended ? "is-on" : ""}`} onClick={() => onToggleHeatpump(!c.recommended)}><i /></button>
+                  {((k === "heatpump" && hpToggle) || (k === "wallbox" && onToggleWallbox)) && (
+                    <button type="button" role="switch" aria-checked={c.recommended} aria-label={`${NAMES[k]} in my plan`}
+                      className={`switch ${c.recommended ? "is-on" : ""}`}
+                      onClick={() => (k === "wallbox" ? onToggleWallbox : onToggleHeatpump)?.(!c.recommended)}><i /></button>
                   )}
                 </span>
               </div>
