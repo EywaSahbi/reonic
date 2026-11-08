@@ -124,6 +124,7 @@ def measure(lat: float, lon: float, outline: list[list[float]]) -> dict | None:
         log.warning("roof vision failed: %s", e)
         return None
     if r.stop_reason != "end_turn":
+        log.warning("roof vision stopped: %s", r.stop_reason)
         return None
     try:
         out = json.loads(next(b.text for b in r.content if b.type == "text"))
@@ -132,6 +133,7 @@ def measure(lat: float, lon: float, outline: list[list[float]]) -> dict | None:
     log.info("roof vision answer: %s", out)
     pts = [p for p in out.get("outline", []) if len(p) == 2]
     if not out.get("found") or out.get("confidence") == "low" or len(pts) < 3:
+        log.warning("roof vision unsure (found=%s, confidence=%s)", out.get("found"), out.get("confidence"))
         return None
     poly = [_latlon(x / scale + left, y / scale + top, z) for x, y in pts]
     footprint, osm = roof.area_sqm(poly), roof.area_sqm([tuple(p) for p in outline])
@@ -139,7 +141,7 @@ def measure(lat: float, lon: float, outline: list[list[float]]) -> dict | None:
     oy, ox = sum(p[0] for p in outline) / len(outline), sum(p[1] for p in outline) / len(outline)
     shift = math.hypot((cy - oy) * 111000, (cx - ox) * 111000 * math.cos(math.radians(oy)))
     if not (0.6 <= footprint / osm <= 1.8) or shift > 8:       # guard: stay close to the OSM building (OSM outlines are often too small)
-        log.info("roof vision rejected: area x%.2f, shift %.1f m", footprint / osm, shift)
+        log.warning("roof vision rejected: area x%.2f, shift %.1f m", footprint / osm, shift)
         return None
     kind = {"hip": "gable", "complex": "gable"}.get(out["roof_type"], out["roof_type"])
     pitch = out.get("pitch_deg")
