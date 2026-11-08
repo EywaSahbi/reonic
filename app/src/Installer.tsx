@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { api, USING_MOCK } from "./api";
 import { getInstallerToken, setInstallerToken } from "./auth";
-import { OfferPackPanel, RunTimeline } from "./OfferPack";
+import { RunTimeline } from "./OfferPack";
 import { SonnfeldMark } from "./Logo";
 
 const DesignStudio = lazy(() => import("./scene/DesignStudio"));
@@ -186,7 +186,6 @@ function PlanDetail({ id }: { id: string }) {
 
       {isOffline(d) && <div className="flag flag-warn">⚠ Design engine unreachable: no sizes or prices in this plan yet. Edits and finalise need the engine.</div>}
 
-      <OfferPackPanel plan={plan} onPlan={setPlan} onDesignChange={(next) => { setChange(diff(plan.design, next.design)); setPlan(next); }} />
 
       {change && (
         <div className="change-banner" role="status">
