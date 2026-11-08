@@ -13,6 +13,16 @@
 
 ## Customer side
 
+> **Since d5d2c17 the customer side is a step form, not a chat** (EywaSahbi's request, customer agent). No advisor text, mascot or mic in the customer UI; reo still records each step in the transcript the planner reads.
+>
+> 1. **Yearly electricity use** (number bar) · "Don't know" → **People at home** tiles.
+> 2. **Your address** + Find roof · not found or "Enter width × length" → **Roof size** (width × length) · Skip.
+> 3. **Electric car?** tiles: Yes, already / Planned / No.
+> 4. **Current heating** tiles (gas, oil, heat pump, electric, district heating, other). Any heating but a heat pump puts a heat pump in the quote by default (aa6c20c); the plan card has a toggle to remove it.
+> 5. **Results screen:** full-width plan card (price range as estimate, savings / payback / own power, components, 3D house + "Your roof" photo, price breakdown) → **Send plan to Sonnfeld** → name + email → sent banner; the confirmed quote appears on the same screen once the planner sends it.
+>
+> Back link on every step. The stages below describe reo's conversation rules (still used for the transcript, the scripted fallback and the planner's "Ask reo why"); their chat-only parts (chips, typed questions, handoff offer text) are historical.
+
 ### Stage 1: Yearly electricity use, household fallback
 
 Open with: "Hi, I'm Sonnfeld's energy advisor. What is your yearly electricity use in kWh? You can find it on your bill, or skip and tell me how many people live at home."

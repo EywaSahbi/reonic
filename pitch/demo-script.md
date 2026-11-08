@@ -11,7 +11,7 @@
 | reo on :8001 | `cd reo && uv run uvicorn api:app --port 8001` → `curl localhost:8001/health` shows `"engine": true` (and `"llm": true` if `reo/.env` has the Anthropic key) |
 | app on :5173, live | `cd app && VITE_API_URL=http://localhost:8001 npm run dev` (PowerShell: `$env:VITE_API_URL='http://localhost:8001'; npm run dev`) |
 | Two browser windows | **A** customer: `http://localhost:5173/` · **B** planner: `http://localhost:5173/#/installer` |
-| Clean state | In window A: reo → "Start over". Old plans in B's inbox are fine; the new one appears on top. |
+| Clean state | In window A: "Start over". Old plans in B's inbox are fine; the new one appears on top. |
 | Fallbacks ready | Recording of this exact run (see bottom); deck open on the validation slide; report PNGs from `data/reports/` as backup |
 
 Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), offer agent on Sonnet 5.5 (~15 s). Without a key everything runs scripted with the same screens.
@@ -25,28 +25,23 @@ Models (reo 7848076): chat on Haiku 5.5 (~4 s per typed reply, taps < 0.2 s), of
 ### 0:20 — Sonnfeld's website (window A)
 
 - Show the homepage: a normal installer site. "This is Sonnfeld, an installer. reo runs on their website under their own name: white-label, no Reonic branding for their customers."
-- Click **Plan my home** (the character in the middle). The page pulls back, the advisor sheet slides down.
+- Click **Plan my home**. The step form slides down.
 
-### 0:40 — Minimal facts → instant first design
-
-| Do | Expect on screen | Say |
-|---|---|---|
-Question order (reo `c53ba6c`): yearly kWh → address → EV → heating → existing solar → handoff offer. Skipping kWh asks for household size; skipping the address asks for the federal state, then roof width × length.
+### 0:40 — Four taps → a real design (step form, customer d5d2c17)
 
 | Do | Expect on screen | Say |
 |---|---|---|
-| Type: **we use about 4,500 kWh a year** | First design in the plan card: PV, battery, price range marked *estimate*; the house fills with panels | "One sentence, and it already has a design and a price range, from a deterministic engine, not the LLM." |
-| Address ask: type **Musterstraße 12, 80331 München** | "I looked up your address: …" 48 m², south, 35°, Bavaria; PV re-derived to fit the roof (mocked lookup, reo 9979655) | "An address is enough; reo reads roof size and orientation." |
-| Tap **Planned** (electric car) | Wallbox + car appear on the house; PV grows because the planned EV adds charging demand (engine 11f5a6a) | "Buying an EV next year: the design adapts and reo explains why." |
-| Tap **Gas** | reo's heat-pump advice and the heating comparison card: today's running cost vs a heat pump on grid power, CO₂ change (engine `heating_comparison`) | "Every figure here is the engine's estimate from public rates. It only says 'cheaper' when the engine finds it cheaper." |
-| Tap **No solar yet** | The handoff offer | "This question exists because our validation showed it was missing (step 4)." |
-| Optional: type **why a battery?** | reo answers from the engine's reasons | "It explains, it doesn't invent numbers." |
+| **Yearly electricity use**: type **4500**, Next | step 2 | "We start from the one number every homeowner can find on their bill." |
+| **Your address**: **Musterstraße 12, 80331 München**, Find roof | roof estimate (demo data: 48 m², 35°) | "An address is enough; we read roof size from the map." |
+| **Electric car?** → **Planned** | step 4 | "Buying an EV next year changes the design." |
+| **Current heating** → **Gas** | Results screen: price range marked *estimate*, savings / payback / own power, PV + battery + heat pump + wallbox, 3D house with the panels, price breakdown | "Every number is the engine's, from real product prices and public labour rates, not the LLM. The heat pump is in by default; one toggle removes it." |
+| Optional: toggle the heat pump off and on | price and components re-derive | |
 
-Before rehearsal: run the flow once and write the actual kWp, price range and heating-card figures into this table (they depend on the engine version at freeze).
+Before rehearsal: run the flow once and write the actual kWp and price range into this table (they depend on the engine version at freeze).
 
-### 1:50 — Handoff
+### 1:30 — Handoff
 
-- Type **send it to the installer** (or tap **Yes, send it**). Name: **Anna Demo** → Send plan.
+- Click **Send plan to Sonnfeld**. Name: **Anna Demo** → Send plan. Sent banner.
 - "The customer is done. The plan goes to the planner, and reo's agent starts working on it."
 
 ### 2:05 — Planner view (window B)
