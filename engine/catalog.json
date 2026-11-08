@@ -1,0 +1,38 @@
+{
+  "_note": "Real products with real German shop / list prices (gross; PV, inverter and battery at 0% VAT for homes, wallbox and heat pump incl. 19% VAT) plus sourced installation rates [low, mid, high]. Prices are snapshots, checked 2026-11-08; the installer confirms the final quote. Replaces the old per-kWp price model for equipment (EywaSahbi). Sources in SOURCES.md.",
+  "products": {
+    "module": {"name": "JA Solar JAM54D40-440/LB glass-glass bifacial module", "price_eur": 93.0,
+               "source": "https://basic-solar.de/shop/solarmodule/ja-solar/1-palette-36x-ja-solar-jam54d40-440-lb-440-wp-glas-glas-solarmodul-bifacial/"},
+    "mounting": {"name": "K2 SingleRail mounting kit, pitched roof", "price_eur_per_module": 83.9,
+                 "source": "https://basic-solar.de/shop/montagematerial/sets/k2-unterkonstriktionsset-fuer-10-module-single-rail-fuer-schraegdach-1-lagig-silber (839 EUR / 10 modules)"},
+    "inverters": [
+      {"name": "Huawei SUN2000-5KTL-M1 hybrid inverter", "kw": 5, "price_eur": 869.0, "source": "https://basic-solar.de/shop/wechselrichter/hybridwechselrichter/huawei-hybrid/sun2000-5ktl-m1/"},
+      {"name": "Huawei SUN2000-6KTL-M1 hybrid inverter", "kw": 6, "price_eur": 679.0, "source": "https://basic-solar.de/eigenschaft/serie/m1/"},
+      {"name": "Huawei SUN2000-8KTL-M1 hybrid inverter", "kw": 8, "price_eur": 899.0, "source": "https://basic-solar.de/shop/wechselrichter/hybridwechselrichter/huawei-hybrid/huawei-8ktl-m1/"},
+      {"name": "Huawei SUN2000-10KTL-M1 hybrid inverter", "kw": 10, "price_eur": 1049.9, "source": "https://www.solaranlage-tipps.de/wechselrichter/huawei-sun2000-10ktl-m1-hybridinverter-10-kw-3-phasen-2-mppt-10-jahre"}
+    ],
+    "inverter_dc_ratio": 1.5,
+    "battery": {"name": "BYD Battery-Box Premium HVS", "points_kwh_eur": [[5.12, 1889], [7.68, 2599], [10.24, 3299], [12.8, 3999]],
+                "source": "https://reduco.ai/blog/solar/byd-stromspeicher-test-erfahrungen (HVS 5.1 / 7.7 / 10.2 / 12.8, June 2026); other sizes on the straight line through these prices"},
+    "wallbox": {"name": "go-e Charger Gemini 11 kW", "price_eur": 644.14, "source": "https://dcs.dk/en/p/go-e-charger-gemini-wallbox-11-kw-1-8m-kabel-weiss-1001155024 (offers from 548 EUR: einfacheauto.de)"},
+    "heatpump": {"name": "Vaillant aroTHERM plus air-water heat pump with hydraulic station", "ref_kw": 10, "ref_price_eur": 19729.0, "eur_per_kw": 147.0,
+                 "source": "42watt.de 2026-08: VWL 105/8.1 A + VWZ MEH 97/7 mean gross list price 19,729 EUR (Stiftung Warentest, 2025-07-17); other sizes by the outdoor-unit price step (3 kW 5,800 EUR, 7 kW 6,389 EUR = 147 EUR/kW)"}
+  },
+  "labour": {
+    "pv_roof_installation_eur_per_kwp": [200, 250, 300],
+    "pv_dc_cabling_eur_per_kwp": [90, 100, 110],
+    "pv_ac_cabling_eur_per_kwp": [67, 108, 150],
+    "pv_meter_cabinet_connection_eur": [500, 700, 900],
+    "pv_commissioning_grid_eur": [150, 275, 400],
+    "scaffolding_eur": [500, 1000, 1500],
+    "battery_installation_eur": [800, 1300, 1800],
+    "wallbox_installation_eur": [500, 1000, 2500],
+    "heatpump_installation_eur": [5000, 8500, 12000]
+  },
+  "_labour_sources": {
+    "pv": "reduco.ai 2026-08-31, installation 10 kWp pitched roof: DC mounting 200-300 EUR/kWp, DC cabling ~100 EUR/kWp, AC cabling 67-150 EUR/kWp, AC connection meter cabinet 500-900 EUR, commissioning + grid connection 150-400 EUR, scaffolding 500-1,500 EUR",
+    "battery": "EcoFlow 2026: professional installation of a home battery 800-1,800 EUR",
+    "wallbox": "clean-invoice.com: wallbox installation 500-2,500 EUR (cable length, meter cabinet)",
+    "heatpump": "42watt / leospardo 2026: installation without the device 5,000-12,000 EUR (hydraulics, electrics, storage, commissioning)"
+  }
+}

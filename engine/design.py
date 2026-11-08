@@ -6,6 +6,7 @@ design()   core() plus re-runs at the low / high plausible value of every missin
 explain()  reasons and what-ifs for one component.
 """
 import json
+import math
 from functools import lru_cache
 from pathlib import Path
 
@@ -14,6 +15,7 @@ from sim import simulate
 
 PRICES = {k: v for k, v in json.loads((Path(__file__).parent / "prices.json").read_text()).items()
           if not k.startswith("_")}
+CATALOG = json.loads((Path(__file__).parent / "catalog.json").read_text(encoding="utf-8"))  # real products + labour rates
 VERSION = f"{PARAMS['version']}+line{PARAMS['pv_line']['a_kwp']}/{PARAMS['pv_line']['b_kwp_per_mwh']}"
 COMPONENTS = ("pv", "battery", "heatpump", "wallbox")
 UNITS = {"pv": "kWp", "battery": "kWh", "heatpump": "kW", "wallbox": "kW"}
@@ -47,12 +49,37 @@ def price_of(key, overrides):
     return mid, mid - share * (mid - lo), mid + share * (hi - mid)
 
 
-# How an installed price splits into quote lines (shares of the sourced total, so the total and range stay the model's).
-# PV: photovoltaik.info example quote 10 kWp, 2026-05 (modules 3,750 / hybrid inverter 1,800 / mounting + DC material
-# 1,500 / installation, AC + registration 3,000 / scaffolding 500 = 10,550 EUR). Wallbox: device 600-1,000 EUR,
-# installation 500-2,500 EUR (ema-energiewelt, clean-invoice 2026) -> 40 / 60. See SOURCES.md.
-PV_SPLIT = {"modules": 3750, "inverter": 1800, "mounting": 1500, "installation": 3000, "scaffolding": 500}
-WALLBOX_SPLIT = {"device": 0.4, "installation": 0.6}
+def labour(key, overrides):
+    """(mid, low, high) for a sourced installation rate; the range is the typical band like price_of."""
+    if key in overrides:
+        return (overrides[key],) * 3
+    lo, mid, hi = CATALOG["labour"][key]
+    share = PARAMS["price_band_share"]
+    return mid, mid - share * (mid - lo), mid + share * (hi - mid)
+
+
+def product(key, default, overrides):
+    """A product's shop price; an installer override (same key) replaces it."""
+    return overrides.get(key, default)
+
+
+def inverters_for(pv_kwp):
+    """Smallest catalogue hybrid inverter whose DC input (kW x ratio) carries the array; several of the largest above."""
+    inv, ratio = CATALOG["products"]["inverters"], CATALOG["products"]["inverter_dc_ratio"]
+    fit = next((i for i in inv if i["kw"] * ratio >= pv_kwp), None)
+    if fit:
+        return fit, 1
+    big = inv[-1]
+    return big, math.ceil(pv_kwp / (big["kw"] * ratio))
+
+
+def battery_price(kwh):
+    """BYD HVS shop prices; sizes between or beyond them on the least-squares line through those prices."""
+    pts = CATALOG["products"]["battery"]["points_kwh_eur"]
+    n = len(pts)
+    mx, my = sum(x for x, _ in pts) / n, sum(y for _, y in pts) / n
+    slope = sum((x - mx) * (y - my) for x, y in pts) / sum((x - mx) ** 2 for x, _ in pts)
+    return round(my + slope * (kwh - mx), 2)
 
 
 def battery_for(pv_kwp, bands):
@@ -114,47 +141,52 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     items, cost = [], {k: [0.0, 0.0] for k in COMPONENTS}
     hp_pv = sizing.heatpump_extra_kwp if adds_hp_pv else 0.0   # PV that exists for the heat pump
 
-    def item(label, qty, unit, key, comp, split=None, show=True):
-        mid, lo, hi = price_of(key, overrides)
-        if show:
-            items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": mid,
-                          "total_eur": round(qty * mid, 2)})
-        for c, q in (split or {comp: qty}).items():
-            cost[c][0] += q * lo
-            cost[c][1] += q * hi
-        return qty * mid
+    def line(label, qty, unit, unit_mid, comp, unit_lo=None, unit_hi=None, share=None):
+        """One quote line; low / high feed the range (products are fixed prices, labour has a sourced band)."""
+        lo = unit_mid if unit_lo is None else unit_lo
+        hi = unit_mid if unit_hi is None else unit_hi
+        items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": round(unit_mid, 2),
+                      "total_eur": round(qty * unit_mid, 2)})
+        for c, f in (share or {comp: 1.0}).items():
+            cost[c][0] += f * qty * lo
+            cost[c][1] += f * qty * hi
+        return qty * unit_mid
 
-    def lines(total, parts):
-        """Quote lines that add up exactly to `total`: (label, qty, unit, weight); the last line takes the rounding rest."""
-        weight, done = sum(w for *_, w in parts), 0.0
-        for i, (label, qty, unit, w) in enumerate(parts):
-            t = round(total * w / weight, 2) if i < len(parts) - 1 else round(total - done, 2)
-            done += t
-            items.append({"label": label, "qty": qty, "unit": unit, "unit_price_eur": round(t / qty, 2), "total_eur": t})
+    def work(label, qty, unit, key, comp, share=None):
+        mid, lo, hi = labour(key, overrides)
+        return line(label, qty, unit, mid, comp, lo, hi, share)
 
+    prod = CATALOG["products"]
     if pv_rec and pv_kwp:
-        pv_eur = item("", pv_kwp, "kWp", "pv_eur_per_kwp", "pv", {"pv": pv_kwp - hp_pv, "heatpump": hp_pv}, show=False)             + item("", 1, "flat", "pv_base_eur", "pv", show=False)
-        s = PV_SPLIT
-        lines(pv_eur, [(f"Solar modules {sizing.module_w:g} W", pv_modules or 1, "pc", s["modules"]),
-                       ("Hybrid inverter" if bat_rec else "Inverter", 1, "pc", s["inverter"]),
-                       ("Mounting system and DC material", 1, "flat", s["mounting"]),
-                       ("Installation, AC connection and grid registration", 1, "flat", s["installation"]),
-                       ("Scaffolding", 1, "flat", s["scaffolding"])])
+        # PV that exists only for the heat pump is costed to the heat pump
+        sh = {"pv": (pv_kwp - hp_pv) / pv_kwp, "heatpump": hp_pv / pv_kwp} if hp_pv else None
+        n = pv_modules or max(1, round(pv_kwp * 1000 / sizing.module_w))
+        line(prod["module"]["name"], n, "pc", product("module_eur", prod["module"]["price_eur"], overrides), "pv", share=sh)
+        inv, k = inverters_for(pv_kwp)
+        line(inv["name"], k, "pc", product("inverter_eur", inv["price_eur"], overrides), "pv", share=sh)
+        line(prod["mounting"]["name"], n, "pc", product("mounting_eur_per_module", prod["mounting"]["price_eur_per_module"], overrides), "pv", share=sh)
+        work("Installation on the roof (modules, rails)", pv_kwp, "kWp", "pv_roof_installation_eur_per_kwp", "pv", sh)
+        work("DC cabling (strings, connectors)", pv_kwp, "kWp", "pv_dc_cabling_eur_per_kwp", "pv", sh)
+        work("AC cabling inverter to meter cabinet", pv_kwp, "kWp", "pv_ac_cabling_eur_per_kwp", "pv", sh)
+        work("Meter cabinet connection", 1, "flat", "pv_meter_cabinet_connection_eur", "pv", sh)
+        work("Commissioning and grid registration", 1, "flat", "pv_commissioning_grid_eur", "pv", sh)
+        work("Scaffolding", 1, "flat", "scaffolding_eur", "pv", sh)
     if bat_rec:
-        item(f"Battery storage {bat_kwh:g} kWh", bat_kwh, "kWh", "battery_eur_per_kwh", "battery")
-        item("Battery installation", 1, "flat", "battery_base_eur", "battery")
+        line(f"{prod['battery']['name']} {bat_kwh:g} kWh", 1, "pc", product("battery_eur", battery_price(bat_kwh), overrides), "battery")
+        work("Battery installation", 1, "flat", "battery_installation_eur", "battery")
     if wb_rec:
-        wb_eur = item("", 1, "piece", "wallbox_eur", "wallbox", show=False)
-        lines(wb_eur, [(f"Wallbox {wb_kw:g} kW", 1, "pc", WALLBOX_SPLIT["device"]),
-                       ("Wallbox installation and registration", 1, "flat", WALLBOX_SPLIT["installation"])])
+        line(f"{prod['wallbox']['name']}", 1, "pc", product("wallbox_device_eur", prod["wallbox"]["price_eur"], overrides), "wallbox")
+        work("Wallbox installation and registration", 1, "flat", "wallbox_installation_eur", "wallbox")
     if hp_rec and hp_kw:
-        device = [price_of(k, overrides) for k in ("heatpump_eur_per_kw", "heatpump_base_eur")]
-        item(f"Air-water heat pump {hp_kw:g} kW", hp_kw, "kW", "heatpump_eur_per_kw", "heatpump")
-        item("Heat pump installation, hydraulics", 1, "flat", "heatpump_base_eur", "heatpump")
+        hp = prod["heatpump"]
+        device = product("heatpump_device_eur", hp["ref_price_eur"] + hp["eur_per_kw"] * (hp_kw - hp["ref_kw"]), overrides)
+        line(f"{hp['name']}, {hp_kw:g} kW", 1, "pc", device, "heatpump")
+        inst = labour("heatpump_installation_eur", overrides)
+        work("Heat pump installation (hydraulics, electrics, storage, commissioning)", 1, "flat", "heatpump_installation_eur", "heatpump")
         # KfW 458 base grant: share of the eligible heat-pump cost (bonuses are case by case, not applied)
         share = price_of("heatpump_subsidy_share", overrides)[0]
         cap = price_of("heatpump_subsidy_max_eligible_eur", overrides)[0]
-        mid, lo, hi = (hp_kw * per_kw + base for per_kw, base in zip(*device))
+        mid, lo, hi = (device + x for x in inst)
         if share:                                # share 0 = no grant line (reo's customer view, persona rule)
             grant = round(share * min(mid, cap), 2)
             items.append({"label": f"KfW 458 base grant {share:.0%} (estimate, eligible up to €{cap:,.0f})", "qty": 1,

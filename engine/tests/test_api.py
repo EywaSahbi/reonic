@@ -23,7 +23,7 @@ def post(facts, **kw):  # noqa: D103
 def test_health_and_prices():
     assert client.get("/health").json()["ok"] is True
     p = client.get("/prices").json()
-    assert p["pv_eur_per_kwp_low"] < p["pv_eur_per_kwp"] < p["pv_eur_per_kwp_high"]
+    assert 0 < p["heatpump_subsidy_share"] < 1 and p["feed_in_eur_per_kwh"] > 0   # equipment prices live in catalog.json
 
 
 def test_empty_facts_give_full_design():
@@ -87,16 +87,18 @@ def test_pv_lock_rederives_battery():
 
 
 def test_price_override_is_exact():
-    a = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1000, "pv_base_eur": 2500})
-    b = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1200, "pv_base_eur": 2500})
-    kwp = a["components"]["pv"]["size"]
-    assert abs((b["price"]["total_eur"] - a["price"]["total_eur"]) - 200 * kwp) < 0.05
+    a = post({"total_demand_kwh": 4500}, prices={"module_eur": 100})
+    b = post({"total_demand_kwh": 4500}, prices={"module_eur": 120})
+    n = a["components"]["pv"]["quantity"]
+    assert abs((b["price"]["total_eur"] - a["price"]["total_eur"]) - 20 * n) < 0.05
+    assert a["price"]["items"][0]["unit_price_eur"] == 100
 
 
 def test_price_lines_split_and_add_up():
     d = post({"total_demand_kwh": 4500, "ev_planned": True})
     labels = [i["label"] for i in d["price"]["items"]]
-    assert labels[0].startswith("Solar modules") and "Scaffolding" in labels and "Wallbox installation and registration" in labels
+    assert labels[0].startswith("JA Solar") and "Scaffolding" in labels and "Wallbox installation and registration" in labels
+    assert any(l.startswith("Huawei SUN2000") for l in labels) and any(l.startswith("go-e") for l in labels)
     modules = d["price"]["items"][0]
     assert modules["qty"] == d["components"]["pv"]["quantity"] and modules["unit"] == "pc"
     assert abs(sum(i["total_eur"] for i in d["price"]["items"]) - d["price"]["total_eur"]) < 0.01
@@ -241,5 +243,5 @@ def test_price_range_uses_typical_band_not_extremes():
     lo, hi = d["price"]["range_eur"]
     assert lo < d["price"]["total_eur"] < hi and hi / lo < 1.35        # only the price-list spread is left: half of the sourced min-max
     assert post({"total_demand_kwh": 4500})["price"]["range_eur"][1] / post({"total_demand_kwh": 4500})["price"]["range_eur"][0] < 1.6
-    fixed = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1000, "pv_base_eur": 2500})["price"]["range_eur"]
+    fixed = post({"total_demand_kwh": 4500}, prices={"module_eur": 93})["price"]["range_eur"]
     assert fixed[0] < fixed[1]

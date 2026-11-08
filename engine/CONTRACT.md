@@ -42,6 +42,9 @@ type Component = {
 };
 
 type PriceList = Record<string, number>;   // keys as returned by GET /prices; each has `<key>_low` / `<key>_high`.
+// 2026-11-08: equipment prices come from real products in engine/catalog.json (quote lines = product x qty + sourced
+// installation rates). GET /prices now returns only subsidy, feed-in and fuel rates. Overridable keys in `prices`:
+// module_eur, inverter_eur, mounting_eur_per_module, battery_eur, wallbox_device_eur, heatpump_device_eur and the labour keys of catalog.json.
                                            // Overriding `<key>` fixes that price (low = high = the override).
 
 type Design = {
