@@ -408,6 +408,10 @@ class Facts(BaseModel):
 
 class Address(BaseModel):
     address: str
+    lat: float | None = None           # set when the customer picked a type-ahead suggestion: no geocoding needed
+    lon: float | None = None
+    housenumber: str | None = None
+    state: str | None = None
 
 
 class Handoff(BaseModel):
@@ -560,11 +564,18 @@ def send_bill(pid: str, image: UploadFile = File(...)):
         return turn
 
 
+@app.get("/sessions/{pid}/address/suggest")
+def suggest_address(pid: str, q: str = ""):
+    """Address type-ahead for the roof step (demo addresses first, then Photon); no state change."""
+    return {"suggestions": roof.suggest(q)}
+
+
 @app.post("/sessions/{pid}/address")
 def send_address(pid: str, body: Address):
     """Roof from the address: demo addresses offline, else OpenStreetMap building outline (roof.py).
     Not found -> offer width x length or skip."""
-    hit = roof.lookup(body.address)  # network call outside the lock
+    point = body.model_dump(include={"lat", "lon", "housenumber", "state"}) if body.lat is not None else None
+    hit = roof.lookup(body.address, point)  # network call outside the lock
     with _lock:
         db = _load()
         plan, st = _get(db, pid)

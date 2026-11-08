@@ -102,8 +102,42 @@ def _building(lat: float, lon: float, number: str | None) -> dict | None:
     return best if best and (best["inside"] or best["match"] or best["dist"] <= 30) else None
 
 
-def lookup(address: str) -> dict | None:
-    """{label, facts: {roof_area_sqm, roof_type?, region?}, say, source, footprint_sqm?} or None."""
+_SUGGEST: dict[str, list] = {}   # shortcut: in-memory cache of type-ahead answers, fine for one demo process
+
+
+def suggest(q: str, limit: int = 5) -> list[dict]:
+    """Address type-ahead: demo addresses first (offline), then Photon (komoot's OSM search, built for autocomplete;
+    Nominatim's usage policy forbids it). [{label, lat?, lon?, housenumber?, state?}]; [] on any failure."""
+    nq = _norm(q)
+    if len(nq) < 3:
+        return []
+    demo = [{"label": a["label"]} for a in json.loads((HERE / "addresses.json").read_text(encoding="utf-8"))["addresses"]
+            if a["match"] in nq or _norm(a["label"]).startswith(nq)]
+    if nq not in _SUGGEST:
+        try:
+            r = httpx.get("https://photon.komoot.io/api/", headers=UA, timeout=4,
+                          params={"q": q, "limit": limit + 3, "lang": "de", "layer": "house", "bbox": "5.87,47.27,15.04,55.06"})
+            r.raise_for_status()
+            out = []
+            for f in r.json().get("features", []):
+                p = f["properties"]
+                if p.get("countrycode") != "DE" or not p.get("street") or not p.get("housenumber"):
+                    continue
+                label = f"{p['street']} {p['housenumber']}, {p.get('postcode', '')} {p.get('city', '')}".replace(" ,", ",").strip()
+                lon, lat = f["geometry"]["coordinates"]
+                if label not in (o["label"] for o in out):
+                    out.append({"label": label, "lat": lat, "lon": lon, "housenumber": p["housenumber"],
+                                "state": p.get("state") or p.get("city")})   # Berlin / Hamburg / Bremen have no state
+            _SUGGEST[nq] = out
+        except (httpx.HTTPError, ValueError, KeyError) as e:
+            log.warning("address suggest failed: %s", e)
+            return demo[:limit]
+    return (demo + _SUGGEST[nq])[:limit]
+
+
+def lookup(address: str, point: dict | None = None) -> dict | None:
+    """{label, facts: {roof_area_sqm, roof_type?, region?}, say, source, footprint_sqm?} or None.
+    point = a picked suggestion {lat, lon, housenumber?, state?}: skips geocoding, straight to the building."""
     hit = _mock(address)
     if hit:
         return hit
@@ -112,7 +146,9 @@ def lookup(address: str) -> dict | None:
     if cached and "lat" in cached:  # older entries lack the location for the satellite view: look up again
         return cached
     try:
-        g = _geocode(address)
+        g = ({"lat": point["lat"], "lon": point["lon"], "display_name": address,
+              "address": {"house_number": point.get("housenumber"), "state": point.get("state")}}
+             if point and point.get("lat") is not None and point.get("lon") is not None else _geocode(address))
         if g is None:
             return None
         addr = g.get("address", {})

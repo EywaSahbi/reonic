@@ -59,7 +59,8 @@ Behaviour notes (v1):
 | POST | `/sessions` | `{}` → `Turn` (greeting; zero-fact design once engine allows `facts: {}`) | done |
 | POST | `/sessions/{id}/messages` | `{text}` → `Turn` | done |
 | POST | `/sessions/{id}/facts` | `{facts?: Partial<HomeFacts>, skip?: string[]}` → `Turn` (no LLM; `skip` = ask fields the customer skipped, e.g. `["roof_area_sqm", "roof_dims"]`) | done |
-| POST | `/sessions/{id}/address` | `{address}` → `Turn & {roof?: {source: "OpenStreetMap" \| "demo data", label, footprint_sqm?}}`: demo addresses (`reo/addresses.json`) offline, any other German address via OpenStreetMap (Nominatim + building outline → estimated sunny roof area, region, roof type); not found → `ask` input `"dimensions"` + chip `Skip` | done |
+| POST | `/sessions/{id}/address` | `{address}` → `Turn & {roof?: {source: "OpenStreetMap" \| "demo data", label, footprint_sqm?}}`: demo addresses (`reo/addresses.json`) offline, any other German address via OpenStreetMap (Nominatim + building outline → estimated sunny roof area, region, roof type); not found → `ask` input `"dimensions"` + chip `Skip`. Optional `lat, lon, housenumber?, state?` (a picked suggestion) skip geocoding | done |
+| GET | `/sessions/{id}/address/suggest?q=` | → `{suggestions: {label, lat?, lon?, housenumber?, state?}[]}` (≥ 3 chars; demo addresses first, label only; then Photon/OSM house addresses in Germany; `[]` on failure). Send the picked one to `/address` with its point | done |
 | POST | `/sessions/{id}/handoff` | `{name, email?}` → `Plan` (status `handed_over`) | done |
 | GET | `/sessions/{id}` | → `Plan` (customer sees the final quote once `quoted`) | done |
 

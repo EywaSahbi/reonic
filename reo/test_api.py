@@ -161,7 +161,7 @@ def test_looks_like_address():
 def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
     import roof
     c = client(tmp_path, monkeypatch)
-    monkeypatch.setattr(roof, "lookup", lambda a: None)  # building not on the map
+    monkeypatch.setattr(roof, "lookup", lambda a, p=None: None)  # building not on the map
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     t = c.post(f"/sessions/{pid}/address", json={"address": "Unbekannt 1"}).json()
     assert t["ask"]["input"] == "dimensions" and t["suggestions"] == ["Skip"]
@@ -173,6 +173,26 @@ def test_roof_by_dimensions_and_skip(tmp_path, monkeypatch):
     c.post(f"/sessions/{pid2}/address", json={"address": "Unbekannt 1"})
     t = c.post(f"/sessions/{pid2}/messages", json={"text": "Skip"}).json()
     assert "roof_area_sqm" not in t["plan"]["facts"] and (t.get("ask") or {}).get("field") not in ("roof_area_sqm", "roof_dims")
+
+
+def test_address_suggest_and_picked_point(tmp_path, monkeypatch):
+    import httpx, roof
+    c = client(tmp_path, monkeypatch)
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    def offline(*a, **k):
+        raise httpx.ConnectError("offline")
+    monkeypatch.setattr(roof.httpx, "get", offline)
+    monkeypatch.setattr(roof, "_SUGGEST", {})
+    s = c.get(f"/sessions/{pid}/address/suggest", params={"q": "Muster"}).json()["suggestions"]
+    assert s and s[0]["label"].startswith("Musterstraße 12")                  # demo address offline, first
+    assert c.get(f"/sessions/{pid}/address/suggest", params={"q": "Mu"}).json()["suggestions"] == []   # < 3 chars
+    seen = {}
+    monkeypatch.setattr(roof, "_geocode", lambda a: (_ for _ in ()).throw(AssertionError("geocoded")))
+    monkeypatch.setattr(roof, "_cache", lambda: {})
+    monkeypatch.setattr(roof, "_building", lambda lat, lon, n: seen.update(lat=lat, n=n) or None)
+    t = c.post(f"/sessions/{pid}/address", json={"address": "Kastanienallee 12, 10435 Berlin", "lat": 52.539, "lon": 13.41,
+                                                  "housenumber": "12", "state": "Berlin"}).json()
+    assert seen == {"lat": 52.539, "n": "12"} and t["ask"]["field"] == "roof_dims"  # picked point: no geocoding
 
 
 def test_roof_geometry():
@@ -202,7 +222,7 @@ def test_address_sets_roof_location_for_the_satellite_view(tmp_path, monkeypatch
     c = client(tmp_path, monkeypatch)
     hit = {"label": "Teststraße 1, 01069 Dresden", "facts": {"roof_area_sqm": 40}, "say": "about 40 m²", "source": "OpenStreetMap",
            "footprint_sqm": 65.0, "lat": 51.05, "lon": 13.74, "outline": [[51.05, 13.74], [51.0501, 13.74], [51.0501, 13.7402]]}
-    monkeypatch.setattr(roof, "lookup", lambda a: hit if a.startswith("Test") else None)
+    monkeypatch.setattr(roof, "lookup", lambda a, p=None: hit if a.startswith("Test") else None)
     pid = c.post("/sessions", json={}).json()["plan"]["id"]
     t = c.post(f"/sessions/{pid}/address", json={"address": "Teststraße 1, 01069 Dresden"}).json()
     assert t["plan"]["roof_location"] == {"label": hit["label"], "lat": 51.05, "lon": 13.74, "outline": hit["outline"]}
