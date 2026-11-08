@@ -499,3 +499,4 @@ h1, h2, h3 { color: var(--ink); }
 .address-hits { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + 6px); list-style: none; margin: 0; padding: 6px; background: var(--white); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-float); }
 .address-hits button { width: 100%; text-align: left; background: none; border: 0; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; color: var(--ink); }
 .address-hits button:hover, .address-hits button:focus-visible { background: var(--sunset-tint); }
+.comp-end { display: flex; align-items: center; gap: 12px; }

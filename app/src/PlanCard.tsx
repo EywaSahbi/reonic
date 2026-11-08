@@ -37,7 +37,7 @@ const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Batt
 const num = (n: number) => String(Math.round(n * 10) / 10);
 const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("en");
 
-// Results screen of the step form: components, sizes, price range, savings, payback, reasons.
+// Results screen of the step form: components, sizes, price range, savings, payback.
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
 export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void }) {
   const d = plan.design;
@@ -99,16 +99,17 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
             <li key={k} className={c.recommended ? "on" : "off"}>
               <div className="comp-row">
                 <span className="comp-name">{NAMES[k]}</span>
-                <span className="comp-size">
-                  {c.recommended && c.size !== null ? `${num(c.size)} ${c.unit}` : "not included"}
-                  {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
+                <span className="comp-end">
+                  <span className="comp-size">
+                    {c.recommended && c.size !== null ? `${num(c.size)} ${c.unit}` : "not included"}
+                    {c.recommended && c.quantity ? <em> · {c.quantity} panels</em> : null}
+                  </span>
+                  {k === "heatpump" && hpToggle && (
+                    <button type="button" role="switch" aria-checked={c.recommended} aria-label="Heat pump in my plan"
+                      className={`switch ${c.recommended ? "is-on" : ""}`} onClick={() => onToggleHeatpump(!c.recommended)}><i /></button>
+                  )}
                 </span>
-                {k === "heatpump" && hpToggle && (
-                  <button type="button" role="switch" aria-checked={c.recommended} aria-label="Heat pump in my plan"
-                    className={`switch ${c.recommended ? "is-on" : ""}`} onClick={() => onToggleHeatpump(!c.recommended)}><i /></button>
-                )}
               </div>
-              {c.reasons[0] && <p className="comp-reason">{c.reasons[0]}</p>}
             </li>
           );
         })}
