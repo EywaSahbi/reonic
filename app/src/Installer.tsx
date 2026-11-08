@@ -8,7 +8,6 @@ const DesignStudio = lazy(() => import("./scene/DesignStudio"));
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Design, type HomeFacts, type Locks, type Plan, type PlanSummary } from "./types";
 
 const NAMES: Record<ComponentKey, string> = { pv: "PV", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox" };
-const STEP: Record<ComponentKey, number> = { pv: 0.5, battery: 1, heatpump: 1, wallbox: 1 };
 const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -211,22 +210,6 @@ function PlanDetail({ id }: { id: string }) {
 
       <div className="detail-grid">
         <section className="card">
-          <h3>Design</h3>
-          <div className="comp-edit-list">
-            {COMPONENT_KEYS.map((k) => (
-              <ComponentEditor key={k + d.components[k].size + d.components[k].recommended} k={k} design={d} disabled={quoted || busy || isOffline(d)} highlight={!!hl(k)}
-                onLock={(lock) => edit({ locks: { [k]: lock } })} />
-            ))}
-          </div>
-          <dl className="econ inst-econ">
-            <div className={hl("savings")}><dt>Savings / yr</dt><dd>{eur(d.economics.annual_savings_eur)}</dd></div>
-            <div className={hl("payback")}><dt>Payback</dt><dd>{d.economics.payback_years ?? "–"} yrs</dd></div>
-            <div><dt>Autarky</dt><dd>{d.economics.autarky_pct}%</dd></div>
-            <div><dt>Self-cons.</dt><dd>{d.economics.self_consumption_pct}%</dd></div>
-          </dl>
-        </section>
-
-        <section className="card">
           <h3>Home facts</h3>
           <FactsEditor facts={plan.facts} assumed={new Set(d.assumptions.map((a) => String(a.field)))} disabled={quoted || busy || isOffline(d)} onSave={(facts) => edit({ facts })} />
           {d.missing_inputs.length > 0 && (
@@ -299,37 +282,6 @@ function summarize(p: Plan): string {
   return `${home}${assumed ? `; assumed: ${assumed}` : ""}. ${asks ? `Customer asked ${asks}× about reasons or cost. ` : ""}Proposal: ${sys}; ${eur(d.price.total_eur)} (range ${eur(d.price.range_eur[0])}–${eur(d.price.range_eur[1]).slice(1)}), payback ~${d.economics.payback_years ?? "–"} yrs.${p.flags.length ? ` Check: ${p.flags.map((x) => x.text).join("; ")}.` : ""}`;
 }
 
-function ComponentEditor({ k, design, disabled, highlight, onLock }: {
-  k: ComponentKey; design: Design; disabled: boolean; highlight: boolean;
-  onLock: (lock: { recommended: boolean; size?: number }) => void;
-}) {
-  const c = design.components[k];
-  const [size, setSize] = useState(c.size ?? c.range?.[0] ?? 0);
-  const commit = () => { if (c.recommended && size !== c.size && size > 0) onLock({ recommended: true, size }); };
-  return (
-    <div className={`comp-edit ${c.recommended ? "on" : "off"} ${highlight ? "changed" : ""}`}>
-      <label className="switch">
-        <input type="checkbox" checked={c.recommended} disabled={disabled}
-          onChange={(e) => onLock(e.target.checked ? { recommended: true, size: c.size ?? (size || undefined) } : { recommended: false })} />
-        <span className="comp-name">{NAMES[k]}</span>
-      </label>
-      <div className="size-stepper">
-        <button disabled={disabled || !c.recommended} onClick={() => setSize((s) => Math.max(0, +(s - STEP[k]).toFixed(1)))} aria-label={`Smaller ${NAMES[k]}`}>−</button>
-        <input type="number" step={STEP[k]} value={c.recommended ? size : ""} disabled={disabled || !c.recommended}
-          onChange={(e) => setSize(Number(e.target.value))} onBlur={commit} onKeyDown={(e) => e.key === "Enter" && commit()} aria-label={`${NAMES[k]} size`} />
-        <button disabled={disabled || !c.recommended} onClick={() => setSize((s) => +(s + STEP[k]).toFixed(1))} aria-label={`Larger ${NAMES[k]}`}>+</button>
-        <span className="unit">{c.unit}</span>
-      </div>
-      <div className="comp-meta">
-        {c.locked && <span className="pill pill-lock">set by you</span>}
-        {c.recommended && <span className={`conf conf-${c.confidence}`}>{c.confidence}</span>}
-        {c.range && c.recommended && <span className="muted small">range {c.range[0]}–{c.range[1]}</span>}
-        {c.recommended && size !== c.size && <button className="btn-small apply" onClick={commit} disabled={disabled}>Apply {size} {c.unit}</button>}
-      </div>
-      <ul className="comp-reasons">{c.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
-    </div>
-  );
-}
 
 const REGIONS = ["BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"];
 
