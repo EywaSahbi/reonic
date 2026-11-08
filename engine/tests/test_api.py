@@ -87,8 +87,19 @@ def test_pv_lock_rederives_battery():
 
 
 def test_price_override_is_exact():
-    d = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1000})
-    assert d["price"]["items"][0]["unit_price_eur"] == 1000
+    a = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1000, "pv_base_eur": 2500})
+    b = post({"total_demand_kwh": 4500}, prices={"pv_eur_per_kwp": 1200, "pv_base_eur": 2500})
+    kwp = a["components"]["pv"]["size"]
+    assert abs((b["price"]["total_eur"] - a["price"]["total_eur"]) - 200 * kwp) < 0.05
+
+
+def test_price_lines_split_and_add_up():
+    d = post({"total_demand_kwh": 4500, "ev_planned": True})
+    labels = [i["label"] for i in d["price"]["items"]]
+    assert labels[0].startswith("Solar modules") and "Scaffolding" in labels and "Wallbox installation and registration" in labels
+    modules = d["price"]["items"][0]
+    assert modules["qty"] == d["components"]["pv"]["quantity"] and modules["unit"] == "pc"
+    assert abs(sum(i["total_eur"] for i in d["price"]["items"]) - d["price"]["total_eur"]) < 0.01
 
 
 def test_reasons_match_facts():

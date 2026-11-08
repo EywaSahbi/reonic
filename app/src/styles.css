@@ -330,6 +330,12 @@ h1, h2, h3 { color: var(--ink); }
 .satellite-outline { fill: rgba(247, 163, 92, 0.18); stroke: #f7a35c; stroke-width: 3; stroke-linejoin: round; }
 .satellite { position: relative; }
 .satellite-credit { position: absolute; right: 10px; bottom: 9px; font-size: 9px; line-height: 1; padding: 2px 4px; border-radius: 3px; color: rgba(255,255,255,.85); background: rgba(0,0,0,.35); pointer-events: none; } /* Esri requires attribution */
+.price-lines { margin: 4px 0 10px; font-size: 13px; }
+.price-lines summary { cursor: pointer; color: var(--ink-700); font-weight: 600; padding: 4px 0; }
+.price-lines ul { list-style: none; margin: 6px 0 4px; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.price-lines li { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-700); }
+.price-lines li b { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.price-lines small { color: var(--ink-500); }
 .house svg { display: block; width: 100%; height: auto; overflow: visible; }
 .house figcaption { font-size: 12px; color: var(--ink-500); text-align: center; margin-top: 2px; }
 .house figcaption strong { color: var(--ink); font-weight: 600; }

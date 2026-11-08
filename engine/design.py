@@ -47,6 +47,14 @@ def price_of(key, overrides):
     return mid, mid - share * (mid - lo), mid + share * (hi - mid)
 
 
+# How an installed price splits into quote lines (shares of the sourced total, so the total and range stay the model's).
+# PV: photovoltaik.info example quote 10 kWp, 2026-05 (modules 3,750 / hybrid inverter 1,800 / mounting + DC material
+# 1,500 / installation, AC + registration 3,000 / scaffolding 500 = 10,550 EUR). Wallbox: device 600-1,000 EUR,
+# installation 500-2,500 EUR (ema-energiewelt, clean-invoice 2026) -> 40 / 60. See SOURCES.md.
+PV_SPLIT = {"modules": 3750, "inverter": 1800, "mounting": 1500, "installation": 3000, "scaffolding": 500}
+WALLBOX_SPLIT = {"device": 0.4, "installation": 0.6}
+
+
 def battery_for(pv_kwp, bands):
     """The experts' most common battery size for this PV size (bands from tools/derive_params.py)."""
     return next(size for upper, size in bands if upper is None or pv_kwp <= upper)
@@ -106,23 +114,39 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
     items, cost = [], {k: [0.0, 0.0] for k in COMPONENTS}
     hp_pv = sizing.heatpump_extra_kwp if adds_hp_pv else 0.0   # PV that exists for the heat pump
 
-    def item(label, qty, unit, key, comp, split=None):
+    def item(label, qty, unit, key, comp, split=None, show=True):
         mid, lo, hi = price_of(key, overrides)
-        items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": mid,
-                      "total_eur": round(qty * mid, 2)})
+        if show:
+            items.append({"label": label, "qty": round(qty, 2), "unit": unit, "unit_price_eur": mid,
+                          "total_eur": round(qty * mid, 2)})
         for c, q in (split or {comp: qty}).items():
             cost[c][0] += q * lo
             cost[c][1] += q * hi
+        return qty * mid
+
+    def lines(total, parts):
+        """Quote lines that add up exactly to `total`: (label, qty, unit, weight); the last line takes the rounding rest."""
+        weight, done = sum(w for *_, w in parts), 0.0
+        for i, (label, qty, unit, w) in enumerate(parts):
+            t = round(total * w / weight, 2) if i < len(parts) - 1 else round(total - done, 2)
+            done += t
+            items.append({"label": label, "qty": qty, "unit": unit, "unit_price_eur": round(t / qty, 2), "total_eur": t})
 
     if pv_rec and pv_kwp:
-        item(f"PV system, {pv_modules} modules × {sizing.module_w:g} W, inverter", pv_kwp, "kWp", "pv_eur_per_kwp", "pv",
-             {"pv": pv_kwp - hp_pv, "heatpump": hp_pv})
-        item("PV installation, scaffolding, grid registration", 1, "flat", "pv_base_eur", "pv")
+        pv_eur = item("", pv_kwp, "kWp", "pv_eur_per_kwp", "pv", {"pv": pv_kwp - hp_pv, "heatpump": hp_pv}, show=False)             + item("", 1, "flat", "pv_base_eur", "pv", show=False)
+        s = PV_SPLIT
+        lines(pv_eur, [(f"Solar modules {sizing.module_w:g} W", pv_modules or 1, "pc", s["modules"]),
+                       ("Hybrid inverter" if bat_rec else "Inverter", 1, "pc", s["inverter"]),
+                       ("Mounting system and DC material", 1, "flat", s["mounting"]),
+                       ("Installation, AC connection and grid registration", 1, "flat", s["installation"]),
+                       ("Scaffolding", 1, "flat", s["scaffolding"])])
     if bat_rec:
         item(f"Battery storage {bat_kwh:g} kWh", bat_kwh, "kWh", "battery_eur_per_kwh", "battery")
         item("Battery installation", 1, "flat", "battery_base_eur", "battery")
     if wb_rec:
-        item(f"Wallbox {wb_kw:g} kW incl. installation", 1, "piece", "wallbox_eur", "wallbox")
+        wb_eur = item("", 1, "piece", "wallbox_eur", "wallbox", show=False)
+        lines(wb_eur, [(f"Wallbox {wb_kw:g} kW", 1, "pc", WALLBOX_SPLIT["device"]),
+                       ("Wallbox installation and registration", 1, "flat", WALLBOX_SPLIT["installation"])])
     if hp_rec and hp_kw:
         device = [price_of(k, overrides) for k in ("heatpump_eur_per_kw", "heatpump_base_eur")]
         item(f"Air-water heat pump {hp_kw:g} kW", hp_kw, "kW", "heatpump_eur_per_kw", "heatpump")

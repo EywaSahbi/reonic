@@ -221,7 +221,7 @@ function PlanDetail({ id }: { id: string }) {
         </section>
 
         <section className="card">
-          <h3>Price breakdown <span className="muted small">(price list editing needs GET /prices from reo)</span></h3>
+          <h3>Price breakdown <span className="muted small">(estimate from the engine's price list)</span></h3>
           <table className="price-table">
             <tbody>
               {d.price.items.map((i) => (

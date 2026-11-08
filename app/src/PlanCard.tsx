@@ -99,6 +99,18 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
         </>)}
       </div>
 
+      {d.price.items.length > 0 && (
+        <details className="price-lines">
+          <summary>Price breakdown</summary>
+          <ul>
+            {d.price.items.map((i) => (
+              <li key={i.label}><span>{i.label}{i.unit === "pc" && i.qty > 1 ? ` × ${i.qty}` : ""}</span><b>{eur(i.total_eur)}</b></li>
+            ))}
+          </ul>
+          <small>{quoted ? "Confirmed by Sonnfeld" : "Estimates; your planner confirms the final price"}</small>
+        </details>
+      )}
+
       <ul className="components">
         {COMPONENT_KEYS.map((k) => {
           const c = d.components[k];
