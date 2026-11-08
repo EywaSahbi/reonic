@@ -35,6 +35,7 @@ type Turn = {
 
 Behaviour notes (v1):
 - `design.params_version === "engine-offline"` means the engine was unreachable: the design carries no numbers (sizes `null`, totals `0`) and reo says so. Never shown as a real design.
+- The customer's design builds up with the answers: until answered (or skipped) a topic's components are locked off for the engine call (pv + battery until total/annual demand or household size, wallbox until the EV question, heat pump until heating). The first design is empty (`total_eur` 0); the customer's own locks win. Installer views and the offer pack are unaffected.
 - Chip taps sent as `/messages` text (exact chip/option texts) and `/facts` answer instantly without the LLM.
 - `flags` (aggregate, from data's `benchmarks.json`) are set every turn. Individual homes are never served (`similar_projects` and `GET /validation` removed 2026-11-08 on EywaSahbi's request, together with the app's Reality check and Similar projects panels).
 - Roof: the roof ask is `input: "address"` with chips `Enter width × length` / `Skip`. Width × length (from `/facts` or free text "8 x 6 m") is sent to the engine as `roof_width_m`, `roof_length_m` plus `roof_area_sqm` = width × length; the engine caps PV modules to the roof (engine NEED 21:10).

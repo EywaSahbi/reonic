@@ -175,3 +175,22 @@ def test_address_sets_roof_location_for_the_satellite_view(tmp_path, monkeypatch
     assert t["plan"]["roof_location"] == {"label": hit["label"], "lat": 51.05, "lon": 13.74, "outline": hit["outline"]}
     t = c.post(f"/sessions/{pid}/address", json={"address": "Nirgendwo 9"}).json()
     assert "roof_location" not in t["plan"]  # a new address without a building: back to the drawn house
+
+
+def test_plan_builds_up_with_the_answers():
+    from api import reveal_locks
+    off = {"recommended": False}
+    assert reveal_locks({}, set()) == {"pv": off, "battery": off, "wallbox": off, "heatpump": off}
+    assert reveal_locks({"total_demand_kwh": 4500}, set()) == {"wallbox": off, "heatpump": off}
+    assert reveal_locks({}, {"total_demand_kwh", "num_inhabitants"}) == {"wallbox": off, "heatpump": off}  # both skipped
+    assert reveal_locks({"num_inhabitants": 3, "ev_planned": True, "heating_type": "gas"}, set()) == {}
+
+
+def test_customer_engine_calls_carry_the_reveal_locks(tmp_path, monkeypatch):
+    seen = []
+    c = client(tmp_path, monkeypatch)
+    monkeypatch.setattr(engine, "design", lambda f, locks=None, prices=None: seen.append(dict(locks or {})) or fake_design(f, locks, prices))
+    pid = c.post("/sessions", json={}).json()["plan"]["id"]
+    assert set(seen[-1]) == {"pv", "battery", "wallbox", "heatpump"}  # empty house, no price
+    c.post(f"/sessions/{pid}/messages", json={"text": "we use about 4,500 kWh a year"})
+    assert set(seen[-1]) == {"wallbox", "heatpump"}

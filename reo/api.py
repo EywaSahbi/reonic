@@ -151,8 +151,21 @@ def customer_prices(st: dict) -> dict:
     return {**CUSTOMER_PRICES, **(st.get("prices") or {})}
 
 
+def reveal_locks(facts: dict, skipped: set) -> dict:
+    """The customer's plan builds up with the answers (EywaSahbi): until a topic is answered (or skipped) its component
+    is locked off, so price, kWp, panels and battery all come from the engine for what the answers justify so far.
+    Solar + battery once the demand or household size is known, wallbox once the EV question, heat pump once the heating."""
+    off = {"recommended": False}
+    demand = any(k in facts for k in ("total_demand_kwh", "annual_demand_kwh", "num_inhabitants"))         or {"total_demand_kwh", "num_inhabitants"} <= skipped
+    ev = "has_ev" in facts or "ev_planned" in facts or "has_ev" in skipped
+    heat = "heating_type" in facts or "heating_type" in skipped
+    return {**({} if demand else {"pv": off, "battery": off}), **({} if ev else {"wallbox": off}),
+            **({} if heat else {"heatpump": off})}
+
+
 def _design(plan: dict, st: dict) -> tuple[dict, bool]:
-    d = engine.design(plan["facts"], st.get("locks"), customer_prices(st))
+    locks = {**reveal_locks(plan["facts"], set(st.get("skipped", []))), **(st.get("locks") or {})}  # customer's own locks win
+    d = engine.design(plan["facts"], locks, customer_prices(st))
     return (d, True) if d else (engine.offline_design(), False)
 
 
@@ -378,7 +391,7 @@ def start_session(_: dict | None = None):
         pid = uuid.uuid4().hex[:10]
         demo_guard.admit_session(pid)
         try:
-            design = engine.design({}, None, CUSTOMER_PRICES) or engine.offline_design()  # zero-fact first design
+            design = engine.design({}, reveal_locks({}, set()), CUSTOMER_PRICES) or engine.offline_design()  # empty first design
             plan = {"id": pid, "status": "drafting", "customer": {}, "facts": {}, "design": design, "transcript": [],
                     "flags": [], "installer_edits": [],
                     "history": [{"at": now(), "trigger": "start", "total_eur": design["price"]["total_eur"]}], "updated_at": now()}
