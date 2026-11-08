@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { Action, Plan, RunStep, Variant, VariantName } from "./types";
+import type { Plan, RunStep } from "./types";
 import "./offerpack.css";
 
 // Installer offer pack (reo/CONTRACT.md v1.1 + harness v1.2): reo's offer agent prepares one quotation, a checklist,
 // a draft message and proposed actions; the planner chooses, edits and approves. Nothing runs without a click here.
-const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
 const num = (n: number | null | undefined) => (n == null ? "–" : String(Math.round(n * 10) / 10));
 const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
 
@@ -73,57 +72,11 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
 
       <RunTimeline runId={pack.run_id} trace={pack.trace} live={preparing} />
 
-      {pack.status === "ready" && (
-        <>
-          {/* one quotation: reo prepares only the engine's design; packs prepared earlier with three variants show
-              just the chosen or recommended one (EywaSahbi) */}
-          <div className="op-variants is-single">
-            {pack.variants.filter((v) => v.name === (pack.chosen ?? pack.recommended)).slice(0, 1).map((v) => (
-              <VariantCard key={v.name} v={v} single recommended={pack.recommended === v.name} chosen={pack.chosen === v.name}
-                disabled={!!busy || quoted} busy={busy === `variant-${v.name}`}
-                onChoose={() => act(`variant-${v.name}`, () => api.chooseVariant(plan.id, v.name as VariantName), true)} />
-            ))}
-          </div>
-
-        </>
-      )}
       {error && <div className="chat-error">{error}</div>}
     </section>
   );
 }
 
-function VariantCard({ v, single, recommended, chosen, disabled, busy, onChoose }: {
-  v: Variant; single: boolean; recommended: boolean; chosen: boolean; disabled: boolean; busy: boolean; onChoose: () => void;
-}) {
-  const c = v.design.components;
-  const e = v.design.economics;
-  const rows: [string, string][] = [
-    ["Solar", c.pv.recommended ? `${num(c.pv.size)} kWp` : "–"],
-    ["Battery", c.battery.recommended ? `${num(c.battery.size)} kWh` : "–"],
-    ["Heat pump", c.heatpump.recommended ? `${num(c.heatpump.size)} kW` : "–"],
-    ["Wallbox", c.wallbox.recommended ? `${num(c.wallbox.size)} kW` : "–"],
-  ];
-  return (
-    <article className={`op-variant ${recommended ? "is-recommended" : ""} ${chosen ? "is-chosen" : ""}`}>
-      <div className="op-variant-top">
-        <h4>{single ? "Quotation" : v.name}</h4>
-        {recommended && !single && <span className="pill pill-quoted">reo's pick</span>}
-        {v.stale && <span className="pill pill-handed_over" title="Facts changed after reo prepared this">outdated</span>}
-      </div>
-      <div className="op-price">{eur(v.design.price.total_eur)}</div>
-      <dl className="op-rows">
-        {rows.map(([k, val]) => <div key={k}><dt>{k}</dt><dd>{val}</dd></div>)}
-        <div><dt>Own power</dt><dd>{Math.round(e.autarky_pct)}%</dd></div>
-        <div><dt>Payback</dt><dd>{e.payback_years == null ? "–" : `~${Math.round(e.payback_years)} yrs`}</dd></div>
-        <div><dt>Range</dt><dd>{eur(v.design.price.range_eur[0])}–{eur(v.design.price.range_eur[1]).slice(1)}</dd></div>
-      </dl>
-      <p className="op-why">{v.why}</p>
-      {!single && <button className={chosen ? "btn-ghost small op-inuse" : "btn-small op-use"} disabled={disabled || chosen} onClick={onChoose}>
-        {busy ? "Applying…" : chosen ? "In use" : "Use this variant"}
-      </button>}
-    </article>
-  );
-}
 
 function plural(n: number, one: string, many = one + "s") { return `${n} ${n === 1 ? one : many}`; }
 
