@@ -316,7 +316,6 @@ function Summary({ plan }: { plan: Plan }) {
   return (
     <section className="card summary">
       <h3 className="installer-reo-heading"><ReoAvatar size={52} outfit="vest" greet={false} interactive title="reo" />Summary</h3>
-      {plan.summary && <p className="summary-text">{plan.summary}</p>}
       <div className="summary-grid">
         <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
         {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}
