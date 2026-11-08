@@ -109,7 +109,6 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
                 )}
               </div>
               {c.reasons[0] && <p className="comp-reason">{c.reasons[0]}</p>}
-              {c.recommended && <span className={`conf conf-${c.confidence}`}>{c.confidence} confidence</span>}
             </li>
           );
         })}
