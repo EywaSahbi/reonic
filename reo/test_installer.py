@@ -163,3 +163,57 @@ def test_planner_asks_by_voice(tmp_path, monkeypatch):
     assert r["heard"] == "why this battery size?" and r["answer"] and r["audio"] == "bXAz"
     r = c.post(f"/plans/{pid}/ask/voice", files={"audio": ("a.webm", b"", "audio/webm")}).json()
     assert r["heard"] == "" and r["audio"] is None
+
+
+def _module_engine(monkeypatch, cap=12):
+    """Fake engine with the real PV shape: a pv lock of n x 0.43 kWp gives quantity n, cut at the roof cap."""
+    from test_api import fake_design
+
+    def design(facts, locks=None, prices=None):
+        d = fake_design(facts, locks, prices)
+        pv, lock = d["components"]["pv"], (locks or {}).get("pv")
+        if lock:
+            pv.update(recommended=lock["recommended"], size=lock.get("size") if lock["recommended"] else None)
+        n = min(cap, round((pv["size"] or 0) / 0.43))
+        if lock and lock["recommended"]:
+            pv["size"] = round(n * 0.43, 2)
+        pv.update(quantity=n or None, max_modules=cap, module={"id": "m", "wp": 430, "w_m": 1.134, "h_m": 1.722})
+        return d
+    monkeypatch.setattr(engine, "design", design)
+
+
+def test_layout_count_becomes_pv_lock_and_customer_never_sees_it(tmp_path, monkeypatch):
+    c, pid, p = setup(tmp_path, monkeypatch)
+    _module_engine(monkeypatch)
+    c.post(f"/plans/{pid}/edit", json={})  # re-run so the plan's design carries the module
+    mods = lambda n: [{"x": i * 1.2, "y": 0, "rot_deg": 0, "portrait": True} for i in range(n)]
+    r = c.put(f"/plans/{pid}/layout", json={"modules": mods(10), "frame": {"lat": 1, "lon": 2, "azimuth_deg": 180}}).json()
+    assert r["design"]["components"]["pv"]["quantity"] == 10 and r["design"]["components"]["pv"]["size"] == 4.3
+    assert r["roof_layout"]["source"] == "planner" and len(r["roof_layout"]["modules"]) == 10
+    assert r["roof_layout"]["frame"]["azimuth_deg"] == 180
+    assert "roof_layout" not in c.get(f"/sessions/{pid}").json()
+    # more than the roof holds: the engine cuts, the layout is trimmed to the engine's quantity
+    r = c.put(f"/plans/{pid}/layout", json={"modules": mods(15)}).json()
+    assert r["design"]["components"]["pv"]["quantity"] == 12 and len(r["roof_layout"]["modules"]) == 12
+    assert r["roof_layout"]["frame"]["azimuth_deg"] == 180  # frame kept when not sent
+    # moving modules (same count) changes no number and leaves no edit record
+    n_edits = len(r["installer_edits"])
+    moved = mods(12)
+    moved[0]["x"] += 0.5
+    r = c.put(f"/plans/{pid}/layout", json={"modules": moved}).json()
+    assert r["roof_layout"]["modules"][0]["x"] == moved[0]["x"] and len(r["installer_edits"]) == n_edits
+    # nothing placed: PV off
+    r = c.put(f"/plans/{pid}/layout", json={"modules": []}).json()
+    assert not r["design"]["components"]["pv"]["recommended"] and r["roof_layout"]["modules"] == []
+    assert any("modules placed" in e["change"] for e in r["installer_edits"])
+    assert c.put("/plans/nope/layout", json={"modules": []}).status_code == 404
+
+
+def test_planner_plan_carries_roof_location(tmp_path, monkeypatch):
+    c, pid, p = setup(tmp_path, monkeypatch)
+    loc = {"label": "x", "lat": 51.0, "lon": 13.0, "outline": [[51.0, 13.0], [51.0, 13.001], [51.001, 13.001]]}
+    with api._lock:
+        db = api._load()
+        db["plans"][pid]["roof_location"] = loc
+        api._save(db)
+    assert c.get(f"/plans/{pid}").json()["roof_location"] == loc

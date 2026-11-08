@@ -19,9 +19,10 @@ from pathlib import Path
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import engine
+import layout
 import demo_guard
 import evidence
 import flow
@@ -118,6 +119,7 @@ def out(plan: dict, installer: bool = False) -> dict:
     working copy (which may carry installer prices such as the grant line)."""
     shown = {k: v for k, v in plan.items() if k not in ("customer_design", "offer_pack", "similar_projects")}
     if not installer:
+        shown.pop("roof_layout", None)  # the planner's module placement; the customer sees the outline only
         shown["design"] = customer_design(plan)
     else:
         if "offer_pack" in plan:
@@ -690,7 +692,42 @@ def list_plans(status: str | None = None):
 
 @app.get("/plans/{pid}")
 def get_plan(pid: str):
-    return out(_get(_read(), pid)[0], installer=True)
+    with _lock:
+        db = _load()
+        plan = _get(db, pid)[0]
+        if ensure_layout(plan):
+            _save(db)   # shortcut: written on first open of the plan; fine at demo scale, move to the design change if it gets slow
+        return out(plan, installer=True)
+
+
+def ensure_layout(plan: dict) -> bool:
+    """Planner view: the modules are already on the roof when the plan opens (layout.py, engine/ROOF_LAYOUT.md).
+    First open -> auto layout; auto layout follows the outline / roof facts / module count; a planner's layout keeps its
+    positions and only grows or shrinks to the design's count. True if the plan changed."""
+    pv = plan["design"].get("components", {}).get("pv") or {}
+    qty, mod = pv.get("quantity"), pv.get("module")
+    if not (qty and mod):
+        return False
+    facts = plan["facts"]
+    loc = plan.get("roof_location") or {}
+    outline = loc.get("outline")
+    dims = (facts["roof_width_m"], facts["roof_length_m"]) if facts.get("roof_width_m") and facts.get("roof_length_m") else None
+    basis = [bool(loc.get("checked")), facts.get("roof_orientation_deg"), facts.get("roof_type"), len(outline or []), dims, mod["wp"]]
+    cur = plan.get("roof_layout")
+    if cur and cur["source"] == "planner":
+        if plan["status"] == "quoted" or len(cur["modules"]) == qty:
+            return False
+        new = layout.reconcile(cur, qty, outline, facts, dims)
+    elif cur and cur.get("basis") == basis and len(cur["modules"]) == min(qty, cur.get("capacity", qty)):
+        return False
+    else:
+        new = layout.auto_layout(outline, mod, qty, facts, dims=dims)
+        if new:
+            new["basis"] = basis
+    if not new or new == cur:
+        return False
+    plan["roof_layout"] = new
+    return True
 
 
 @app.delete("/plans/{pid}")
@@ -710,34 +747,91 @@ def delete_plan(pid: str):
     return {"deleted": pid}
 
 
+@app.delete("/plans/{pid}/layout")
+def reset_layout(pid: str):
+    """Planner: back to the automatic placement for the design's current module count."""
+    with _lock:
+        db = _load()
+        plan = _get(db, pid)[0]
+        _not_quoted(plan)
+        plan.pop("roof_layout", None)
+        ensure_layout(plan)
+        _save(db)
+        return out(plan, installer=True)
+
+
 @app.post("/plans/{pid}/edit")
 def edit_plan(pid: str, body: Edit):
     with _lock:
         db = _load()
         plan, st = _get(db, pid)
         _not_quoted(plan)
-        if bad := non_positive(body.facts or {}):
-            raise HTTPException(422, f"must be greater than 0: {', '.join(bad)}")
-        st["locks"].update(body.locks or {})  # locks persist across edits, merged per component
-        st["prices"].update(body.prices or {})
-        facts = {**plan["facts"], **(body.facts or {})}
-        d = engine.design(facts, st["locks"], st["prices"])
-        if d is None:
-            raise HTTPException(503, "engine not reachable, edit not applied")
-        before = plan["design"]["price"]["total_eur"]
-        plan["facts"], plan["design"] = facts, d
-        what = [f"{k} {'set to ' + str(v.get('size', 'recommended')) if v.get('recommended') else 'removed'}"
-                for k, v in (body.locks or {}).items()]
-        what += [f"{k} = {v}" for k, v in (body.facts or {}).items()]
-        what += ["prices edited"] if body.prices else []
-        plan["installer_edits"].append({"at": now(), "change": ", ".join(what) or "no change",
-                                        "before": before, "after": d["price"]["total_eur"]})
-        plan["history"].append({"at": now(), "trigger": "installer edit", "total_eur": d["price"]["total_eur"]})
-        attach_evidence(plan)
-        for v in (plan.get("offer_pack") or {}).get("variants", []):
-            v["stale"] = True  # trigger: installer edit -> variants no longer match the facts / locks / prices
-        _refresh_draft(db, plan)  # the draft and the pending quote describe the plan as edited
-        plan["updated_at"] = now()
+        _apply_edit(db, plan, st, body)
+        _save(db)
+        return out(plan, installer=True)
+
+
+def _apply_edit(db: dict, plan: dict, st: dict, body: Edit, extra: str | None = None) -> None:
+    """Planner edit: merge locks / facts / prices, re-run the engine, record it. Caller holds the lock and saves."""
+    if bad := non_positive(body.facts or {}):
+        raise HTTPException(422, f"must be greater than 0: {', '.join(bad)}")
+    locks = {**st["locks"], **(body.locks or {})}  # locks persist across edits, merged per component
+    prices = {**st["prices"], **(body.prices or {})}
+    facts = {**plan["facts"], **(body.facts or {})}
+    d = engine.design(facts, locks, prices)
+    if d is None:
+        raise HTTPException(503, "engine not reachable, edit not applied")
+    st["locks"], st["prices"] = locks, prices
+    before = plan["design"]["price"]["total_eur"]
+    plan["facts"], plan["design"] = facts, d
+    what = [f"{k} {'set to ' + str(v.get('size', 'recommended')) if v.get('recommended') else 'removed'}"
+            for k, v in (body.locks or {}).items()]
+    what += [f"{k} = {v}" for k, v in (body.facts or {}).items()]
+    what += ["prices edited"] if body.prices else []
+    plan["installer_edits"].append({"at": now(), "change": extra or ", ".join(what) or "no change",
+                                    "before": before, "after": d["price"]["total_eur"]})
+    plan["history"].append({"at": now(), "trigger": "installer edit", "total_eur": d["price"]["total_eur"]})
+    attach_evidence(plan)
+    for v in (plan.get("offer_pack") or {}).get("variants", []):
+        v["stale"] = True  # trigger: installer edit -> variants no longer match the facts / locks / prices
+    _refresh_draft(db, plan)  # the draft and the pending quote describe the plan as edited
+    plan["updated_at"] = now()
+
+
+class LayoutModule(BaseModel):
+    x: float          # metres east of the frame origin
+    y: float          # metres north
+    rot_deg: float = 0
+    portrait: bool = True
+
+
+class Layout(BaseModel):
+    modules: list[LayoutModule] = Field(max_length=400)
+    frame: dict | None = None
+
+
+@app.put("/plans/{pid}/layout")
+def put_layout(pid: str, body: Layout):
+    """Planner's module placement on the roof photo (engine/ROOF_LAYOUT.md). Only the module COUNT is a number: it becomes
+    the pv lock count x wp / 1000, the engine re-derives the rest. Positions are stored as sent, trimmed to the engine's
+    quantity when the roof holds fewer. 409 once quoted."""
+    with _lock:
+        db = _load()
+        plan, st = _get(db, pid)
+        _not_quoted(plan)
+        pv = plan["design"]["components"].get("pv") or {}
+        mod = pv.get("module")
+        if not mod:
+            raise HTTPException(409, "no module size known: the engine has no PV design for this plan")
+        n = len(body.modules)
+        if n != (pv.get("quantity") or 0):   # moving or rotating modules changes no number: no engine call, no edit record
+            lock = {"recommended": True, "size": round(n * mod["wp"] / 1000, 2)} if n else {"recommended": False}
+            _apply_edit(db, plan, st, Edit(locks={"pv": lock}), f"{n} modules placed on the roof")
+            pv = plan["design"]["components"]["pv"]
+        kept = body.modules[: pv.get("quantity") or 0]
+        old = plan.get("roof_layout") or {}
+        plan["roof_layout"] = {"source": "planner", "module": pv.get("module") or mod,
+                               "frame": body.frame or old.get("frame"), "modules": [m.model_dump() for m in kept]}
         _save(db)
         return out(plan, installer=True)
 
