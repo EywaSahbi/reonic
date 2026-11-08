@@ -26,6 +26,7 @@ You write only inside your own folder. You may **read and run** anything in the 
 |---|---|---|---|
 | `egeunluer` | **engine** | `engine/` | deterministic design core + pricing, HTTP API on `:8000` |
 | `EywaSahbi` | **reo** | `reo/` | reo backend: LLM layer, conversation state, next question, engine tools, plan store + handoff, scripted fallback, API on `:8001` |
+| `EywaSahbi` | **customer** | `reo/` (customer conversation only) | the customer side of reo: question flow, extraction, replies and prompt, voice, roof/address lookup, bill reading, the `/sessions` routes in `reo/api.py`; UI changes go to app by `NEED`. Shares `reo/` with reo: reo keeps the installer side (`/plans`, `/runs`, offer pack, approvals, auth, plan store). Coordinate on the board before touching the other half of `reo/api.py`. |
 | `EywaSahbi` | **data** | `data/` | expert designs, split, scoring, benchmarks for flags, reality-check numbers |
 | `RaneemK-commits` | **app** | `app/`, `experience/`, `pitch/`, `README.md` | the web UI (installer website + reo chat widget + installer dashboard); reo's creative direction; pitch |
 | `RaneemK-commits` | **qa** (Codex) | `qa/` | verifies every delivery, end-to-end smoke test, demo rehearsal; reports, never fixes |
@@ -74,7 +75,7 @@ python tools/board.py whoami                       # my login and role
 ```
 (`python3` on macOS/Linux. Long text: `--file msg.md`. Your identity is your `gh` login plus this clone's `git config hackathon.role`.)
 
-**Agents are addressed by role** (`engine`, `reo`, `data`, `app`, `qa`), because one login can run two agents (`EywaSahbi` runs reo and data, `RaneemK-commits` runs app and qa, each agent in its own clone). The tool tags the owner's GitHub `@username` and adds a hidden header with the roles so `wait` wakes only the agent that was addressed.
+**Agents are addressed by role** (`engine`, `reo`, `customer`, `data`, `app`, `qa`), because one login can run two agents (`EywaSahbi` runs reo and data, `RaneemK-commits` runs app and qa, each agent in its own clone). The tool tags the owner's GitHub `@username` and adds a hidden header with the roles so `wait` wakes only the agent that was addressed.
 
 ### Message types
 
@@ -160,7 +161,7 @@ Simple beats clever; a working end-to-end slice beats a perfect component. Befor
 ```bash
 gh auth status                                  # must be logged in as your own GitHub user
 git config core.hooksPath tools/hooks           # enables the folder-ownership guard
-git config hackathon.role <engine|reo|data|app|qa> # your role from the table above (one clone per agent)
+git config hackathon.role <engine|reo|customer|data|app|qa> # your role from the table above (one clone per agent)
 python tools/board.py whoami                    # checks gh, the board and your role
 ```
 

@@ -30,6 +30,7 @@ ROLES = {  # role -> GitHub login of the human who runs that agent
     "engine": "egeunluer",
     "reo": "EywaSahbi",
     "data": "EywaSahbi",
+    "customer": "EywaSahbi",  # customer-side conversation in reo/ (added 2026-11-08 by EywaSahbi)
     "app": "RaneemK-commits",
     "qa": "RaneemK-commits",
     "lead": "RaneemK-commits",  # the human coordinator's session (plans, setup); not an agent loop
