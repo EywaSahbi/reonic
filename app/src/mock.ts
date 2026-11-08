@@ -31,63 +31,109 @@ function get(id: string): Plan {
   return p;
 }
 
+// Calibrated to the real engine on 2026-11-08 for the demo path (4,500 kWh, 48 m² roof, EV planned, gas heating).
+// Engine: 7.74 kWp (18 modules, roof-limited) + 5 kWh battery + 11 kW wallbox = EUR 14,186; with the 8 kW heat pump
+// EUR 42,121 before the KfW grant; solar + battery ROI 8.5 yrs; savings EUR 1,471/yr; own power 29.6 % (with heat pump).
+// Still a mock: formulas fitted to those outputs, NOT engine output. Prices are shown without the KfW grant, as reo does for customers.
+const MODULE_KWP = 0.43; // 430 W per module, as in the engine
+const M2_PER_MODULE = 2.65; // roof area one module needs (engine: 48 m² holds 18)
+const YIELD_KWH_PER_KWP = 1082; // German average, as in the engine's reasons
+
 const DEFAULT_PRICES: PriceList = {
-  pv_per_kwp: 1350,
-  battery_per_kwh: 600,
-  battery_base: 1200,
-  heatpump_base: 9000,
-  heatpump_per_kw: 900,
-  wallbox: 1400,
-  installation: 2500,
+  pv_per_kwp: 869, // modules + mounting + roof installation + DC/AC cabling
+  battery_per_kwh: 275,
+  battery_base: 1786, // battery inverter, BMS, installation
+  heatpump_base: 11500, // incl. hydraulics and installation
+  heatpump_per_kw: 2054,
+  wallbox: 1644, // device + installation
+  installation: 1975, // meter cabinet, commissioning, scaffolding
 };
 
 function comp(unit: Component["unit"], partial: Partial<Component>): Component {
   return { recommended: false, size: null, unit, range: null, confidence: "low", locked: false, reasons: [], ...partial };
 }
 
+function inverterFor(kwp: number): { label: string; qty: number; unit_price_eur: number } {
+  if (kwp <= 8.6) return { label: "Hybrid inverter 6 kW", qty: 1, unit_price_eur: 679 };
+  if (kwp <= 13.5) return { label: "Hybrid inverter 10 kW", qty: 1, unit_price_eur: 1050 };
+  return { label: "Hybrid inverter 10 kW", qty: 2, unit_price_eur: 1050 };
+}
+
+function heatingComparison(f: HomeFacts, heatKwh: number): Design["heating_comparison"] {
+  const t = f.heating_type;
+  if (t !== "gas" && t !== "oil" && t !== "district" && t !== "other") return null;
+  const eff = t === "oil" ? 0.85 : t === "district" ? 1 : 0.9;
+  const fuelEur = t === "oil" ? 0.11 : t === "district" ? 0.11 : 0.12; // EUR per kWh of fuel
+  const co2 = t === "gas" ? 0.201 : t === "oil" ? 0.266 : null; // kg per kWh of fuel (official factors only)
+  const cop = 3.3;
+  const now = Math.round((heatKwh / eff) * fuelEur);
+  const hp = Math.round((heatKwh / cop) * 0.32);
+  const co2Now = co2 === null ? null : Math.round((heatKwh / eff) * co2);
+  const co2Hp = co2 === null ? null : Math.round((heatKwh / cop) * 0.344);
+  return {
+    fuel: t, heat_kwh: heatKwh, efficiency_now: eff, cop, energy_factor: Math.round((cop / eff) * 10) / 10,
+    cost_now_eur_per_year: now, cost_heatpump_eur_per_year: hp, cost_factor: Math.round((now / hp) * 100) / 100,
+    heatpump_cheaper: now > hp,
+    co2_now_kg_per_year: co2Now, co2_heatpump_kg_per_year: co2Hp,
+    co2_reduction_pct: co2Now === null || co2Hp === null ? null : Math.round(((co2Now - co2Hp) / co2Now) * 1000) / 10,
+    note: "median heat demand in the expert projects",
+  };
+}
+
 function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRICES): Design {
   const assumptions: Design["assumptions"] = [];
-  let demand = f.total_demand_kwh ?? f.annual_demand_kwh;
-  if (demand === undefined) {
-    demand = f.num_inhabitants ? 1000 + f.num_inhabitants * 900 : 4000;
-    assumptions.push({ field: "annual_demand_kwh", value: demand, note: f.num_inhabitants ? `estimated from ${f.num_inhabitants} people` : "typical home" });
+  let stated = f.total_demand_kwh ?? f.annual_demand_kwh;
+  if (stated === undefined) {
+    stated = f.num_inhabitants ? 1000 + f.num_inhabitants * 900 : 4000;
+    assumptions.push({ field: "annual_demand_kwh", value: stated, note: f.num_inhabitants ? `estimated from ${f.num_inhabitants} people` : "typical home" });
   }
-  const ev = !!(f.has_ev || f.ev_planned);
-  const evKwh = ev ? 2200 : 0;
-  const hpWanted = f.heating_type === "gas" || f.heating_type === "oil";
+  const evPlanned = !f.has_ev && !!f.ev_planned;
+  const ev = !!f.has_ev || evPlanned;
+  const evKwh = evPlanned ? 2340 : 0; // a planned EV adds future charging; an existing one is already in the stated total
+  const hpWanted = f.heating_type === "gas" || f.heating_type === "oil" || f.heating_type === "district" || f.heating_type === "other";
   const living = f.house_size_sqm ?? 140;
-  const hpKw = Math.max(5, Math.round((living * (f.house_built_year && f.house_built_year > 2000 ? 0.04 : 0.065))));
-  const hpKwh = hpWanted ? Math.round(hpKw * 2000 / 3.2) : 0;
-  const total = f.total_demand_kwh ?? demand + evKwh + hpKwh; // stated total already includes EV/heating
+  const hpKw = Math.max(5, Math.round(living / 17.5));
+  const heatKwh = Math.round(((15800 * living) / 140) / 100) * 100;
 
-  let pv = Math.round((total / 600) * 2) / 2;
-  const roofMax = Math.floor(((f.roof_area_sqm ?? 60) / 5.5) * 2) / 2;
-  if (pv > roofMax) pv = roofMax;
-  if (f.roof_area_sqm === undefined) assumptions.push({ field: "roof_area_sqm", value: 60, note: "typical roof, south-facing" });
-  if (f.electricity_price_eur_per_kwh === undefined) assumptions.push({ field: "electricity_price_eur_per_kwh", value: 0.36, note: "German average tariff" });
+  // PV: comparable expert designs install 6.2 kWp + 0.60 kWp per MWh (engine rule), limited by the roof when it is known
+  const pvLoad = stated + evKwh;
+  const wantModules = Math.round((6.2 + 0.6 * (pvLoad / 1000)) / MODULE_KWP);
+  const roofModules = f.roof_area_sqm !== undefined ? Math.floor(f.roof_area_sqm / M2_PER_MODULE) : undefined;
+  const modules = roofModules !== undefined ? Math.min(wantModules, roofModules) : wantModules;
+  const roofLimited = roofModules !== undefined && roofModules < wantModules;
+  const pv = Math.round(modules * MODULE_KWP * 100) / 100;
+  if (f.roof_area_sqm === undefined) assumptions.push({ field: "roof_area_sqm", value: "not limited", note: "no roof limit assumed until the roof is known" });
+  if (f.electricity_price_eur_per_kwh === undefined) assumptions.push({ field: "electricity_price_eur_per_kwh", value: 0.32, note: "German average household tariff" });
 
   const missing: Design["missing_inputs"] = [];
   if (!f.heating_type) missing.push({ field: "heating_type", why: "decides whether a heat pump makes sense", impact: "high" });
   if (f.has_ev === undefined && f.ev_planned === undefined) missing.push({ field: "has_ev", why: "an EV adds demand and a wallbox", impact: "high" });
   if (f.roof_area_sqm === undefined) missing.push({ field: "roof_area_sqm", why: "limits how many panels fit", impact: "medium" });
   if (hpWanted && f.house_size_sqm === undefined) missing.push({ field: "house_size_sqm", why: "sizes the heat pump", impact: "medium" });
-  if (f.electricity_price_eur_per_kwh === undefined) missing.push({ field: "electricity_price_eur_per_kwh", why: "drives savings and payback", impact: "low" });
+  if (f.electricity_price_eur_per_kwh === undefined) missing.push({ field: "electricity_price_eur_per_kwh", why: "drives savings and ROI", impact: "low" });
 
-  const spread = 0.05 + missing.filter((m) => m.impact === "high").length * 0.06 + missing.filter((m) => m.impact === "medium").length * 0.03;
-  const conf: Component["confidence"] = spread > 0.15 ? "low" : spread > 0.09 ? "medium" : "high";
-  const r = (x: number, s = spread): [number, number] => [Math.round(x * (1 - s) * 2) / 2, Math.round(x * (1 + s) * 2) / 2];
+  const hi = missing.filter((m) => m.impact === "high").length;
+  const med = missing.filter((m) => m.impact === "medium").length;
+  const score = hi * 2 + med;
+  const conf: Component["confidence"] = score >= 3 ? "low" : score >= 1 ? "medium" : "high";
+  const s = 0.1 + 0.05 * score;
+  const r = (x: number, sp = s): [number, number] => [Math.round(x * (1 - sp) * 2) / 2, Math.round(x * (1 + sp) * 2) / 2];
 
-  const battKwh = Math.round(Math.min(pv * 1.1, 15));
+  const battKwh = pv < 8.5 ? 5 : pv < 14 ? 10 : 15; // what comparable expert designs pair with that much PV
   const components: Design["components"] = {
     pv: comp("kWp", {
-      recommended: true, size: pv, range: r(pv), quantity: Math.round((pv * 1000) / 430), confidence: conf,
-      reasons: [`${total.toLocaleString("en")} kWh/yr total demand${ev ? " incl. EV" : ""}${hpWanted ? " incl. heat pump" : ""}`, pv === roofMax ? `capped by roof area (${f.roof_area_sqm ?? 60} m²${f.roof_area_sqm ? "" : ", assumed"})` : "sized to cover about 100% of yearly demand"],
+      recommended: true, size: pv, range: r(pv), quantity: modules, confidence: conf,
+      reasons: [
+        `${pvLoad.toLocaleString("en")} kWh/yr: comparable expert designs install 6.2 kWp + 0.60 kWp per MWh`,
+        `${modules} new modules produce ~${Math.round(pv * YIELD_KWH_PER_KWP).toLocaleString("en")} kWh/yr (1,082 kWh per kWp, German average)`,
+        ...(roofLimited ? [`the roof is the limit: it holds only ${roofModules} modules (${wantModules} would match your demand)`] : []),
+      ].slice(0, 3),
     }),
-    battery: comp("kWh", total > 2500
-      ? { recommended: true, size: battKwh, range: r(battKwh), confidence: conf, reasons: ["shifts midday solar to the evening", `about 1.1 kWh per kWp of solar`] }
+    battery: comp("kWh", stated > 2500
+      ? { recommended: true, size: battKwh, range: r(battKwh), confidence: conf, reasons: [`${battKwh} kWh is what comparable expert designs most often pair with ~${Math.round(pv)} kWp of PV (a battery is in 95% of expert PV offers)`, "stores the midday surplus for the evening"] }
       : { reasons: ["demand too low for a battery to pay off"] }),
     heatpump: comp("kW", hpWanted
-      ? { recommended: true, size: hpKw, range: r(hpKw, spread + 0.05), confidence: f.house_size_sqm ? "medium" : "low", reasons: [`replaces ${f.heating_type} heating`, f.house_size_sqm ? `${living} m² living space` : "living space assumed 140 m²"] }
+      ? { recommended: true, size: hpKw, range: r(hpKw, s + 0.05), confidence: f.house_size_sqm ? "medium" : "low", reasons: [`replaces ${f.heating_type} heating`, f.house_size_sqm ? `${living} m² living space` : "living space assumed 140 m²"] }
       : { reasons: [f.heating_type ? `${f.heating_type} heating: no heat pump needed` : "heating type unknown"] }),
     wallbox: comp("kW", ev ? { recommended: true, size: 11, range: [11, 11], confidence: "high", reasons: [f.has_ev ? "you have an EV" : "EV planned"] } : { reasons: ["no EV"] }),
   };
@@ -98,36 +144,54 @@ function design(f: HomeFacts, locks: Locks = {}, prices: PriceList = DEFAULT_PRI
     c.recommended = lock.recommended;
     if (lock.size !== undefined) c.size = lock.size;
     if (!lock.recommended) c.size = null;
-    if (k === "pv") c.quantity = c.size ? Math.round((c.size * 1000) / 430) : undefined; // same module rule as above
+    if (k === "pv") c.quantity = c.size ? Math.round((c.size * 1000) / (MODULE_KWP * 1000)) : undefined; // same module rule as above
     c.reasons = ["set by planner", ...c.reasons].slice(0, 3);
   }
 
   const items: Design["price"]["items"] = [];
   const add = (label: string, qty: number, unit: string, unit_price_eur: number) => items.push({ label, qty, unit, unit_price_eur, total_eur: Math.round(qty * unit_price_eur) });
   const p = { ...DEFAULT_PRICES, ...prices };
-  if (components.pv.recommended && components.pv.size) add("PV system", components.pv.size, "kWp", p.pv_per_kwp);
-  if (components.battery.recommended && components.battery.size) { add("Battery storage", components.battery.size, "kWh", p.battery_per_kwh); add("Battery inverter + BMS", 1, "pc", p.battery_base); }
-  if (components.heatpump.recommended && components.heatpump.size) add("Heat pump", 1, "pc", p.heatpump_base + p.heatpump_per_kw * components.heatpump.size);
-  if (components.wallbox.recommended) add("Wallbox 11 kW", 1, "pc", p.wallbox);
-  add("Installation + scaffolding", 1, "pc", p.installation);
-  const total_eur = items.reduce((s, i) => s + i.total_eur, 0);
+  const pvKwp = components.pv.recommended ? components.pv.size ?? 0 : 0;
+  const battSize = components.battery.recommended ? components.battery.size ?? 0 : 0;
+  if (pvKwp) {
+    add("Solar modules, mounting and roof installation", pvKwp, "kWp", p.pv_per_kwp);
+    const inv = inverterFor(pvKwp);
+    add(inv.label, inv.qty, "pc", inv.unit_price_eur);
+  }
+  if (battSize) { add("Battery storage", battSize, "kWh", p.battery_per_kwh); add("Battery inverter, BMS and installation", 1, "pc", p.battery_base); }
+  if (components.heatpump.recommended && components.heatpump.size) add(`Air-water heat pump ${components.heatpump.size} kW incl. installation`, 1, "pc", p.heatpump_base + p.heatpump_per_kw * components.heatpump.size);
+  if (components.wallbox.recommended) add("Wallbox 11 kW incl. installation", 1, "pc", p.wallbox);
+  add("Grid connection, commissioning and scaffolding", 1, "pc", p.installation);
+  const total_eur = items.reduce((sum, i) => sum + i.total_eur, 0);
+  const solarEur = items.filter((i) => !/heat pump|wallbox/i.test(i.label)).reduce((sum, i) => sum + i.total_eur, 0); // ROI = solar + battery only, as in the engine
 
-  const pvKwh = (components.pv.size ?? 0) * 950;
-  const selfPct = Math.min(80, components.battery.recommended ? 65 : 35);
-  const savings = Math.round((pvKwh * selfPct) / 100 * 0.36 + pvKwh * (1 - selfPct / 100) * 0.08);
+  // economics, fitted to the engine's outputs for the demo path
+  const hpOn = components.heatpump.recommended && !!components.heatpump.size;
+  const load = stated + evKwh + (hpOn ? Math.round(heatKwh / 3.3) : 0);
+  const pvKwh = pvKwp * YIELD_KWH_PER_KWP;
+  const share = 0.3 + 0.012 * battSize + (hpOn ? 0.05 : 0);
+  const selfKwh = Math.min(pvKwh * share, load * 0.42);
+  const exportKwh = pvKwh - selfKwh;
+  const savings = Math.round(selfKwh * 0.34 + exportKwh * 0.06);
+  const tariff = hpOn ? 0.3695 : 0.3193; // EUR per kWh, incl. the standing charge, as the engine's bills imply
+  const spreadLo = 0.046 + 0.01 * hi + 0.005 * med;
+  const spreadHi = 0.064 + 0.012 * hi + 0.006 * med;
   return {
     components,
-    price: { items, total_eur, range_eur: [Math.round(total_eur * (1 - spread) / 100) * 100, Math.round(total_eur * (1 + spread) / 100) * 100] },
+    price: { items, total_eur, range_eur: [Math.round((total_eur * (1 - spreadLo)) / 10) * 10, Math.round((total_eur * (1 + spreadHi)) / 10) * 10] },
     economics: {
-      total_demand_kwh: total,
-      self_consumption_pct: selfPct,
-      autarky_pct: Math.min(85, Math.round(((pvKwh * selfPct) / 100 / total) * 100)),
+      total_demand_kwh: load,
+      self_consumption_pct: pvKwh > 0 ? Math.round((selfKwh / pvKwh) * 100) : 0,
+      autarky_pct: Math.round((selfKwh / load) * 100),
       annual_savings_eur: savings,
-      payback_years: savings > 0 ? Math.round(total_eur / savings) : null,
+      payback_years: savings > 0 ? Math.round((solarEur / savings) * 10) / 10 : null,
+      bill_today_eur_per_month: Math.round((load * tariff) / 12),
+      bill_after_eur_per_month: Math.round(((load - selfKwh) * tariff - exportKwh * 0.09) / 12),
     },
+    heating_comparison: heatingComparison(f, heatKwh),
     assumptions,
     missing_inputs: missing,
-    params_version: "mock-0",
+    params_version: "mock-1",
   };
 }
 
@@ -156,9 +220,11 @@ function extract(text: string): Partial<HomeFacts> {
 }
 
 const QUESTIONS: { field: keyof HomeFacts; done: (f: HomeFacts) => boolean; ask: Ask; chips: string[]; say: string }[] = [
-  { field: "heating_type", done: (f) => !!f.heating_type, ask: { field: "heating_type", prompt: "How do you heat today?", input: "choice", options: ["gas", "oil", "heatpump", "electric", "district", "other"] }, chips: ["Gas", "Oil", "Heat pump already", "Other"], say: "How do you heat your home today? That decides whether a heat pump makes sense." },
-  { field: "has_ev", done: (f) => f.has_ev !== undefined || f.ev_planned !== undefined, ask: { field: "has_ev", prompt: "Electric car?", input: "choice", options: ["Yes, already", "Planned", "No"] }, chips: ["Yes, already", "Planned", "No"], say: "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." },
+  { field: "total_demand_kwh", done: (f) => f.total_demand_kwh !== undefined || f.num_inhabitants !== undefined || f.annual_demand_kwh !== undefined, ask: { field: "total_demand_kwh", prompt: "Yearly electricity use (kWh, from your bill)", input: "number" }, chips: ["Don't know"], say: "What is your yearly electricity use in kWh? You can find it on your bill. Or skip, and tell me how many people live at home." },
+  { field: "num_inhabitants", done: (f) => f.total_demand_kwh !== undefined || f.num_inhabitants !== undefined || f.annual_demand_kwh !== undefined, ask: { field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"] }, chips: [], say: "How many people live in your home?" },
   { field: "roof_area_sqm", done: (f) => f.roof_area_sqm !== undefined, ask: { field: "roof_area_sqm", prompt: "Roof area facing the sun (m²) or your address", input: "address" }, chips: ["Enter width × length", "Skip"], say: "How big is the roof area that faces the sun? Or give me your address and I'll look it up." },
+  { field: "has_ev", done: (f) => f.has_ev !== undefined || f.ev_planned !== undefined, ask: { field: "has_ev", prompt: "Electric car?", input: "choice", options: ["Yes, already", "Planned", "No"] }, chips: ["Yes, already", "Planned", "No"], say: "Do you have an electric car, or plan to get one? It changes the solar size and adds a wallbox." },
+  { field: "heating_type", done: (f) => !!f.heating_type, ask: { field: "heating_type", prompt: "How do you heat today?", input: "choice", options: ["gas", "oil", "heatpump", "electric", "district", "other"] }, chips: ["Gas", "Oil", "Heat pump already", "Other"], say: "How do you heat your home today? That decides whether a heat pump makes sense." },
 ];
 
 function msg(text: string): Message {
@@ -237,9 +303,10 @@ export const mockApi: Api = {
       installer_edits: [], history: [], updated_at: now(),
     };
     skippedBySession[id] = new Set();
-    const messages = [msg("Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. To start: how many people live in your home?")];
+    const q0 = QUESTIONS[0];
+    const messages = [msg(`Hi, I'm the energy advisor at Sonnfeld. A few taps and I'll sketch your solar system with a price estimate. ${q0.say}`)];
     plan.transcript.push(...messages);
-    return delay({ messages, plan: save(plan), suggestions: ["I know my yearly kWh"], ask: { field: "num_inhabitants", prompt: "People in your home", input: "choice", options: ["1", "2", "3", "4", "5+"] } });
+    return delay({ messages, plan: save(plan), suggestions: q0.chips, ask: q0.ask });
   },
 
   async sendMessage(id, text) {
