@@ -1,8 +1,8 @@
 """Roof check on the satellite photo (EywaSahbi, 2026-11-08): Claude Opus 5.5 looks at the customer's own building and
-returns a corrected roof outline, the roof type, the ridge direction and an estimated pitch.
+returns the roof outline traced from the photo, the roof type, the ridge direction and an estimated pitch.
 
 Claude only returns geometry (pixel points, angles); every area is computed here in code (roof.area_sqm, sunny_area),
-and the engine sizes from those facts. The answer is accepted only when it stays close to the OpenStreetMap outline
+and the engine sizes from those facts. The traced roof is accepted only when it stays close to the OpenStreetMap building
 (area 0.6-1.8x, centre within 8 m), otherwise the OSM estimate stands. Hard rule 5: only this one home's photo is sent.
 """
 import base64
@@ -38,13 +38,18 @@ SCHEMA = {
 }
 
 PROMPT = """This is a top-down satellite photo ({w} x {h} px, north up) of one house in Germany. The hint below is the
-building outline from OpenStreetMap in pixel coordinates (x right, y down); it may be shifted or rough.
+building outline from OpenStreetMap in pixel coordinates (x right, y down). It only tells you WHICH building is meant:
+it is often several metres off, too small or too large, and tall buildings lean in the photo, so their roof appears
+shifted from the ground outline.
 
-OSM outline: {hint}
+OSM outline (hint only): {hint}
 
-Find the roof of the building that this outline marks (the one nearest the image centre) and return:
-- found: false if you cannot see that roof clearly.
-- outline: the roof's outer edge as pixel points [x, y] in order around the roof (4-30 points, no repeat of the first).
+Trace the roof you actually SEE for that building (the one under or nearest the hint, near the image centre). Follow the
+visible roof edges - eaves, gutters, the line where roof meets shadow or ground - not the hint. In a row of attached
+houses, take only this house's roof section: its ends are where roof colour, tiles, ridge height or a party-wall line
+change. Return:
+- found: false only if there is no roof near the hint.
+- outline: the visible roof edge as pixel points [x, y] in order around the roof (4-30 points, no repeat of the first).
 - roof_type: flat, gable (two faces), hip (four faces), mono (one sloped face) or complex.
 - ridge_bearing_deg: compass direction of the main ridge line (0 = north-south, 90 = east-west), null for flat roofs.
 - pitch_deg: your estimate of the roof pitch in degrees from shading, shadows and roof style (typical German roofs
@@ -115,7 +120,7 @@ def measure(lat: float, lon: float, outline: list[list[float]]) -> dict | None:
     try:
         r = c.beta.messages.create(
             model=MODEL, max_tokens=16000,
-            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": SCHEMA}},
+            output_config={"effort": "high", "format": {"type": "json_schema", "schema": SCHEMA}},   # background job: precision over speed
             messages=[{"role": "user", "content": [
                 {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": base64.standard_b64encode(png).decode()}},
                 {"type": "text", "text": PROMPT.format(w=SIZE, h=SIZE, hint=json.dumps(hint))}]}],
@@ -132,8 +137,8 @@ def measure(lat: float, lon: float, outline: list[list[float]]) -> dict | None:
         return None
     log.info("roof vision answer: %s", out)
     pts = [p for p in out.get("outline", []) if len(p) == 2]
-    if not out.get("found") or out.get("confidence") == "low" or len(pts) < 3:
-        log.warning("roof vision unsure (found=%s, confidence=%s)", out.get("found"), out.get("confidence"))
+    if not out.get("found") or len(pts) < 3:   # low confidence is still traced from the photo; the area / position guard below decides
+        log.warning("roof vision found no roof (found=%s, points=%d)", out.get("found"), len(pts))
         return None
     poly = [_latlon(x / scale + left, y / scale + top, z) for x, y in pts]
     footprint, osm = roof.area_sqm(poly), roof.area_sqm([tuple(p) for p in outline])
