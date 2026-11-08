@@ -9,7 +9,11 @@
   "k_ev_kwh_per_km": 0.18,
   "cop": 3.3,
   "price_band_share": 0.5,
-  "co2_kg_per_kwh": {"electricity": 0.344, "gas": 0.201, "oil": 0.266},
+  "co2_kg_per_kwh": {
+    "electricity": 0.344,
+    "gas": 0.201,
+    "oil": 0.266
+  },
   "module_w": 430,
   "module_area_sqm": 2.0,
   "pv_yield": {
@@ -221,7 +225,10 @@
     ]
   },
   "usable_roof_share": 0.75,
-  "module_dims_m": [1.722, 1.134],
+  "module_dims_m": [
+    1.722,
+    1.134
+  ],
   "roof_edge_margin_m": 0.3,
   "heatpump_full_load_hours": 2000,
   "heating_demand_default_kwh": 15800.0,
@@ -536,22 +543,22 @@
   "expert_spread": {
     "pv": {
       "all": [
-        0.707,
-        1.454
+        0.607,
+        1.473
       ],
       "23c108b7": [
-        0.75,
+        0.646,
         1.714
       ],
       "2a8ba8e2": [
-        0.692,
-        1.381
+        0.603,
+        1.49
       ]
     },
     "battery": {
       "all": [
-        0.667,
-        1.4
+        0.5,
+        1.2
       ],
       "23c108b7": [
         1.0,
@@ -564,12 +571,12 @@
     },
     "quantiles": {
       "pv": [
-        0.15,
-        0.85
+        0.1,
+        0.9
       ],
       "battery": [
-        0.2,
-        0.8
+        0.21,
+        0.79
       ]
     },
     "split": "train",
