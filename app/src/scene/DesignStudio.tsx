@@ -3,7 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import type { Design, HomeFacts, Locks } from "../types";
 import { HouseScene, Picker, type Pick, type SceneEvents } from "./HouseScene";
-import { defaultItems, enginePanels, fitRoof, frontCells, kwpPerModule, locksFrom, placeOnLot, type ItemKey, type Items, type Spot } from "./layout";
+import { defaultItems, enginePanels, fitRoof, frontCells, kwpPerModule, locksFrom, placeOnLot, type Cell, type ItemKey, type Items, type Spot } from "./layout";
 
 // Planner "build mode": click roof spots to add or remove modules (drag across for many), drag components around.
 // No tool modes (EywaSahbi). Modules sit on the front face only, so every module drawn is one the plan counts.
@@ -14,6 +14,16 @@ type Kind = "panel" | ItemKey;
 const LABEL: Record<Kind, string> = { panel: "Solar module", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox + car" };
 const HINT: Record<Kind, string> = { panel: "Click roof spots to add or remove", battery: "Wall-mounted storage", heatpump: "Air-source unit outside", wallbox: "Charger at the driveway" };
 const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
+
+/** Keep the planner's own module positions when a new design arrives; only add or drop modules to match the engine's count. */
+function reconcile(cur: Set<string>, cells: Cell[], n: number): Set<string> {
+  const ids = new Set(cells.map((c) => c.id));
+  const kept = [...cur].filter((id) => ids.has(id)).slice(0, n);
+  const out = new Set(kept);
+  for (const c of cells) { if (out.size >= n) break; out.add(c.id); }
+  return out;
+}
+const AUTO_APPLY_MS = 700; // after the last change the layout goes to reo; the engine re-derives sizes and prices
 
 export default function DesignStudio({ design, facts, disabled, onApply }: {
   design: Design; facts: HomeFacts; disabled: boolean; onApply: (locks: Locks) => Promise<void>;
@@ -27,15 +37,16 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   const [hover, setHover] = useState<string | null>(null);
   const [applying, setApplying] = useState(false);
   const dragging = useRef<ItemKey | null>(null);
-  const paintTo = useRef<boolean | null>(null); // while the button is held on the roof: add (true) or remove (false)
+  const paintTo = useRef<boolean | null>(null); // button held on a free spot: every free spot passed gets a module
+  const moving = useRef<{ id: string; moved: boolean } | null>(null); // button held on a module: it follows the pointer
   const [grabbing, setGrabbing] = useState(false); // dragging a component or painting: the camera holds still
   const pick = useRef<Pick | null>(null);
   const perModule = useRef<number | null>(kwpPerModule(design));
 
-  // New design from the engine: redraw from it.
+  // New design from the engine: keep where the planner put the modules, match the engine's module count.
   useEffect(() => {
     perModule.current = kwpPerModule(design) ?? perModule.current;
-    setPanels(enginePanels(design, cells));
+    setPanels((cur) => (cur.size ? reconcile(cur, cells, enginePanels(design, cells).size) : enginePanels(design, cells)));
     setItems((cur) => {
       const d = defaultItems(design, roof);
       return { battery: d.battery && (cur.battery ?? d.battery), heatpump: d.heatpump && (cur.heatpump ?? d.heatpump), wallbox: d.wallbox && (cur.wallbox ?? d.wallbox) };
@@ -43,7 +54,11 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   }, [design, cells, roof]);
 
   useEffect(() => {
-    const up = () => { paintTo.current = null; dragging.current = null; setGrabbing(false); };
+    const up = () => {
+      const m = moving.current;
+      if (m && !m.moved) setCell(m.id, false); // a click on a module (no drag) removes it
+      moving.current = null; paintTo.current = null; dragging.current = null; setGrabbing(false);
+    };
     const key = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.closest("input, textarea")) return;
       if ((e.key === "Delete" || e.key === "Backspace") && selected) { remove(selected); e.preventDefault(); }
@@ -68,9 +83,24 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
 
   const events: SceneEvents = {
     hoverCell: hover, selected,
-    // click toggles a spot; keep the button down and drag to do the same to every spot you pass
-    onCellDown: (id) => { if (disabled) return; paintTo.current = !panels.has(id); setGrabbing(true); setCell(id, paintTo.current); },
-    onCellEnter: (id) => { setHover(id); if (id && paintTo.current !== null) setCell(id, paintTo.current); },
+    // free spot: click adds a module, drag adds one on every free spot passed;
+    // module: drag moves it to the free spot under the pointer, a plain click removes it
+    onCellDown: (id) => {
+      if (disabled) return;
+      setGrabbing(true);
+      if (panels.has(id)) { moving.current = { id, moved: false }; return; }
+      paintTo.current = true; setCell(id, true);
+    },
+    onCellEnter: (id) => {
+      setHover(id);
+      if (!id) return;
+      const m = moving.current;
+      if (m) {
+        if (id !== m.id && !panels.has(id)) { setPanels((p) => { const n = new Set(p); n.delete(m.id); n.add(id); return n; }); moving.current = { id, moved: true }; }
+        return;
+      }
+      if (paintTo.current) setCell(id, true);
+    },
     onItemDown: (k) => { if (disabled) return; setSelected(k); dragging.current = k; setGrabbing(true); },
     onGroundMove: (p) => { const k = dragging.current; if (k) setItems((it) => ({ ...it, [k]: placeOnLot(p, roof) })); },
     onGroundDown: () => setSelected(null),
@@ -95,13 +125,19 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
     setApplying(true);
     try { await onApply(locks); } finally { setApplying(false); }
   }
+  const lockKey = JSON.stringify(locks);
+  useEffect(() => {
+    if (!dirty || disabled || applying || grabbing) return;
+    const t = setTimeout(apply, AUTO_APPLY_MS);
+    return () => clearTimeout(t);
+  }, [lockKey, disabled, applying, grabbing]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <section className="card studio">
       <div className="studio-head">
         <div>
           <h3>Design studio</h3>
-          <span className="muted small">Click the roof to add or remove modules, drag components to move them. Apply sends the layout to reo; the engine re-derives sizes and prices.</span>
+          <span className="muted small">Click a free spot to add a module, drag a module to move it, click it to remove it. Every change goes to reo by itself; the engine re-derives sizes and prices.</span>
         </div>
       </div>
 
@@ -132,7 +168,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
             <Picker api={pick} />
           </Canvas>
           <div className="studio-hud">
-            {selected ? `${LABEL[selected]} selected · drag to move · Delete removes` : "Click a roof spot to add or remove a module · drag across for many · grab a component to move it · drag elsewhere to turn"}
+            {selected ? `${LABEL[selected]} selected · drag to move · Delete removes` : "Click a free spot to add · drag a module to move it · click a module to remove · drag beside the house to turn"}
           </div>
         </div>
 
@@ -163,7 +199,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
           {c.pv.reasons[0] && <p className="muted small studio-reason">{c.pv.reasons[0]}</p>}
 
           <div className="studio-actions">
-            <button className="btn-primary" disabled={!dirty || disabled || applying} onClick={apply}>{applying ? "Re-deriving…" : dirty ? "Apply to plan" : "No changes"}</button>
+            <button className="btn-primary" disabled={!dirty || disabled || applying} onClick={apply}>{applying ? "Updating prices…" : dirty ? "Update now" : "Prices up to date"}</button>
             <button className="btn-ghost" disabled={!dirty || applying} onClick={() => { setPanels(enginePanels(design, cells)); setItems(defaultItems(design, roof)); setSelected(null); }}>Reset</button>
           </div>
         </aside>
