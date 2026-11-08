@@ -287,3 +287,14 @@ def test_electric_heating_gets_heatpump_comparison():
     assert d["components"]["heatpump"]["recommended"] and hc["fuel"] == "electric" and hc["heat_kwh"] == 12000
     assert hc["energy_factor"] == hc["cop"] and hc["heatpump_cheaper"] and round(hc["cost_factor"], 1) == hc["cop"]
     assert hc["co2_reduction_pct"] == round(100 * (1 - 1 / hc["cop"]), 1)
+
+
+def test_pv_module_for_roof_layout():
+    """pv.module gives the sizing module; count x wp / 1000 as a pv lock round-trips to the same quantity."""
+    base = {"total_demand_kwh": 4500}
+    pv = client.post("/design", json={"facts": base}).json()["components"]["pv"]
+    m = pv["module"]
+    assert m["wp"] == 430 and (m["w_m"], m["h_m"]) == (1.134, 1.722) and m["id"]
+    for n in (10, 23):
+        locked = client.post("/design", json={"facts": base, "locks": {"pv": {"recommended": True, "size": round(n * m["wp"] / 1000, 2)}}}).json()
+        assert locked["components"]["pv"]["quantity"] == n

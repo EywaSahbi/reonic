@@ -37,6 +37,7 @@ type Component = {
   unit: "kWp" | "kWh" | "kW";
   range: [number, number] | null;       // sizes comparable expert designs choose, incl. what is still unknown (~80% of expert sizes fall inside on val)
   quantity?: number;                    // e.g. number of PV modules
+  module?: { id: string; wp: number; w_m: number; h_m: number };   // pv only: the sizing module (w_m short side, h_m long side, metres); quantity = size x 1000 / wp, so a layout of n modules is the lock {recommended: true, size: n x wp / 1000}
   max_modules?: number;                 // pv only, when the roof is known: modules the roof holds (net of existing panels); size/quantity never exceed it, a pv lock above it is cut to it with a reason
   confidence: "low" | "medium" | "high";   // how much the still-missing inputs could move the size
   locked: boolean;

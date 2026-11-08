@@ -15,6 +15,7 @@
     "oil": 0.266
   },
   "module_w": 430,
+  "module_name": "Jinko Tiger Neo JKM430N-54HL4R 430 W",
   "module_area_sqm": 2.0,
   "pv_yield": {
     "y_kwh_per_kwp": 1081.9,

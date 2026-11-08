@@ -92,6 +92,13 @@ def battery_for(pv_kwp, bands):
     return next(size for upper, size in bands if upper is None or pv_kwp <= upper)
 
 
+def module_info(module_w: float) -> dict:
+    """The sizing module for drawing a layout: count x wp / 1000 = size. Short side first; area scales with W (as in grid_modules)."""
+    scale = math.sqrt(module_w / PARAMS["module_w"])
+    long_m, short_m = (round(d * scale, 3) for d in sorted(PARAMS["module_dims_m"], reverse=True))
+    return {"id": PARAMS.get("module_name", "module"), "wp": module_w, "w_m": short_m, "h_m": long_m}
+
+
 def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None) -> dict:
     p = PARAMS
     home = read_inputs(facts)
@@ -446,6 +453,7 @@ def design(facts: dict, locks: dict | None = None, overrides: dict | None = None
              "range": rng, "confidence": conf, "locked": locked, "reasons": reasons}
         if k == "pv" and size:
             c["quantity"] = base["modules"]
+            c["module"] = module_info(base["sizing"].module_w)
         if k == "pv" and base["sizing"].modules_fitting is not None:
             c["max_modules"] = base["sizing"].modules_fitting          # hard roof cap, net of existing panels
             if rng:
