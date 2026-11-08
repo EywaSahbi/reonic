@@ -128,3 +128,10 @@ Customer: `http://localhost:5173/` · Planner: `http://localhost:5173/#/installe
 - `src/live/`: LiveStage (3D house + the advisor character as an HTML overlay that glides to what changed, glass bubble, live step line), narrate.ts (pure: kind of answer, pending/done steps from the real call + response, the advisor's line = reo's own reply minus the question, engine reasons as fallback, tap-a-number explanations), live.css (Apple-like glass, spring curves, reduced motion).
 - Step form: stage beside every step (stacked on phones). Results: stage on top, numbers tappable ("Tap any number to see why"), advisor explains in the scene, "Ask more" sends the question to the results chat (text + voice, starter chips).
 - Hard rule 2: every number shown in bubbles/steps is the engine's from that turn; step labels describe calls reo actually makes. Verified live (local reo :8011 + engine :8010): 4500 kWh -> address -> EV planned -> gas -> results -> tap savings -> Ask more -> grounded reo answer. Desktop + 375 px checked.
+
+## Handover to Eywa (8 Nov, ~06:30, Raneem's call)
+
+app files are free for Eywa's agents (customer / reo). Last app commits: 632d30b (bubble placed invisibly, no flip; scene stops rotating while the advisor talks), bf13267, b02c3a0, 7a52124, 73b6b87.
+- Living advisor lives in `app/src/live/` (LiveStage, narrate.ts, live.css) + Widget.tsx (flow container: one persistent stage, crossfading step cards), PlanCard (`onExplain` tap targets), PlanChat (`ask` prop, starter chips).
+- Not verified: the bubble reveal after 632d30b was not watched (browser pane hidden pauses the 3D loop); phone-width bubble fit likewise. Mic not testable here.
+- Prod: backend on this laptop restarted on e3f5ddb (protected, via start-backend.ps1 -Protected, backup app/.runtime/plans-backup-20261108-050326.json). Vercel frontend NOT redeployed (needs `cd app && npx --yes vercel --prod` by a human). Local demo: engine :8010, reo :8011 (plan store in scratch), app :5173.
