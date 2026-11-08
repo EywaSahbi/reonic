@@ -1,7 +1,7 @@
 import { COMPONENT_KEYS, isOffline, type ComponentKey, type Plan } from "./types";
 import { House } from "./House";
 import { Satellite } from "./Satellite";
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 
 const House3D = lazy(() => import("./scene/House3D"));
 let gl: boolean | null = null;
@@ -10,9 +10,12 @@ const webglOk = () => {
   return gl;
 };
 
-/** 3D house (engine design drawn on the roof) with the satellite photo as a second view once an address was found. */
+/** 3D house (engine design drawn on the roof); once an address was found, the satellite photo of the customer's
+ *  building replaces it (EywaSahbi), with the 3D plan one tab away. */
 function HouseView({ plan }: { plan: Plan }) {
-  const [view, setView] = useState<"3d" | "photo">("3d");
+  const label = plan.roof_location?.label;
+  const [view, setView] = useState<"3d" | "photo">(label ? "photo" : "3d");
+  useEffect(() => { if (label) setView("photo"); }, [label]); // a new address switches to its photo
   const flat = <House design={plan.design} />;
   const three = webglOk() ? <Suspense fallback={flat}><House3D design={plan.design} facts={plan.facts} /></Suspense> : flat;
   if (!plan.roof_location) return three;
@@ -20,8 +23,8 @@ function HouseView({ plan }: { plan: Plan }) {
     <div className="house-views">
       {view === "3d" ? three : <Satellite loc={plan.roof_location} fallback={flat} />}
       <div className="house-toggle" role="tablist" aria-label="House view">
-        <button role="tab" aria-selected={view === "3d"} onClick={() => setView("3d")}>3D plan</button>
         <button role="tab" aria-selected={view === "photo"} onClick={() => setView("photo")}>Your roof</button>
+        <button role="tab" aria-selected={view === "3d"} onClick={() => setView("3d")}>3D plan</button>
       </div>
     </div>
   );

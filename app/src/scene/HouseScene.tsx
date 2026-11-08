@@ -42,7 +42,10 @@ export type SceneEvents = {
 type Props = { roof: Roof; cells: Cell[]; panels: Set<string>; items: Items; events?: SceneEvents };
 
 export function HouseScene({ roof, cells, panels, items, events }: Props) {
-  const { length: L, depth: D, rise } = houseDims(roof);
+  const { length: L, depth: D } = houseDims(roof);
+  // The attic follows the roof planes exactly (eave at D/2, roof tilt), so the two never disagree at the ridge,
+  // even when houseDims clamps the depth.
+  const rise = roof.flat ? 0 : (D / 2) * Math.tan((roof.tilt * Math.PI) / 180);
   const lotX = L + 12, lotZ = D + 12;
   return (
     <group>
@@ -85,7 +88,8 @@ function HouseBody({ L, D, rise, flat }: { L: number; D: number; rise: number; f
     <group>
       <mesh position={[0, WALL_H / 2, 0]} castShadow receiveShadow><boxGeometry args={[L, WALL_H, D]} /><meshStandardMaterial color={C.wall} /></mesh>
       <mesh position={[0, 0.15, 0]}><boxGeometry args={[L + 0.08, 0.3, D + 0.08]} /><meshStandardMaterial color="#d8cdbb" /></mesh>
-      {!flat && <mesh geometry={gable} rotation={[0, Math.PI / 2, 0]} position={[-L / 2 + 0.01, WALL_H, 0]} castShadow><meshStandardMaterial color={C.wall} /></mesh>}
+      {/* attic sits 0.1 m lower so its slopes hide inside the roof slab (same plane = flicker) */}
+      {!flat && <mesh geometry={gable} rotation={[0, Math.PI / 2, 0]} position={[-L / 2 + 0.01, WALL_H - 0.1, 0]} castShadow><meshStandardMaterial color={C.wall} /></mesh>}
       {flat && <mesh position={[0, WALL_H + 0.15, 0]} castShadow><boxGeometry args={[L + 0.2, 0.3, D + 0.2]} /><meshStandardMaterial color="#9aa0a8" /></mesh>}
       {/* front: door + windows; sides: one window each floor */}
       <mesh position={[0, 1.1, D / 2 + 0.02]}><boxGeometry args={[1.1, 2.2, 0.06]} /><meshStandardMaterial color={C.door} /></mesh>
@@ -111,14 +115,15 @@ function Window(p: { position: [number, number, number]; rotation?: [number, num
 function RoofFaces({ roof, L, D, cells, panels, events }: { roof: Roof; L: number; D: number; cells: Cell[]; panels: Set<string>; events?: SceneEvents }) {
   const t = (roof.tilt * Math.PI) / 180;
   const faces = roof.flat ? [0] : [0, 1];
+  const run = D / 2 / Math.cos(t); // eave to ridge along the slope
   return (
     <group>
       {faces.map((face) => (
         <group key={face} rotation={[0, face ? Math.PI : 0, 0]}>
           <group position={roof.flat ? [0, WALL_H + 0.32, D / 2] : [0, WALL_H, D / 2]} rotation={[roof.flat ? -Math.PI / 2 : t - Math.PI / 2, 0, 0]}>
             {!roof.flat && (
-              <mesh position={[0, roof.slope / 2, -0.08]} castShadow receiveShadow>
-                <boxGeometry args={[L + 0.6, roof.slope + 0.35, 0.16]} /><meshStandardMaterial color={C.roof} />
+              <mesh position={[0, run / 2 - 0.1, -0.08]} castShadow receiveShadow>
+                <boxGeometry args={[L + 0.6, run + 0.2, 0.16]} /><meshStandardMaterial color={C.roof} />
               </mesh>
             )}
             {cells.filter((c) => c.face === face).map((c) => (
