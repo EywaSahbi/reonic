@@ -6,7 +6,7 @@ import type { RoofLocation } from "./types";
 // Tiles and outline share one Web-Mercator pixel space, so the outline sits exactly on the building.
 const W = 640, H = 380; // same shape as the drawn house (320 x 190)
 const TILE = 256, MAX_ZOOM = 19; // Esri has real imagery up to 19 in Germany; 20 is a placeholder
-const FILL = 0.8, MAX_UPSCALE = 3.5; // beyond zoom 19 we enlarge: house fills ~80% of the frame, at most 3.5x (softer, but close)
+const FILL = 0.5, MAX_UPSCALE = 2.5; // beyond zoom 19 we enlarge: house fills ~50% of the frame (some street and garden around it), at most 2.5x
 const URL = (z: number, x: number, y: number) =>
   `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`;
 
@@ -27,7 +27,7 @@ export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: Reac
     const p = pts.map(([la, lo]) => px(la, lo, z));
     const w = Math.max(...p.map((q) => q[0])) - Math.min(...p.map((q) => q[0]));
     const h = Math.max(...p.map((q) => q[1])) - Math.min(...p.map((q) => q[1]));
-    if (w <= W * 0.6 && h <= H * 0.6) break;
+    if (w <= W * 0.45 && h <= H * 0.45) break;
   }
   const p = pts.map(([la, lo]) => px(la, lo, z));
   const cx = (Math.max(...p.map((q) => q[0])) + Math.min(...p.map((q) => q[0]))) / 2;
