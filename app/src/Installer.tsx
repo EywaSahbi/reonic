@@ -234,15 +234,6 @@ function PlanDetail({ id }: { id: string }) {
         </section>
       </div>
 
-      {plan.installer_edits.length > 0 && (
-        <section className="card">
-          <h3>Your edits</h3>
-          <ul className="edit-log">
-            {plan.installer_edits.map((e, i) => <li key={i}><span className="muted">{when(e.at)}</span> {e.change}</li>)}
-          </ul>
-        </section>
-      )}
-
       {/* the offer pack no longer carries a send-quote step: the planner finalises here (EywaSahbi) */}
       <section className="card finalize">
         {quoted ? (

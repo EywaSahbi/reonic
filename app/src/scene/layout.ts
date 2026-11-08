@@ -184,7 +184,8 @@ export function layoutPanels(n: number, a: RoofArea, keep: FreePanel[] = []): Fr
     if (!s) break;
     out.push({ id: newId(), ...s });
   }
-  return out;
+  // freely placed modules can block the grid: then lay all of them out afresh rather than show fewer than the engine's
+  return out.length < n && keep.length ? layoutPanels(n, a) : out;
 }
 
 export const addPanel = (panels: FreePanel[], at: Pt): FreePanel[] => [...panels, { id: newId(), ...at }];

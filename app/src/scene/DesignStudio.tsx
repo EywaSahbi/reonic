@@ -45,6 +45,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   const [active, setActive] = useState<string | null>(null);
   const [overRoof, setOverRoof] = useState(false);
   const [applying, setApplying] = useState(false);
+  const touched = useRef(false); // set by the planner's actions; only those are sent to reo
   const [grabbing, setGrabbing] = useState(false); // dragging a module or a component: the camera holds still
   const dragging = useRef<ItemKey | null>(null);
   const moving = useRef<{ id: string; from: { x: number; y: number }; moved: boolean } | null>(null);
@@ -54,6 +55,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   // New design from the engine: keep the planner's module positions and devices, follow the engine's count and sizes.
   useEffect(() => {
     perModule.current = kwpPerModule(design) ?? perModule.current;
+    touched.current = false;
     setPanels((cur) => layoutPanels(engineCount, area, cur));
     setHw((cur) => hwFrom(design, cur.inverter));
   }, [design, area, engineCount]);
@@ -71,6 +73,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
     const up = () => {
       const m = moving.current;
       if (m) {
+        if (!m.moved) touched.current = true;
         if (!m.moved) setPanels((ps) => ps.filter((p) => p.id !== m.id)); // a plain click on a module removes it
         else setPanels((ps) => ps.map((p) => {
           if (p.id !== m.id) return p;
@@ -90,8 +93,8 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
     return () => { window.removeEventListener("pointerup", up); window.removeEventListener("keydown", key); };
   });
 
-  const setSize = (k: "inverter" | ItemKey, v: number) => { setHw((h) => ({ ...h, [k]: v })); if (k !== "inverter" && !v) setSelected(null); };
-  const addModule = () => setPanels((ps) => { const s = nextSlot(ps, area); return s ? addPanel(ps, s) : ps; });
+  const setSize = (k: "inverter" | ItemKey, v: number) => { touched.current = true; setHw((h) => ({ ...h, [k]: v })); if (k !== "inverter" && !v) setSelected(null); };
+  const addModule = () => { touched.current = true; setPanels((ps) => { const s = nextSlot(ps, area); return s ? addPanel(ps, s) : ps; }); };
   const place = (k: ItemKey, at?: Spot) => {
     if (!hw[k]) setSize(k, c[k].recommended && c[k].size ? c[k].size : OPTIONS[k][0]);
     if (at) setItems((it) => ({ ...it, [k]: placeOnLot(at, roof) }));
@@ -104,6 +107,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
     onRoofDown: (x, y) => {
       if (disabled) return;
       setSelected(null);
+      touched.current = true;
       setPanels((ps) => { const s = snapSlot({ x, y }, ps, area, undefined, ps.length ? Infinity : 0.6); return s ? addPanel(ps, s) : ps; });
     },
     // a module follows the pointer anywhere on the roof while the button is held
@@ -156,7 +160,7 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
   }
   const changeKey = JSON.stringify([locks, hw.inverter]);
   useEffect(() => {
-    if (!dirty || disabled || applying || grabbing) return;
+    if (!dirty || !touched.current || disabled || applying || grabbing) return;
     const t = setTimeout(apply, AUTO_APPLY_MS);
     return () => clearTimeout(t);
   }, [changeKey, disabled, applying, grabbing]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -198,8 +202,8 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
             );
           })}
           <div className="palette-row">
-            <button className="btn-ghost" disabled={disabled} onClick={() => setPanels((ps) => { let out = ps; for (let s = nextSlot(out, area); s; s = nextSlot(out, area)) out = addPanel(out, s); return out; })}>Fill roof</button>
-            <button className="btn-ghost" disabled={disabled} onClick={() => setPanels([])}>Clear roof</button>
+            <button className="btn-ghost" disabled={disabled} onClick={() => { touched.current = true; setPanels((ps) => { let out = ps; for (let s = nextSlot(out, area); s; s = nextSlot(out, area)) out = addPanel(out, s); return out; }); }}>Fill roof</button>
+            <button className="btn-ghost" disabled={disabled} onClick={() => { touched.current = true; setPanels([]); }}>Clear roof</button>
           </div>
         </aside>
 
