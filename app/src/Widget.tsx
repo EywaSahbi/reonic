@@ -99,9 +99,10 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
     if (!saved) { run(() => api.startSession()); return; }
     api.getSession(saved)
       .then((p) => {
+        // a plan still being drafted starts over on reload: the house and the numbers build up from zero (EywaSahbi)
+        if (p.status === "drafting") { writeSaved(null); run(() => api.startSession()); return; }
         setPlan(p);
         setMessages(p.transcript);
-        if (p.status === "drafting") setChips(["Why this size?", "What does it cost?", "Send to installer"]);
       })
       .catch(() => { writeSaved(null); run(() => api.startSession()); });
   }, []);
