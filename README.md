@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/reo-logo.svg" alt="reo" width="160"></p>
+
 # reo — an AI companion that designs home energy systems like an expert installer
 
 **Give reo one number from your electricity bill and it answers in seconds: a complete system (solar, battery, heat pump, wallbox), a price range, and a reason for every number. The installer's planner then receives a ready offer, not a lead, and can change anything while the rest of the design re-derives.**
@@ -18,11 +20,11 @@
 **Three-minute tour**
 
 1. Open the live app, enter `1234`, click **Plan my home**.
-2. Type a yearly use of **4500** kWh, the address **Türkenstr. 58, 80799 München** (or the offline demo address *Musterstraße 12, 80331 München*), say you plan an **electric car** and heat with **gas**. You get a design, a price range marked *estimate*, savings, payback, and a gas-vs-heat-pump comparison with CO₂. Toggle the heat pump off and on; the design re-derives.
+2. Type a yearly use of **4500** kWh, the address **Sandstraße 33 80335 München** (or the offline demo address *Musterstraße 12, 80331 München*), say you plan an **electric car** and heat with **gas**. You get a design, a price range marked *estimate*, savings, payback, and a gas-vs-heat-pump comparison with CO₂. Toggle the heat pump off and on; the design re-derives.
 3. Hand the plan over, then open the **planner workspace** (`/#/installer`, code `1234`). The new plan is on top: see the modules already placed on the roof photo, drag one, watch price and savings change, tap *Ask reo why*, and approve the proposed actions.
 4. Finalise and send the quote: the customer's page now shows the confirmed plan.
 
-> The live backend runs on a team laptop behind a tunnel. If the page reports that it cannot calculate, see [Run it yourself](#run-it-yourself) (three commands, no API key needed) or watch the recorded demo. Details: [app/DEPLOYMENT.md](app/DEPLOYMENT.md).
+> The live backend runs on a team laptop behind a tunnel. If the page reports that it cannot calculate, see [Run it yourself](#run-it-yourself) (three commands, no API key needed). Details: [app/DEPLOYMENT.md](app/DEPLOYMENT.md).
 
 ---
 
@@ -43,7 +45,7 @@
 
 Also: [challenge PDF](Reonic_Hackathon_Challenge_final.pdf) · [challenge brief](docs/challenge-brief.md) · [how the team worked (AGENTS.md)](AGENTS.md)
 
-**Jump to:** [The idea](#the-idea) · [How it works](#how-it-works) · [The engine](#the-engine-decides-like-an-expert) · [reo](#reo-talks-explains-and-prepares-the-offer) · [The planner](#the-planners-workspace) · [How good is it](#how-good-is-it-honest-validation) · [Limits](#known-limitations) · [Run it yourself](#run-it-yourself) · [Team](#how-we-built-it)
+**Jump to:** [The idea](#the-idea) · [How it works](#how-it-works) · [The engine](#the-engine-decides-like-an-expert) · [reo](#reo-talks-explains-and-prepares-the-offer) · [The planner](#the-planners-workspace) · [Run it yourself](#run-it-yourself)
 
 ---
 
@@ -156,59 +158,6 @@ All parameters are fitted on the `train` split only and chosen on `val`; the eng
 
 ---
 
-## How good is it? (honest validation)
-
-The dataset has **1,571 usable projects** from two installers, split once and for all by customer: **1,098 train · 238 val · 235 test**. Parameters are fitted on `train`, choices made on `val`, and the **test split is scored only by `data/score.py` and reported as it came out — including where we lose.** The baseline gives every home the training-median PV and battery, no heat pump, and a wallbox iff it has an EV. QA reproduced these numbers from a clean clone ([qa/REPORT.md](qa/REPORT.md)).
-
-**Test set — 235 homes the engine never saw**
-
-| Metric | reo engine | Baseline |
-|---|---|---|
-| PV size within ±20% of the expert | **49.2%** | 41.5% |
-| PV size, mean absolute error | **3.22 kWp** | 3.50 kWp |
-| Battery size within ±20% | **45.6%** | 41.9% |
-| Battery size, mean absolute error | **3.58 kWh** | 3.74 kWh |
-| Complete bundle (PV, battery, heat pump, wallbox yes/no) matches | 52.8% | 52.3% |
-| PV / battery yes-no correct | 79% / 92% | 79% / 92% |
-| Wallbox yes-no correct | 69% | 69% |
-
-**What we learned, including the losses**
-
-- Sizes beat the baseline; **yes/no decisions only tie it.** Wallbox yes/no is not predictable from the data (AUC 0.50–0.59, no better than "always no"), and heat pumps appear in only 22 of the 1,571 projects.
-- The one big miss on PV yes/no is **missing input, not bad sizing**: 49 of the 52 homes where experts sold no PV got a battery or wallbox instead — retrofits to homes that most likely already have solar. The data records this for only 2 of them. reo therefore **asks "do you already have solar?"** and sizes no new panels for retrofits.
-- **Each installer has its own style** (opposite PV bias). Installer profiles help the one with free designs on validation but did not generalise for the package seller (65% on val → 45% on test), so the headline numbers are without profiles.
-- On validation, the PV ±20% rate (46.2%) was *below* the baseline's (49.7%), though the error in kWp was lower (2.50 vs 2.71). We report it anyway.
-- Ranges: about **70% (PV) and 82% (battery)** of expert sizes fall inside the engine's displayed range on test, after calibrating the tails by cross-validation on training homes only.
-
-Full reports with charts: [data/reports/](data/reports/) · deviation analysis: [data/reports/reality_check_test.md](data/reports/reality_check_test.md).
-
----
-
-## Challenge checklist
-
-| Challenge goal | Where it is |
-|---|---|
-| **1. Propose a complete system**, coherent as a whole | Coupled engine: [engine/METHOD.md](engine/METHOD.md) |
-| **2. Let the user refine it** and understand why | Locks, `/explain` what-ifs, reasons per component, planner workspace, roof editor, design studio |
-| **3. Prove it decides like an expert** on unseen projects | `data/score.py` on the fixed test split, reproduced by QA: [How good is it](#how-good-is-it-honest-validation) |
-| Stretch: where and why designs deviate | [data/reports/reality_check_test.md](data/reports/reality_check_test.md) |
-| Stretch: alternatives and confidence | Ranges, confidence per component, goal planner |
-| Stretch: validation view for planners, homeowner exploration view | Flags against similar homes; customer variants (heat pump, wallbox, goals) |
-| AI is a real part | Parameters measured on expert designs; reo's agent harness with grounded tool use and roof vision. An LLM alone decides nothing |
-
----
-
-## Known limitations
-
-- **Prices are estimates.** The dataset contains no prices; they come from real product prices and public labour rates in [engine/catalog.json](engine/catalog.json) and are shown as estimates until the installer confirms. Roof outlines are estimates and need a site visit.
-- **Which option the customer signed is unknown** in the data; we take the highest option with hardware. Part of the expert "truth" (PV kWp) is itself estimated from module counts.
-- **Yes/no decisions are no better than the baseline**; battery size is hard because experts pick catalogue steps and personal preferences.
-- **Address lookup** uses OpenStreetMap and a mocked set of demo addresses; module placement is one module type on one roof plane, with orientation only visual.
-- **The deployed backend is a laptop behind a tunnel** with capacity limits (5 active sessions); the static site itself scales.
-- Mock-mode designs (no backend) are UI placeholders, not engine output.
-
----
-
 ## Run it yourself
 
 Requirements: Python 3.12+, [uv](https://docs.astral.sh/uv/), Node.js and npm. **No API key is needed**; without one reo runs in scripted mode with the same screens.
@@ -233,21 +182,9 @@ cd engine && uv run pytest                       # 65 tests
 cd reo    && uv run pytest && uv run python -m evals   # 69 tests, 9 harness scenarios
 cd data   && uv run pytest
 cd app    && npm run build
-# reproduce the numbers above:
+# score the engine on homes it has not seen:
 cd engine && uv run python predict.py --split test
 cd ../data && uv run python score.py ../engine/out/predictions_test.csv --split test
 ```
 
 The [five-minute demo script](pitch/demo-script.md) lists the exact inputs.
-
----
-
-## How we built it
-
-Three humans and five agents (engine, reo, data, app, qa) worked in parallel, each writing **only in its own folder**, handing work over through a single message board (a pinned GitHub issue, driven by [tools/board.py](tools/board.py)) and a pre-commit hook that enforces the ownership. The contracts between folders ([engine](engine/CONTRACT.md), [reo](reo/CONTRACT.md), [data](data/CONTRACT.md)) are plain files, and the hard rules (stay in your folder, the engine decides and reo talks, honest validation, prices are estimates, data stays in the team, no secrets in git) are in [AGENTS.md](AGENTS.md). Plan and milestones: [docs/plan.md](docs/plan.md).
-
-## Data, sources and credits
-
-- The project data is used only for this hackathon and never leaves the team; the repository is private. Aggregate benchmarks are the only derived data that reaches reo.
-- Outside sources, each with its link and date: [engine/SOURCES.md](engine/SOURCES.md) (PVGIS yields, German product and labour prices, KfW grant, UBA CO₂ factors, H0 profile factors). Satellite imagery © Esri, Maxar, Earthstar Geographics; building outlines © OpenStreetMap contributors.
-- AI: Anthropic Claude (Haiku 5.5, Sonnet 5.5, Opus 5.5) for conversation, agents and roof vision; ElevenLabs for voice.
