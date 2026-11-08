@@ -238,8 +238,10 @@ function PlanDetail({ id }: { id: string }) {
           </table>
         </section>
 
-        <AskReo id={plan.id} />
-
+        <div className="detail-col">
+          <AskReo id={plan.id} />
+          <NextSteps plan={plan} onPlan={setPlan} />
+        </div>
       </div>
 
       {/* the offer pack no longer carries a send-quote step: the planner finalises here (EywaSahbi) */}
@@ -320,6 +322,67 @@ const FACT_FIELDS: { key: keyof HomeFacts; label: string; type: "number" | "heat
   { key: "electricity_price_eur_per_kwh", label: "Tariff (€/kWh)", type: "number" },
 ];
 
+
+// reo's proposed next steps from the offer pack (site visit, CRM follow-up, document request). Nothing runs until the
+// planner approves; the quote itself goes out with "Finalise and send quote" below (EywaSahbi).
+const STEP_KIND: Record<string, string> = { book_visit: "Calendar", create_crm_task: "CRM", request_document: "Request" };
+function NextSteps({ plan, onPlan }: { plan: Plan; onPlan: (p: Plan) => void }) {
+  const pack = plan.offer_pack;
+  const steps = (pack?.actions ?? []).filter((a) => a.kind !== "send_quote");
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [slots, setSlots] = useState<string[]>([]);
+  const [slot, setSlot] = useState("");
+  const visit = steps.find((a) => a.kind === "book_visit");
+  useEffect(() => {
+    if (!visit || visit.status !== "proposed") return;
+    api.calendarSlots().then((r) => {
+      const proposed = String(visit.payload.slot ?? "");
+      setSlots(proposed && !r.slots.includes(proposed) ? [proposed, ...r.slots] : r.slots);
+      setSlot(proposed || r.slots[0] || "");
+    }).catch(() => {});
+  }, [visit?.id, visit?.status]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function act(key: string, f: () => Promise<Plan>) {
+    setBusy(key); setError(null);
+    try { onPlan(await f()); } catch (e) { setError(errText(e)); } finally { setBusy(null); }
+  }
+  if (!pack) return null;
+  return (
+    <section className="card next-steps">
+      <h3>Next steps <span className="muted small">nothing happens until you approve</span></h3>
+      {pack.status === "preparing" ? <p className="muted small">reo is preparing the next steps…</p>
+        : steps.length === 0 ? <p className="muted small">No steps proposed.</p> : (
+        <ul className="op-actions">
+          {steps.map((a) => (
+            <li key={a.id} className={`op-action is-${a.status}`}>
+              <span className="op-kind">{STEP_KIND[a.kind] ?? a.kind}</span>
+              <div className="op-action-main">
+                <span>{a.label}</span>
+                {a.kind === "book_visit" && a.status === "proposed" && slots.length > 0 && (
+                  <select value={slot} onChange={(e) => setSlot(e.target.value)} aria-label="Visit slot">
+                    {slots.map((s) => <option key={s}>{s}</option>)}
+                  </select>
+                )}
+                {a.result && <span className="muted small">{a.result}</span>}
+              </div>
+              {a.status === "proposed" ? (
+                <div className="op-action-btns">
+                  <button className="btn-ghost small" disabled={!!busy} onClick={() => act(`reject-${a.id}`, () => api.rejectAction(plan.id, a.id))}>Reject</button>
+                  <button className="btn-small" disabled={!!busy} onClick={() => act(`approve-${a.id}`, () => api.approveAction(plan.id, a.id, a.kind === "book_visit" && slot ? { slot } : undefined))}>
+                    {busy === `approve-${a.id}` ? "Running…" : "Approve"}
+                  </button>
+                </div>
+              ) : (
+                <span className={`pill pill-${a.status === "rejected" ? "drafting" : "quoted"}`}>{a.status}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <div className="chat-error">{error}</div>}
+    </section>
+  );
+}
 
 function AskReo({ id }: { id: string }) {
   const [q, setQ] = useState("");
