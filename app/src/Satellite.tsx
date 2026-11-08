@@ -16,10 +16,9 @@ function px(lat: number, lon: number, z: number): [number, number] {
   return [((lon + 180) / 360) * n, ((1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2) * n];
 }
 
-export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: ReactNode }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) return <>{fallback}</>;
-
+/** The photo frame for a roof: zoom, visible part of the map (viewBox units = zoom-z pixels), tiles, and the lat/lon -> unit mapping.
+ *  Shared by the customer's satellite view and the planner's module editor. */
+export function roofView(loc: RoofLocation) {
   const pts = loc.outline?.length ? loc.outline : [[loc.lat, loc.lon] as [number, number]];
   // Zoom: the largest at which the building plus a margin still fits the frame.
   let z = MAX_ZOOM;
@@ -40,7 +39,19 @@ export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: Reac
   const tiles: { x: number; y: number }[] = [];
   for (let x = Math.floor(left / TILE); x <= Math.floor((left + vw) / TILE); x++)
     for (let y = Math.floor(top / TILE); y <= Math.floor((top + vh) / TILE); y++) tiles.push({ x, y });
-  const outline = loc.outline?.length ? p.map(([x, y]) => `${x - left},${y - top}`).join(" ") : "";
+  const toUnits = (la: number, lo: number): [number, number] => { const [x, y] = px(la, lo, z); return [x - left, y - top]; };
+  return { z, left, top, vw, vh, tiles, toUnits, tileUrl: (x: number, y: number) => URL(z, x, y) };
+}
+
+/** Metres per viewBox unit of a roofView at this latitude (Web Mercator: same in both axes). */
+export const metresPerUnit = (lat: number, z: number) => (40075016.686 * Math.cos((lat * Math.PI) / 180)) / (TILE * 2 ** z);
+
+export function Satellite({ loc, fallback }: { loc: RoofLocation; fallback: ReactNode }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) return <>{fallback}</>;
+
+  const { z, left, top, vw, vh, tiles, toUnits } = roofView(loc);
+  const outline = loc.outline?.length ? loc.outline.map(([la, lo]) => toUnits(la, lo).join(",")).join(" ") : "";
 
   return (
     <figure className="house satellite" aria-label={`Satellite view of ${loc.label}`}>

@@ -1,7 +1,8 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import { api, USING_MOCK } from "./api";
 import { getInstallerToken, setInstallerToken } from "./auth";
 import { RunTimeline } from "./OfferPack";
+import { RoofEditor } from "./RoofEditor";
 import { SonnfeldMark } from "./Logo";
 import { ReoAvatar } from "./ReoAvatar";
 import { MicButton, voiceForced } from "./Voice";
@@ -151,6 +152,19 @@ function diff(a: Design, b: Design): Change {
   return { keys, text: parts.length ? parts.join(" · ") : "No change to the design." };
 }
 
+/** With real map data the roof editor above is the main tool, so the design studio folds into its title bar;
+ *  a click on the bar (or the arrow on its right) opens it, another click folds it again. Without map data it stays open. */
+function StudioFold({ fold, children }: { fold: boolean; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  if (!fold) return <>{children}</>;
+  return (
+    <div className={`studio-fold ${open ? "is-open" : "is-folded"}`} onClick={(e) => { if ((e.target as Element).closest(".studio-head, .studio-fold-toggle")) setOpen((o) => !o); }}>
+      <button type="button" className="studio-fold-toggle" aria-expanded={open} aria-label={open ? "Fold the design studio" : "Open the design studio"}>{open ? "Fold" : "Open"} <span aria-hidden>{open ? "▴" : "▾"}</span></button>
+      {children}
+    </div>
+  );
+}
+
 function PlanDetail({ id }: { id: string }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
@@ -221,9 +235,13 @@ function PlanDetail({ id }: { id: string }) {
       )}
       {error && <div className="chat-error">{error}</div>}
 
-      <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
-        <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks, prices) => edit({ locks, ...(prices ? { prices } : {}) })} />
-      </Suspense>
+      <RoofEditor plan={plan} disabled={quoted || isOffline(d)} onPlan={setPlan} />
+
+      <StudioFold fold={!!(plan.roof_location && plan.roof_layout && plan.roof_layout.frame.lat != null)}>
+        <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
+          <DesignStudio design={d} facts={plan.facts} disabled={quoted || busy || isOffline(d)} onApply={(locks, prices) => edit({ locks, ...(prices ? { prices } : {}) })} />
+        </Suspense>
+      </StudioFold>
 
       <div className="detail-grid">
 

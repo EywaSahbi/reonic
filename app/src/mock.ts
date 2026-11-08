@@ -408,6 +408,9 @@ export const mockApi: Api = {
 
   async getPlan(id) { return delay(advancePrep(get(id))); },
 
+  async putLayout() { throw new Error("Module placement needs the reo backend (not available in the offline demo)"); },
+  async resetLayout() { throw new Error("Module placement needs the reo backend (not available in the offline demo)"); },
+
   async editPlan(id, edit) {
     const plan = get(id);
     const before = plan.design.price.total_eur;

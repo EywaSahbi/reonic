@@ -87,6 +87,7 @@ export type Plan = {
   offer_pack?: OfferPack; // installer endpoints only (reo v1.1)
   customer_estimate?: { total_eur: number; range_eur: [number, number] }; // installer view: what the customer was told at handoff
   roof_location?: RoofLocation; // set by an address lookup that found the building: satellite view on the plan card
+  roof_layout?: RoofLayout; // installer endpoints only: where the PV modules sit on the roof (reo/CONTRACT.md, engine/ROOF_LAYOUT.md)
 };
 
 export type Ask = {
@@ -97,6 +98,14 @@ export type Ask = {
 };
 
 export type RoofLocation = { label: string; lat: number; lon: number; outline?: [number, number][]; checked?: boolean };   // checked: outline redrawn by Claude from the satellite photo
+/** Module placement, metres east (x) / north (y) of frame lat/lon (null = no photo). rot_deg = compass bearing of the slope
+ *  axis (the module's long side when portrait). Only the count is a number: it becomes the pv lock in reo. */
+export type LayoutModule = { x: number; y: number; rot_deg: number; portrait: boolean };
+export type PvModule = { id: string; wp: number; w_m: number; h_m: number };
+export type RoofLayout = {
+  source: "auto" | "planner"; module: PvModule; frame: { lat: number | null; lon: number | null; azimuth_deg: number };
+  modules: LayoutModule[]; capacity?: number; note?: string | null;
+};
 export type RoofLookup = { source: "OpenStreetMap" | "demo data"; label: string; footprint_sqm?: number };
 /** GET /sessions/{id}/address/suggest: demo addresses (label only) or a Photon hit with its point. */
 export type AddressSuggestion = { label: string; lat?: number; lon?: number; housenumber?: string; state?: string };

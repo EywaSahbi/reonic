@@ -1,5 +1,5 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
-import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn, AddressSuggestion } from "./types";
+import type { LayoutModule, RoofLayout, Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn, AddressSuggestion } from "./types";
 import { mockApi } from "./mock";
 import { getInstallerToken, installerUnauthorized, isInstallerPath, getDemoPin, demoUnauthorized } from "./auth";
 
@@ -34,7 +34,7 @@ export async function verifyDemoAccess(): Promise<void> {
   if (!USING_MOCK) await call("GET", "/demo/access");
 }
 
-async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "PUT" | "DELETE", path: string, body?: unknown): Promise<T> {
   const res = await fetch(BASE.replace(/\/$/, "") + path, {
     method,
     headers: requestHeaders(path, body !== undefined),
@@ -61,6 +61,9 @@ export type Api = {
   getPlan(id: string): Promise<Plan>;
   deletePlan(id: string): Promise<{ deleted: string }>;
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
+  /** Planner's module placement: the count becomes the pv lock, positions are stored (reo PUT /plans/{id}/layout). */
+  putLayout(id: string, modules: LayoutModule[], frame?: RoofLayout["frame"]): Promise<Plan>;
+  resetLayout(id: string): Promise<Plan>;
   askPlan(id: string, text: string): Promise<{ answer: string; run_id?: string }>;
   /** Planner asks by voice: ElevenLabs speech-to-text, reo's answer, spoken back (audio: base64 mp3 or null). */
   askPlanVoice(id: string, audio: Blob): Promise<{ heard: string; answer: string; run_id?: string; audio: string | null }>;
@@ -103,6 +106,8 @@ const httpApi: Api = {
   listPlans: (status) => call("GET", `/plans${status ? `?status=${status}` : ""}`),
   getPlan: (id) => call("GET", `/plans/${id}`),
   editPlan: (id, edit) => call("POST", `/plans/${id}/edit`, edit),
+  putLayout: (id, modules, frame) => call("PUT", `/plans/${id}/layout`, { modules, frame }),
+  resetLayout: (id) => call("DELETE", `/plans/${id}/layout`),
   askPlan: (id, text) => call("POST", `/plans/${id}/ask`, { text }),
   async askPlanVoice(id, audio) {
     const form = new FormData();

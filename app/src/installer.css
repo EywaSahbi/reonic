@@ -10,3 +10,33 @@
   .reo-vest-preview { padding: 32px 20px; }
   .reo-vest-sizes { gap: 24px; }
 }
+
+/* Roof and solar modules (RoofEditor): photo + outline + draggable PV modules */
+.roof-editor { display: grid; gap: 10px; }
+.roof-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.roof-head h3 { margin: 0; }
+.roof-stage { position: relative; border-radius: 10px; overflow: hidden; outline: none; background: var(--paper-sand, #efe9df); }
+.roof-svg { display: block; width: 100%; height: auto; max-height: 520px; touch-action: none; user-select: none; }
+.roof-svg.is-blank { background: repeating-linear-gradient(0deg, rgba(0,0,0,.05) 0 1px, transparent 1px 50px), repeating-linear-gradient(90deg, rgba(0,0,0,.05) 0 1px, transparent 1px 50px); }
+.pv-module { cursor: grab; }
+.pv-module:active { cursor: grabbing; }
+.pv-module.is-locked { cursor: default; }
+.pv-module rect { fill: rgba(20, 44, 92, .78); stroke: rgba(255, 255, 255, .85); stroke-width: 1; }
+.pv-module line { stroke: rgba(255, 255, 255, .28); stroke-width: 1; vector-effect: non-scaling-stroke; pointer-events: none; }
+.pv-module:hover rect { fill: rgba(30, 64, 130, .85); }
+.pv-module.is-selected rect { stroke: #f7a35c; stroke-width: 2.5; }
+.pv-module.is-bad rect { fill: rgba(200, 40, 40, .72); stroke: #ffd3d3; }
+.roof-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.roof-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.roof-warn { margin: 0; font-size: 13px; color: #9a3412; }
+.roof-hint { margin: 0; font-size: 12px; }
+
+/* Design studio folded into its title bar when the roof editor has real map data */
+.studio-fold { position: relative; }
+.studio-fold .studio-head { cursor: pointer; }
+.studio-fold-toggle { position: absolute; top: 16px; right: 16px; z-index: 2; background: transparent; border: 1px solid var(--line); border-radius: 9999px; padding: 4px 12px; font-size: 13px; color: var(--ink-500); cursor: pointer; }
+.studio-fold-toggle:hover { color: var(--ink); border-color: var(--ink-500); }
+.studio-fold.is-folded .studio-body, .studio-fold.is-folded .studio-head .muted { display: none; }
+.studio-fold.is-folded .studio.card { padding-top: 14px; padding-bottom: 14px; }
+.studio-fold.is-folded .studio-head { margin-bottom: 0; }
+.studio-fold .studio-head > div { padding-right: 90px; }
