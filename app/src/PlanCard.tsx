@@ -37,7 +37,7 @@ const NAMES: Record<ComponentKey, string> = { pv: "Solar panels", battery: "Batt
 const num = (n: number) => String(Math.round(n * 10) / 10);
 const eur = (n: number) => "€" + (Math.round(n / 100) * 100).toLocaleString("en");
 
-// Results screen of the step form: components, sizes, price range, savings, payback, reasons, assumptions.
+// Results screen of the step form: components, sizes, price range, savings, payback, reasons.
 // Displays engine numbers as received (rounded to €100 per experience/persona.md); computes nothing.
 export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; onHandoff?: () => void; onToggleHeatpump?: (on: boolean) => void }) {
   const d = plan.design;
@@ -115,13 +115,6 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump }: { plan: Plan; on
       </ul>
 
       {d.heating_comparison && <HeatingComparison comparison={d.heating_comparison} />}
-
-      {d.assumptions.length > 0 && !quoted && (
-        <div className="assumptions">
-          <span>Assumed for now</span>
-          <ul>{d.assumptions.map((a) => <li key={String(a.field)}>{a.note}</li>)}</ul>
-        </div>
-      )}
 
       {onHandoff && <button className="btn-primary plan-cta" onClick={onHandoff}>Send plan to Sonnfeld</button>}
       {!quoted && <p className="plan-fine">All prices are estimates until your planner confirms the quote.</p>}
