@@ -14,7 +14,6 @@ import { addPanel, clampToRoof, defaultItems, enginePanels, fitRoof, frontCells,
 type Kind = "panel" | ItemKey;
 const LABEL: Record<Kind, string> = { panel: "Solar module", battery: "Battery", heatpump: "Heat pump", wallbox: "Wallbox + car" };
 const HINT: Record<Kind, string> = { panel: "Adds next to the others", battery: "Wall-mounted storage", heatpump: "Air-source unit outside", wallbox: "Charger at the driveway" };
-const eur = (n: number) => "€" + Math.round(n).toLocaleString("en");
 
 // Sizes the planner can fix: the catalogue's real products (engine/catalog.json); 0 = none / automatic.
 const OPTIONS: Record<"inverter" | ItemKey, number[]> = { inverter: [5, 6, 8, 10], battery: [5.12, 7.68, 10.24, 12.8], heatpump: [6, 8, 10, 12], wallbox: [11, 22] };
@@ -235,18 +234,13 @@ export default function DesignStudio({ design, facts, disabled, onApply }: {
           </div>
           {tooMany && <p className="studio-note warn">More modules than the measured roof holds; the engine will cut to {c.pv.max_modules}.</p>}
 
-          <h4>Engine design {dirty && <span className="muted small">· updating…</span>}</h4>
-          <dl className="studio-econ">
-            <div><dt>PV</dt><dd>{c.pv.recommended ? `${c.pv.size} kWp` : "–"}</dd></div>
-            <div><dt>Battery</dt><dd>{c.battery.recommended ? `${c.battery.size} kWh` : "–"}</dd></div>
-            <div><dt>Total</dt><dd>{eur(design.price.total_eur)}</dd></div>
-            <div><dt>Own power</dt><dd>{design.economics.autarky_pct}%</dd></div>
-            <div><dt>Payback</dt><dd>{design.economics.payback_years ?? "–"} yrs</dd></div>
-          </dl>
-
           <div className="studio-actions">
-            <button className="btn-primary" disabled={!dirty || disabled || applying} onClick={apply}>{applying ? "Updating prices…" : dirty ? "Update now" : "Prices up to date"}</button>
-            <button className="btn-ghost" disabled={applying} onClick={() => { setPanels(layoutPanels(engineCount, area)); setHw(hwFrom(design, invApplied.current)); setItems(defaultItems(design, roof)); setSelected(null); }}>Reset layout</button>
+            <div className={`studio-status ${applying ? "is-busy" : dirty ? "is-dirty" : "is-ok"}`} role="status">
+              {applying ? <><span className="op-spinner" aria-hidden /> Updating prices…</>
+                : dirty ? <>Changes not priced yet <button className="studio-link" disabled={disabled} onClick={apply}>Update now</button></>
+                : <>✓ Prices up to date</>}
+            </div>
+            <button className="btn-ghost small studio-reset" disabled={applying} onClick={() => { setPanels(layoutPanels(engineCount, area)); setHw(hwFrom(design, invApplied.current)); setItems(defaultItems(design, roof)); setSelected(null); }}>↺ Reset layout</button>
           </div>
         </aside>
       </div>
