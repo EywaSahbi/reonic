@@ -1,6 +1,6 @@
 {
   "_comment": "Voice-over for scenes 1-4 (0:00-0:46). start = seconds from the start of the video (global). until = latest second the line may end (the next visual beat). 'on screen' is what the picture does at that moment. Edit text freely; only changed lines are regenerated.",
-  "duration": 73.2,
+  "duration": 120,
   "lines": [
     {
       "id": "01-wants-solar",
@@ -127,6 +127,83 @@
       "until": 69.5,
       "text": "Tap any number, and the advisor explains it.",
       "on screen": "Send plan (66.8-68.7): name typed, Send plan clicked; sent banner (70.3)"
+    },
+    {
+      "id": "19-summary",
+      "start": 73.6,
+      "until": 77.1,
+      "text": "The planner opens the plan, and reo has already written the summary.",
+      "on screen": "summary and table (74-76)"
+    },
+    {
+      "id": "20-roof",
+      "start": 77.3,
+      "until": 81.6,
+      "text": "Panels are placed on the satellite image, around the skylight and the rooftop units.",
+      "on screen": "roof zoom (76-79), automatic layout"
+    },
+    {
+      "id": "21-edit",
+      "start": 81.8,
+      "until": 85.9,
+      "text": "The planner moves, adds or removes modules, and the price re-derives instantly.",
+      "on screen": "drag, three adds, remove (78.7-86.8)"
+    },
+    {
+      "id": "22-price",
+      "start": 86.4,
+      "until": 89.4,
+      "text": "Every line of the breakdown follows the design.",
+      "on screen": "the price table and the re-derive banner (86.8-89.4)"
+    },
+    {
+      "id": "23-next",
+      "start": 89.6,
+      "until": 94.3,
+      "text": "Then reo suggests the next steps: a calendar event for the site visit, a CRM task.",
+      "on screen": "next steps, both approved (89.4-93.1)"
+    },
+    {
+      "id": "24-send",
+      "start": 94.5,
+      "until": 97.6,
+      "text": "A note, one click, and the quote is sent.",
+      "on screen": "the note typed, Send (93.1-97)"
+    },
+    {
+      "id": "25-quote",
+      "start": 98.0,
+      "until": 101.3,
+      "text": "The customer sees their confirmed quote the same moment.",
+      "on screen": "Quote sent hold, the cut into scene 7"
+    },
+    {
+      "id": "26-agent",
+      "start": 101.6,
+      "until": 106.8,
+      "text": "reo is an agent, not a chatbot: an engine for the numbers, the calendar, the CRM, WhatsApp.",
+      "on screen": "reo floats, tool tiles land one by one"
+    },
+    {
+      "id": "27-vision",
+      "start": 106.9,
+      "until": 109.4,
+      "text": "Our vision: one companion for every installer.",
+      "on screen": "all lines pulse, the word Vision"
+    },
+    {
+      "id": "28-impact",
+      "start": 110.2,
+      "until": 115.4,
+      "text": "Ten percent of Reonic's installers adopting reo: about seven hundred thousand dollars in new ARR.",
+      "on screen": "the figure, the method line, the source line"
+    },
+    {
+      "id": "29-thanks",
+      "start": 115.8,
+      "until": 117.6,
+      "text": "Thank you.",
+      "on screen": "reo waves, then winks"
     }
   ]
 }
