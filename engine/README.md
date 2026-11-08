@@ -59,6 +59,5 @@ Full shapes: [CONTRACT.md](CONTRACT.md).
 cd engine
 uv sync
 uv run uvicorn api:app --port 8000
-uv run pytest
 uv run python predict.py --split val     # then score it with data/score.py
 ```

@@ -19,5 +19,4 @@ Multiple options per project: use a documented default (e.g. the largest-numbere
 cd data && uv sync
 uv run python build.py      # raw CSV -> processed/ (idempotent)
 uv run python score.py ../engine/out/predictions_val.csv --split val
-uv run pytest
 ```

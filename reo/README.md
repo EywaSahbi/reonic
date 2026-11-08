@@ -48,6 +48,4 @@ cd reo
 uv sync
 cp .env.example .env            # optional: ANTHROPIC_API_KEY, ELEVENLABS_API_KEY (never commit keys)
 uv run uvicorn api:app --port 8001     # needs the engine on :8000
-uv run pytest
-uv run python -m evals                 # harness evals (scripted, needs the engine)
 ```

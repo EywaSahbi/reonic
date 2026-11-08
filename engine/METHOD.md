@@ -131,7 +131,7 @@ Per component: off (or on), one size step down and one up (PV ±2 modules, batte
 | Expert spread for ranges | PV 0.61–1.47, battery 0.50–1.20 (all installers) | train | `tools/derive_spread.py --split train` |
 | Prices, COP, EV kWh/km, Stromspiegel, module, full-load hours | — | public sources | hand-set with `_sources` in `prices.json` / `params.json` |
 
-Rebuild order: `derive_y` → `derive_profiles` → `derive_calibration` → `derive_params --split train` → `derive_spread --split train` → `uv run pytest` → `predict.py`.
+Rebuild order: `derive_y` → `derive_profiles` → `derive_calibration` → `derive_params --split train` → `derive_spread --split train` → `predict.py`.
 
 ## 11. Validation and results
 

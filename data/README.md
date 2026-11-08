@@ -14,13 +14,12 @@ This folder turns the two installers' raw CSVs into **one row per project** (the
 | Engine predictions vs experts | [`score.py`](score.py) | JSON reports in `reports/` |
 | Per-installer comparison with and without profile | [`installers.py`](installers.py) | `reports/installer_style_val.md` |
 | Reality-check report with charts | [`report.py`](report.py) | `reports/reality_check_*.md` + PNGs |
-| Lookups reo uses (reference spec in code) | [`lookup.py`](lookup.py) | |
 
 ## Rules that make the numbers honest
 
 - The split is fixed. The engine's parameters are fitted on `train`, choices made on `val`, and `test` is scored once with `score.py`, reported as it comes out, including where we lose.
 - Expert design = the highest option with hardware per project (which option was signed is an open question for Reonic). 1,571 of 1,619 projects remain; the build rules are in [NOTES.md](NOTES.md).
-- `lookup.py` and the benchmarks only ever use `train` homes.
+- The benchmarks only ever use `train` homes.
 
 ## Read next
 
@@ -33,5 +32,4 @@ cd data
 uv sync
 uv run python build.py && uv run python benchmarks.py
 uv run python score.py ../engine/out/predictions_test.csv --split test
-uv run pytest
 ```

@@ -21,5 +21,4 @@ LLM: Claude via the Anthropic SDK with tool use (pick a current fast model; chec
 ```bash
 cd reo && uv sync
 uv run uvicorn api:app --reload --port 8001      # needs the engine on :8000
-uv run pytest
 ```

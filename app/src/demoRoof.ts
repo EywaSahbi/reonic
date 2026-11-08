@@ -63,4 +63,3 @@ export const SAND33_MODULES: LayoutModule[] = [
   { x: 2.95, y: 6.31, rot_deg: 25.0, portrait: true },
 ];
 
-export const SAND33_OBSTACLES = "glazed skylight strip and 6 rooftop units kept 0.65 m clear, 0.9 m from the roof edge";

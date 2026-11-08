@@ -85,7 +85,7 @@ Built by `uv run python scenarios.py`. 9 real homes from `val` (`gas_to_heatpump
 - `added_facts`: facts the data cannot hold (`ev_planned`, `budget_eur`), added for the scenario. The expert design did not see them, so compare against `expect`, not the expert sizes, for those aspects.
 - Ids: `typical`, `retrofit_existing_pv`, `retrofit_unrecorded_pv`, `ev_driver`, `ev_planned`, `gas_to_heatpump`, `tiny_demand`, `big_demand`, `tight_budget`.
 
-## Lookups for reo (spec; reference code `data/lookup.py`, tested in `test_lookup.py`)
+## Lookups for reo (spec; implemented in `reo/evidence.py`)
 
 reo reads the files and implements these itself (no imports across folders). Only `train` homes are used or shown.
 

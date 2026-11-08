@@ -2,7 +2,7 @@
 
 ## Handover (session ended 2026-11-07 by Eywa's decision)
 
-Everything above the open items works and is pushed. To resume: read this file, CONTRACT.md, run `uv run pytest` (27 pass), start `uv run uvicorn api:app --port 8001` with the engine on :8000.
+Everything above the open items works and is pushed. To resume: read this file, CONTRACT.md, start `uv run uvicorn api:app --port 8001` with the engine on :8000.
 Open: Haiku vs Sonnet for installer_qa (human call, models in `llm.py`), German scripted replies, chat_turn onto the harness, live bill test, final voice. Possible engine NEED: 5 kWh battery suggested even when the roof caps PV at ~1 kWp.
 
 ## Installer-backend cleanup (2026-11-08)
@@ -19,12 +19,13 @@ Reproduced and fixed (regressions in `test_installer.py`, fake engine; live chec
 Checks: `uv run pytest` 27 pass; `uv run python -m evals` 9/9 (scripted, live engine); live journey incl. SSE replay, Sonnet pack, 409s on repeat approve/reject, restart mid-prep → failed.
 Not covered: engine downtime only with the fake engine (did not stop Ege's engine); customer `installer_edits`/`history` still visible to the customer (totals only, no change in this pass).
 
+- 2026-11-08: all test suites (reo, engine, data, app check scripts) and reo/evals removed at EywaSahbi's request; verify changes live.
+
 ## Backlog (top = next)
 
 - [x] Deployment guard: planner Bearer token (`REO_INSTALLER_TOKEN`) on installer routes + `REO_ALLOWED_ORIGINS` CORS (`test_auth.py`)
 - [ ] Roof lookup: OSM building relations (multipolygon), app NEED 23:4x (Platz der Republik 1 Berlin, Schellingstraße 3 München)
 
-- [ ] Harness evals on data's scenarios.json (`uv run python -m evals`)
 - [x] bill_reader skill (`/sessions/{id}/bill`, vision; live vision not yet tried on a real bill) and goal_planner skill (Turn.goal_result, /plans/{id}/ask)
 - [x] installer_qa on the harness (Sonnet 5.5 / scripted)
 - [x] Mocked address lookup (`addresses.json`: Musterstraße München, Hauptstraße Hamburg, Lindenweg Dresden)

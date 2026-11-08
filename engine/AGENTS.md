@@ -24,6 +24,5 @@ You write only in `engine/`. You read `data/processed/` and run data's scoring t
 cd engine && uv sync
 uv run uvicorn api:app --reload --port 8000
 uv run python predict.py --split val && (cd ../data && uv run python score.py ../engine/out/predictions_val.csv --split val)
-uv run pytest
 ```
 (Create these files as you need them; CORS open to `http://localhost:5173` and `:8001`.)

@@ -1,82 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "./api";
-import type { Plan, RunStep } from "./types";
+import type { RunStep } from "./types";
 import "./offerpack.css";
 
-// Installer offer pack (reo/CONTRACT.md v1.1 + harness v1.2): reo's offer agent prepares one quotation, a checklist,
-// a draft message and proposed actions; the planner chooses, edits and approves. Nothing runs without a click here.
-const num = (n: number | null | undefined) => (n == null ? "–" : String(Math.round(n * 10) / 10));
-const errText = (e: unknown) => String(e instanceof Error ? e.message : e);
-
-export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
-  plan: Plan;
-  onPlan: (p: Plan) => void; // silent refresh (polling)
-  onDesignChange: (p: Plan) => void; // planner action that changes the design (highlight + banner)
-}) {
-  const pack = plan.offer_pack;
-  const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const quoted = plan.status === "quoted";
-
-  // Poll while reo prepares the pack.
-  useEffect(() => {
-    if (pack?.status !== "preparing") return;
-    const t = setInterval(() => api.getPlan(plan.id).then(onPlan).catch(() => {}), 1200);
-    return () => clearInterval(t);
-  }, [plan.id, pack?.status]);
-
-  async function act(key: string, f: () => Promise<Plan>, changesDesign = false) {
-    setBusy(key);
-    setError(null);
-    try {
-      const next = await f();
-      (changesDesign ? onDesignChange : onPlan)(next);
-    } catch (e) {
-      setError(errText(e));
-    } finally {
-      setBusy(null);
-    }
-  }
-
-  if (!pack) {
-    return (
-      <section className="card op-empty">
-        <div>
-          <h3>Offer pack</h3>
-          <p className="muted">reo can prepare a quotation, a site-visit checklist, a draft message and next steps for you to approve.</p>
-        </div>
-        <button className="btn-primary" disabled={!!busy || quoted} onClick={() => act("prepare", () => api.preparePlan(plan.id))}>Prepare offer pack</button>
-      </section>
-    );
-  }
-
-  const preparing = pack.status === "preparing";
-  const model = pack.model === "scripted" ? "Scripted" : pack.model.includes("opus") ? "Opus 5.5" : pack.model.includes("sonnet") ? "Sonnet 5.5" : pack.model;
-
-  return (
-    <section className="card op">
-      <header className="op-head">
-        <div>
-          <h3>Offer pack</h3>
-          <p className="op-sub">
-            {preparing ? <><span className="op-spinner" aria-hidden /> reo is preparing the offer…</>
-              : pack.status === "failed" ? "reo could not finish the offer pack."
-              : <>reo prepared this in <strong>{num(pack.duration_s)} s</strong></>}
-            {pack.model && <span className={`op-model ${pack.model === "scripted" ? "is-scripted" : ""}`}>{model}</span>}
-          </p>
-        </div>
-        {!preparing && !quoted && (
-          <button className="btn-ghost small" disabled={!!busy} onClick={() => act("prepare", () => api.preparePlan(plan.id))}>Prepare again</button>
-        )}
-      </header>
-
-      <RunTimeline runId={pack.run_id} trace={pack.trace} live={preparing} />
-
-      {error && <div className="chat-error">{error}</div>}
-    </section>
-  );
-}
-
+// reo's run timeline ("What reo did"): the steps of a harness run, live over SSE (reo/CONTRACT.md harness v1.2).
 
 function plural(n: number, one: string, many = one + "s") { return `${n} ${n === 1 ? one : many}`; }
 

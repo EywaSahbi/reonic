@@ -201,17 +201,6 @@ def headline(d: dict) -> str:
     return f"I'd suggest {items}. That would cost roughly {eur(lo)}–{eur(hi)[1:]} (estimate)."
 
 
-def heatpump_option_text(without: dict, with_: dict, delta: dict) -> str:
-    """The between-step: the plan stands, the heat pump version is prepared. All numbers are from the two engine designs and /explain."""
-    lo, hi = with_["price"]["range_eur"]
-    kw = with_["components"]["heatpump"]["size"]
-    more = f"{eur(abs(delta['price_eur']))} {'more' if delta['price_eur'] >= 0 else 'less'}"
-    saving = f", saving about €{rnd(with_['economics']['annual_savings_eur'], 10):,} a year" if with_["economics"]["annual_savings_eur"] > 0 else ""
-    n = str(rnd(kw))
-    return (f"Your plan above still stands. I've also prepared a version with {a_n(n)} {n} kW heat pump: roughly {eur(lo)}–{eur(hi)[1:]} "
-            f"(estimate), {more}{saving}.")
-
-
 def heating_advice(d: dict) -> str | None:
     """One sentence on a heat pump vs today's fossil / district heating, from the engine's heating_comparison (None = nothing to claim)."""
     hc = d.get("heating_comparison")

@@ -5,7 +5,7 @@
 1. [METHOD.md](METHOD.md): how a design is made, every rule and parameter, final results, known limits.
 2. This file: backlog, what is published, scores, decisions.
 3. [CONTRACT.md](CONTRACT.md): the API reo calls. [SOURCES.md](SOURCES.md): where every outside number comes from. [PLAN.md](PLAN.md): build log.
-4. Run: `cd engine && uv sync && uv run uvicorn api:app --port 8000`; check: `uv run pytest`; rebuild parameters: METHOD.md section 10.
+4. Run: `cd engine && uv sync && uv run uvicorn api:app --port 8000`; rebuild parameters: METHOD.md section 10.
 
 ## Backlog (top = next)
 

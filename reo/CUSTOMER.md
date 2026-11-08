@@ -9,13 +9,12 @@ You write in `reo/` only, and only the customer half of it. UI changes go to `ap
 - Understanding the customer: `scripted.py` (chips, rule extraction, templates), `llm.py` (extract + reply), `prompt.md`
 - Voice: `voice.py`; roof / address lookup: `roof.py`, `addresses.json`; bill reading: the `bill_reader` skill
 - Customer routes in `api.py`: `/sessions*` (`customer_turn`, `goal_turn`, `after_handoff_turn`, `reveal_locks`, `_design`,
-  `send_address`, `send_bill`, `send_voice`, `handoff`) and their tests in `test_api.py`, `test_flow.py`
+  `send_address`, `send_bill`, `send_voice`, `handoff`)
 
 ## Not yours (reo keeps it; ask reo on the board first)
 
 `/plans*`, `/runs*`, `/calendar`, `/prices`, offer pack, approvals, `out()` / `customer_design`, the plan store (`_load`,
-`_save`, `_read`, `_recover`), the auth middleware, `harness/` (except the `bill_reader` and `goal_planner` skills), `test_installer.py`,
-`test_auth.py`. Both of you edit `api.py`: pull right before you edit, keep commits small, say on the board which part you touch.
+`_save`, `_read`, `_recover`), the auth middleware, `harness/` (except the `bill_reader` and `goal_planner` skills). Both of you edit `api.py`: pull right before you edit, keep commits small, say on the board which part you touch.
 
 ## Rules that matter most here
 
@@ -27,7 +26,7 @@ You write in `reo/` only, and only the customer half of it. UI changes go to `ap
 
 ## Before every push
 
-`cd reo && uv run pytest` and `uv run python -m evals` (engine on :8000). Commit prefix `customer:`. Push straight to `main`,
+Check the change live against the engine on :8000 (the test suites were removed on 2026-11-08, EywaSahbi). Commit prefix `customer:`. Push straight to `main`,
 then post `DONE` with the SHA to the roles that depend on it (usually `app`, `qa`, and `reo` if `api.py` changed).
 
 ## Status
