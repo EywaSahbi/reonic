@@ -64,7 +64,9 @@ Answer from the engine's `reasons`, price `items` and (M2) `/explain` what-ifs, 
 | "Is this normal for a home like mine?" | the plan's `flags` / benchmarks, aggregate only: "Most similar homes went with a battery around this size." | `Why this size?` |
 | Dates, warranties, financing, subsidy amounts | no numbers: "Your planner at Sonnfeld will confirm that." | |
 
-Standing chips after every design turn (when nothing more specific fits): `Why this size?`, `What does it cost?`, `Send to installer`.
+> **Since 9ced1ff the app shows no suggestion chips** (only the bill confirmation pair and the tap cards of an `ask`). reo may still return `suggestions`; the app ignores them. Handoff is the plan card's "Send to installer" button; skipping the roof is in the address box. The plan starts empty and builds up with the answers (reo 104fe5a).
+
+Standing chips after every design turn (historical, not rendered): `Why this size?`, `What does it cost?`, `Send to installer`.
 
 ### Stage 5: Handoff
 
