@@ -161,7 +161,7 @@ function RoofViews({ hasMap, roof, studio }: { hasMap: boolean; roof: ReactNode;
   return (
     <div className="roof-views">
       <div className="house-toggle roof-views-toggle" role="tablist" aria-label="Roof view">
-        <button role="tab" aria-selected={view === "photo"} onClick={() => setView("photo")}>Your roof</button>
+        <button role="tab" aria-selected={view === "photo"} onClick={() => setView("photo")}>Roof</button>
         <button role="tab" aria-selected={view === "3d"} onClick={() => setView("3d")}>3D plan</button>
       </div>
       {view === "photo" ? roof : studio}
