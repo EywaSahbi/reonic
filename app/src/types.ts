@@ -97,6 +97,8 @@ export type Ask = {
 
 export type RoofLocation = { label: string; lat: number; lon: number; outline?: [number, number][] };
 export type RoofLookup = { source: "OpenStreetMap" | "demo data"; label: string; footprint_sqm?: number };
+/** GET /sessions/{id}/address/suggest: demo addresses (label only) or a Photon hit with its point. */
+export type AddressSuggestion = { label: string; lat?: number; lon?: number; housenumber?: string; state?: string };
 
 export type Turn = { roof?: RoofLookup; messages: Message[]; plan: Plan; suggestions: string[]; ask?: Ask; bill?: { read: Partial<HomeFacts> & { provider?: string }; confirmed: false }; goal_result?: GoalResult; heatpump_option?: HeatpumpOption };
 /** reo/CONTRACT.md heat pump option: the plan as it stands and the same home with a heat pump, both from the engine. */

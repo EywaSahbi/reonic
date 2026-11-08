@@ -300,6 +300,11 @@ export const mockApi: Api = {
     return delay({ messages, plan: save(plan), suggestions: ["Yes, that's right", "Not quite"], bill: { read, confirmed: false } });
   },
 
+  async suggestAddress(_id, q) {
+    const demo = ["Musterstraße 12, 80331 München", "Hauptstraße 5, 20095 Hamburg"];
+    return delay({ suggestions: q.trim().length < 3 ? [] : demo.filter((a) => a.toLowerCase().includes(q.trim().toLowerCase().slice(0, 5))).map((label) => ({ label })) });
+  },
+
   async sendAddress(id, address) {
     const plan = get(id);
     const known = /musterstra|hauptstra/i.test(address);

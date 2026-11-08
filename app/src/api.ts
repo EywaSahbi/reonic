@@ -1,5 +1,5 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
-import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
+import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn, AddressSuggestion } from "./types";
 import { mockApi } from "./mock";
 import { getInstallerToken, installerUnauthorized, isInstallerPath, getDemoPin, demoUnauthorized } from "./auth";
 
@@ -52,7 +52,9 @@ export type Api = {
   /** skip: ask fields the customer skipped (reo/CONTRACT.md /facts). */
   sendFacts(id: string, facts: Partial<HomeFacts>, skip?: string[]): Promise<Turn>;
   sendBill(id: string, image: File): Promise<Turn>;
-  sendAddress(id: string, address: string): Promise<Turn>;
+  /** point: the picked type-ahead suggestion, so reo skips geocoding. */
+  sendAddress(id: string, address: string, point?: AddressSuggestion): Promise<Turn>;
+  suggestAddress(id: string, q: string): Promise<{ suggestions: AddressSuggestion[] }>;
   handoff(id: string, name: string, email?: string): Promise<Plan>;
   getSession(id: string): Promise<Plan>;
   listPlans(status?: Plan["status"]): Promise<PlanSummary[]>;
@@ -90,7 +92,8 @@ const httpApi: Api = {
     if (!res.ok) throw await responseError(res);
     return res.json() as Promise<Turn>;
   },
-  sendAddress: (id, address) => call("POST", `/sessions/${id}/address`, { address }),
+  sendAddress: (id, address, point) => call("POST", `/sessions/${id}/address`, { ...point, address }),
+  suggestAddress: (id, q) => call("GET", `/sessions/${id}/address/suggest?q=${encodeURIComponent(q)}`),
   handoff: (id, name, email) => call("POST", `/sessions/${id}/handoff`, { name, email }),
   getSession: (id) => call("GET", `/sessions/${id}`),
   listPlans: (status) => call("GET", `/plans${status ? `?status=${status}` : ""}`),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "./api";
-import type { Ask, HomeFacts, Plan, Turn } from "./types";
+import type { AddressSuggestion, Ask, HomeFacts, Plan, Turn } from "./types";
 import { PlanCard } from "./PlanCard";
 import { iconFor } from "./Icons";
 
@@ -142,7 +142,8 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
               </div>
               {note && <p className="step-note">{note}</p>}
               <h2 className="step-title">{TITLE[ask.field] ?? ask.prompt}</h2>
-              <StepInput ask={ask} busy={busy} onFacts={facts} onAddress={(a) => id && run(() => api.sendAddress(id, a), ask)}
+              <StepInput ask={ask} busy={busy} onFacts={facts} onAddress={(a, point) => id && run(() => api.sendAddress(id, a, point), ask)}
+                suggest={(q) => (id ? api.suggestAddress(id, q).then((r) => r.suggestions) : Promise.resolve([]))}
                 onDims={() => { setBack((b) => [...b, ask]); setAsk(DIMS_ASK); setNote(null); }} />
               {error && <div className="chat-error">Something went wrong: {error}</div>}
               <div className="step-foot">
@@ -170,15 +171,26 @@ function choiceFacts(ask: Ask, o: string): Partial<HomeFacts> {
   return { [ask.field]: Number.isFinite(n) && /^\d/.test(o) ? n : o } as Partial<HomeFacts>;
 }
 
-function StepInput({ ask, busy, onFacts, onAddress, onDims }: {
+function StepInput({ ask, busy, onFacts, onAddress, onDims, suggest }: {
   ask: Ask; busy: boolean;
   onFacts: (f: Partial<HomeFacts>, skip?: string[]) => void;
-  onAddress: (a: string) => void;
+  onAddress: (a: string, point?: AddressSuggestion) => void;
   onDims: () => void;
+  suggest: (q: string) => Promise<AddressSuggestion[]>;
 }) {
   const [v, setV] = useState("");
   const [width, setWidth] = useState("");
   const [length, setLength] = useState("");
+  const [hits, setHits] = useState<AddressSuggestion[]>([]);
+  const picked = useRef(false);
+
+  // Address type-ahead: from 3 characters, 250 ms after the last keystroke; the latest answer wins.
+  useEffect(() => {
+    if (ask.input !== "address" || picked.current || v.trim().length < 3) { setHits([]); return; }
+    let live = true;
+    const t = setTimeout(() => suggest(v.trim()).then((s) => live && setHits(s)).catch(() => {}), 250);
+    return () => { live = false; clearTimeout(t); };
+  }, [v, ask.input]);
   const link = (text: string, onClick: () => void) => <button type="button" className="step-link" disabled={busy} onClick={onClick}>{text}</button>;
 
   if (ask.input === "choice" || ask.input === "boolean") {
@@ -210,10 +222,23 @@ function StepInput({ ask, busy, onFacts, onAddress, onDims }: {
   }
 
   if (ask.input === "address") {
-    return <form className="step-form" onSubmit={(e) => { e.preventDefault(); if (v.trim()) onAddress(v.trim()); }}>
-      <div className="step-bar-input">
-        <input value={v} onChange={(e) => setV(e.target.value)} placeholder="Musterstraße 12, München" aria-label="Your address" autoComplete="street-address" autoFocus />
-        <button type="submit" className="btn-primary" disabled={!v.trim() || busy}>Find roof</button>
+    const pick = (s: AddressSuggestion) => { picked.current = true; setV(s.label); setHits([]); onAddress(s.label, s.lat != null ? s : undefined); };
+    return <form className="step-form" onSubmit={(e) => { e.preventDefault(); if (hits[0] && hits[0].label.toLowerCase().startsWith(v.trim().toLowerCase())) pick(hits[0]); else if (v.trim()) onAddress(v.trim()); }}>
+      <div className="step-address">
+        <div className="step-bar-input">
+          <input value={v} onChange={(e) => { picked.current = false; setV(e.target.value); }} placeholder="Musterstraße 12, München" aria-label="Your address"
+            autoComplete="off" role="combobox" aria-expanded={hits.length > 0} aria-controls="address-hits" autoFocus />
+          <button type="submit" className="btn-primary" disabled={!v.trim() || busy}>Find roof</button>
+        </div>
+        {hits.length > 0 && (
+          <ul className="address-hits" id="address-hits" role="listbox">
+            {hits.map((s) => (
+              <li key={s.label} role="option" aria-selected={false}>
+                <button type="button" disabled={busy} onClick={() => pick(s)}>{s.label}</button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <div className="step-links">{link("Enter width × length", onDims)}{link("Skip", () => onFacts({}, ROOF_SKIP))}</div>
     </form>;
