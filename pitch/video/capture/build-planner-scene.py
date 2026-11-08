@@ -63,7 +63,7 @@ for e in ev["events"]:
 mp4_rel = "assets/planner-capture.mp4"
 clips = []
 for i, s in enumerate(segs):
-    hold = 1.45 if i == len(segs) - 1 else 0
+    hold = 1.8 if i == len(segs) - 1 else 0
     clips.append(
         f'            <video id="c6-v{i}" class="clip c6-vid" src="{mp4_rel}" muted playsinline data-start="{s["film0"]}" '
         f'data-duration="{round(s["dur"] + hold, 4)}" data-media-start="{s["cap0"]}" data-playback-rate="{s["rate"]}" data-track-index="{i}"></video>'
@@ -92,6 +92,11 @@ t = re.sub(r"\n    // hand-off: the plan leaves.*?\n\n    window\.__timelines", 
 t = re.sub(r'    // entrance:.*?\n    tl\.fromTo\("#c6-win".*?\n', '    // entrance: the planner window grows out of the placeholder scene 5 ended on (centre 1470,540, scale 0.6)\n'
            '    tl.fromTo("#c6-win", { opacity: 1, x: 510, y: 0, scale: 0.6 }, { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.85, ease: "power3.inOut" }, 0);\n', t, count=1, flags=re.S)
 
+# the window folds into the centre as reo arrives (the ending starts at film 100.6 = local TOTAL + 1.4)
+t = t.replace('    window.__timelines["planner"] = tl;',
+              '    tl.to(["#c6-label", "#c6-ticker", "#c6-ptr"], { opacity: 0, duration: 0.25 }, TOTAL + 1.15);\n'
+              '    tl.to("#c6-win", { scale: 0.08, x: 0, y: 0, opacity: 0, duration: 0.55, ease: "power3.in" }, TOTAL + 1.3);\n\n'
+              '    window.__timelines["planner"] = tl;')
 for marker, val in [("/*VIDEOS*/", "\n".join(clips)), ("/*SEGMENTS*/", json.dumps(segs)), ("/*CAMERA*/", json.dumps(CAMERA)), ("/*POINTER*/", json.dumps(pointer)),
                     ("/*DOWNS*/", json.dumps(downs)), ("/*STEPS*/", json.dumps(STEP_MARKS)), ("/*RESULTS_AT*/", str(RESULTS_AT)), ("/*TOTAL*/", str(TOTAL))]:
     t = t.replace(marker, val)

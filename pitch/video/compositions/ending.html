@@ -1,0 +1,223 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2"); font-weight: 700; }
+
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #1b1d20; }
+    #root * { box-sizing: border-box; }
+    .abs { position: absolute; }
+
+    /* reo, the same character as scene 4, in his finished pose */
+    #e-reo { left: 240px; top: 276px; width: 1440px; height: 528px; z-index: 6; opacity: 0; }
+    #e-svg { position: absolute; left: 0; top: 0; overflow: visible; }
+
+    /* scene 7: the tools around reo */
+    #e-lines { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; z-index: 1; }
+    .e-tile { width: 232px; height: 176px; border-radius: 24px; background: #fff; border: 2px solid #e4e4e7; box-shadow: 0 18px 44px rgba(9, 9, 11, 0.09);
+      z-index: 3; opacity: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+    .e-tile svg { width: 76px; height: 76px; }
+    .e-tile span.l { font-size: 30px; font-weight: 600; letter-spacing: -0.01em; }
+    .e-tile.next { background: transparent; border: 2px dashed #b9b9c2; box-shadow: none; }
+    .e-tile.next svg { opacity: 0.75; }
+    .e-tile.next span.l { color: #71717a; }
+    .e-tile .pill { position: absolute; right: 14px; top: 12px; font-size: 20px; font-weight: 600; color: #71717a; border: 2px solid #d4d4d8; border-radius: 12px; padding: 0 10px; line-height: 26px; background: #fdfdfb; }
+    #e-vision { left: 0; top: 962px; width: 1920px; text-align: center; opacity: 0; z-index: 4; }
+    #e-vision .k { display: inline-block; font-size: 28px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; margin-right: 18px;
+      background: linear-gradient(90deg, #f7a35c, #f2784b 55%, #ee6a5b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #e-vision .t { font-size: 54px; font-weight: 600; letter-spacing: -0.02em; }
+
+    /* scene 8: what it is worth */
+    #e-fig { left: 790px; top: 250px; width: 1010px; opacity: 0; }
+    #e-pill { display: inline-block; font-size: 26px; font-weight: 600; color: #0b7a5e; background: #eaf8f3; border: 2px solid #bde5d8; border-radius: 26px; padding: 0 20px; line-height: 48px; margin-bottom: 14px; }
+    #e-num { font-size: 250px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.02;
+      background: linear-gradient(90deg, #f7a35c, #f2784b 45%, #ee6a5b); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    #e-sub { font-size: 54px; font-weight: 500; margin-top: 4px; }
+    #e-sub b { font-weight: 700; color: #0b7a5e; }
+    #e-method { font-size: 42px; font-weight: 500; color: #3f3f46; margin-top: 30px; opacity: 0; }
+    #e-src { left: 120px; top: 982px; width: 1680px; text-align: center; font-size: 22px; font-weight: 500; color: #71717a; opacity: 0; }
+
+    /* scene 9 */
+    #e-thanks { left: 0; top: 780px; width: 1920px; text-align: center; font-size: 120px; font-weight: 700; letter-spacing: -0.03em; opacity: 0; }
+  </style>
+
+  <div id="root" data-composition-id="ending" data-width="1920" data-height="1080">
+    <svg id="e-lines" viewBox="0 0 1920 1080" aria-hidden="true"></svg>
+
+    <div id="e-tiles"></div>
+    <div id="e-vision" class="abs"><span class="k">Vision</span><span class="t">One companion for every installer.</span></div>
+
+    <div id="e-fig" class="abs">
+      <div id="e-pill">Conservative case</div>
+      <div id="e-num">+$0.0M</div>
+      <div id="e-sub">in new ARR, <b>+3.6 %</b></div>
+      <div id="e-method">10 % of 3,000+ installers × $199 a month</div>
+    </div>
+    <div id="e-src" class="abs">Reonic ARR ≈ $20M (arr.club, third-party, unverified) · 3,000+ customers (company-claimed) · adoption and price are our assumptions</div>
+
+    <div id="e-reo" class="abs" data-layout-allow-overflow><svg id="e-svg" viewBox="0 0 600 220" width="1440" height="528" role="img" aria-label="reo"></svg></div>
+    <div id="e-thanks" class="abs">Thank you</div>
+  </div>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+    const seg = (t, [a, b]) => clamp((t - a) / (b - a));
+    const lerp = (a, b, p) => a + (b - a) * p;
+    const inOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+    const outBack = (p, s = 1.70158) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+
+    /* ---------------- reo, finished pose (geometry from app/src/ReoIntro.tsx / ReoAvatar.tsx, as in scene 4) ---------------- */
+    const INK = "#141414", PINK = "#FF6B7A", ORANGE = "#FF9A3C";
+    const R = 30, RI = 17.7;
+    const topBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 0 ${px} ${py + R}A${RI} ${R} 0 0 1 ${px - RI} ${py}Z`;
+    const bottomBlade = (px, py) => `M${px - R} ${py}A${R} ${R} 0 0 1 ${px} ${py - R}A${RI} ${R} 0 0 0 ${px - RI} ${py}Z`;
+    const EYE_X = 18, EYE_Y = 2, BROW_LIFT = -44, BROW_SPREAD = 1.14;
+    const LEFT_ARM = [-42, 16, -62, 30], RIGHT_ARM = [42, 10, 62, -8];
+    const FOOT = { x: 22, y: 52, rx: 14, ry: 9 };
+    const CY = 110, END_X = 300, END_S = 1.25, LOCK_X = 161, WM_X = 288, WM_BASE = 150, WM_XH = 70, WM_EO_W = 160, WM_RIGHT = WM_X + WM_XH + 6 + WM_EO_W;
+    const k = WM_XH / 30;
+    const P = (u, v) => `${(WM_X + u * k).toFixed(2)} ${(WM_BASE + (v - 6) * k).toFixed(2)}`;
+    const R_PATH = `M${P(30, -24)}A${30 * k} ${30 * k} 0 0 0 ${P(0, 6)}A${30 * k} ${15 * k} 0 0 1 ${P(30, -9)}Z`;
+    const svg = document.getElementById("e-svg");
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="e-gb" gradientUnits="userSpaceOnUse" x1="-55" y1="55" x2="55" y2="-55"><stop offset="0" stop-color="${PINK}"/><stop offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="e-gl" gradientUnits="userSpaceOnUse" x1="-70" y1="-70" x2="70" y2="70"><stop offset="0" stop-color="${PINK}"/><stop offset="1" stop-color="${ORANGE}"/></linearGradient>
+        <linearGradient id="e-wm" gradientUnits="userSpaceOnUse" x1="${WM_X}" y1="${WM_BASE - WM_XH}" x2="${WM_RIGHT}" y2="${WM_BASE}"><stop offset="0" stop-color="${PINK}"/><stop offset="1" stop-color="${ORANGE}"/></linearGradient>
+      </defs>
+      <g id="e-ic">
+        <g fill="url(#e-gl)"><ellipse cx="${-FOOT.x}" cy="${FOOT.y}" rx="${FOOT.rx}" ry="${FOOT.ry}"/><ellipse cx="${FOOT.x}" cy="${FOOT.y}" rx="${FOOT.rx}" ry="${FOOT.ry}"/></g>
+        <g id="e-armL"><line x1="${LEFT_ARM[0]}" y1="${LEFT_ARM[1]}" x2="${LEFT_ARM[2]}" y2="${LEFT_ARM[3]}" stroke="url(#e-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g id="e-armR"><line x1="${RIGHT_ARM[0]}" y1="${RIGHT_ARM[1]}" x2="${RIGHT_ARM[2]}" y2="${RIGHT_ARM[3]}" stroke="url(#e-gl)" stroke-width="15" stroke-linecap="round"/></g>
+        <g transform="rotate(90)"><rect x="-50" y="-50" width="100" height="100" rx="26" fill="url(#e-gb)"/></g>
+        <path d="${topBlade(6, -30)}" fill="#fff" stroke="url(#e-gb)" stroke-width="7" stroke-linejoin="round" paint-order="stroke" transform="translate(0 ${BROW_LIFT}) translate(0 -9) scale(${BROW_SPREAD}) translate(0 9) rotate(90)"/>
+        <path d="${bottomBlade(6, 30)}" fill="#fff" stroke="url(#e-gb)" stroke-width="7" stroke-linejoin="round" paint-order="stroke" transform="translate(0 ${BROW_LIFT}) translate(0 -9) scale(${BROW_SPREAD}) translate(0 9) rotate(90)"/>
+        ${[-1, 1].map((s, i) => `<g id="e-eye${i}"><ellipse rx="12.5" ry="16.5" fill="#fff"/><ellipse cx="1.5" cy="1.5" rx="8.6" ry="12" fill="${INK}"/><ellipse cx="4.2" cy="-3.6" rx="2.4" ry="3.6" fill="#fff"/></g>`).join("")}
+      </g>
+      <g id="e-wmk">
+        <path id="e-rp" d="${R_PATH}" fill="url(#e-wm)"/>
+        <text id="e-e" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#e-wm)" x="${WM_X + WM_XH + 6}" y="${WM_BASE}">e</text>
+        <text id="e-o" font-family="Geist, Inter, sans-serif" font-weight="700" font-size="134" letter-spacing="-3" fill="url(#e-wm)" x="${WM_X + WM_XH + 6 + WM_EO_W / 2}" y="${WM_BASE}">o</text>
+        <text id="e-tag" x="${WM_RIGHT}" y="${WM_BASE + 34}" text-anchor="end" font-family="Geist, Inter, sans-serif" font-weight="500" font-size="22" fill="${INK}">by Reonic</text>
+      </g>`;
+    const $ = (id) => document.getElementById(id);
+    const el = { ic: $("e-ic"), armL: $("e-armL"), armR: $("e-armR"), eyes: [$("e-eye0"), $("e-eye1")], wmk: $("e-wmk"), rp: $("e-rp"), e: $("e-e"), o: $("e-o"), tag: $("e-tag") };
+
+    const blinkAt = (idle) => { if (idle < 600) return 1; const q = ((idle - 600) % 3400) / 170; return q < 1 ? 1 - 0.92 * Math.sin(Math.PI * q) : 1; };
+    const WAVE = [15.0, 16.0], WINK = 17.45;
+    function render(local) {
+      // floating: a slow hover, a small tilt that follows it
+      const bob = 5 * Math.sin((local * 2 * Math.PI) / 3.2);
+      const mix = inOutCubic(seg(local, [14.9, 15.4]));
+      const x = lerp(END_X, LOCK_X, mix);
+      el.ic.setAttribute("transform", `translate(${x} ${CY + bob}) scale(${END_S})`);
+
+      const pw = seg(local, WAVE);
+      const wave = pw > 0 && pw < 1 ? 22 * Math.sin(pw * Math.PI * 4) * (1 - pw * 0.6) : 0;
+      el.armR.setAttribute("transform", `rotate(${wave} ${RIGHT_ARM[0]} ${RIGHT_ARM[1]})`);
+
+      // the wink: the left eye closes quickly, holds, opens; reo's blinks stay out of its way
+      const wt = local - WINK;
+      const closed = wt < 0 ? 0 : wt < 0.12 ? wt / 0.12 : wt < 0.4 ? 1 : wt < 0.6 ? 1 - (wt - 0.4) / 0.2 : 0;
+      const blink = local > 16.8 && local < 18.6 ? 1 : blinkAt(local * 1000 - 1500);
+      el.eyes[0].setAttribute("transform", `translate(${-EYE_X} ${EYE_Y}) scale(1 ${Math.max(0.06, Math.min(blink, 1 - closed * 0.94))})`);
+      el.eyes[1].setAttribute("transform", `translate(${EYE_X} ${EYE_Y}) scale(1 ${Math.max(0.06, blink)})`);
+
+      // wordmark lockup builds beside him
+      const pR = seg(local, [15.15, 15.55]), rScale = pR === 0 ? 0 : outBack(pR, 2);
+      const rise = (span) => { const p = seg(local, span); return { opacity: clamp(p * 2), dy: 16 * (1 - outBack(p, 2)) }; };
+      const pE = rise([15.3, 15.65]), pO = rise([15.4, 15.75]);
+      el.wmk.setAttribute("display", pR > 0 ? "inline" : "none");
+      el.rp.setAttribute("transform", `translate(${WM_X} ${WM_BASE}) scale(${rScale}) translate(${-WM_X} ${-WM_BASE})`);
+      el.e.setAttribute("y", WM_BASE + pE.dy); el.e.setAttribute("opacity", pE.opacity);
+      el.o.setAttribute("y", WM_BASE + pO.dy); el.o.setAttribute("opacity", pO.opacity);
+      el.tag.setAttribute("opacity", inOutCubic(seg(local, [15.65, 16.05])));
+
+      // the figure counts up
+      $("e-num").textContent = "+$" + (0.7 * inOutCubic(seg(local, [9.7, 10.8]))).toFixed(1) + "M";
+    }
+
+    /* ---------------- the tools ---------------- */
+    const G = {
+      engine: '<svg viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="14" fill="#1b1d20"/><g stroke="#ff6b7a" stroke-width="3" stroke-linecap="round"><path d="M20 24 L32 18 L44 26 M20 24 L24 40 L40 42 L44 26 M32 18 L32 32 M32 32 L24 40 M32 32 L40 42 M32 32 L20 24 M32 32 L44 26"/></g><g fill="#fff"><circle cx="20" cy="24" r="3.6"/><circle cx="32" cy="18" r="3.6"/><circle cx="44" cy="26" r="3.6"/><circle cx="24" cy="40" r="3.6"/><circle cx="40" cy="42" r="3.6"/></g><circle cx="32" cy="32" r="4.8" fill="#ff9a3c"/></svg>',
+      calendar: '<svg viewBox="0 0 64 64"><rect x="8" y="12" width="48" height="44" rx="8" fill="#fff" stroke="#d4d4d8" stroke-width="2"/><path d="M8 20a8 8 0 0 1 8-8h32a8 8 0 0 1 8 8v6H8z" fill="#ef4444"/><g fill="#52525b"><circle cx="20" cy="36" r="3"/><circle cx="32" cy="36" r="3"/><circle cx="44" cy="36" r="3"/><circle cx="20" cy="47" r="3"/><circle cx="32" cy="47" r="3.6" fill="#0f9f7a"/></g><rect x="18" y="6" width="4" height="11" rx="2" fill="#52525b"/><rect x="42" y="6" width="4" height="11" rx="2" fill="#52525b"/></svg>',
+      crm: '<svg viewBox="0 0 64 64"><g stroke="#3b82f6" stroke-width="3.5"><path d="M32 18 L16 44 M32 18 L48 44 M16 44 L48 44"/></g><circle cx="32" cy="18" r="9" fill="#3b82f6"/><circle cx="16" cy="44" r="9" fill="#60a5fa"/><circle cx="48" cy="44" r="9" fill="#93c5fd"/></svg>',
+      roof: '<svg viewBox="0 0 64 64"><rect x="6" y="8" width="52" height="48" rx="10" fill="#4b5d44"/><path d="M14 40 L24 16 L50 22 L42 46 Z" fill="#d8dcd7"/><g fill="#1e3a8a"><rect x="22" y="30" width="7" height="5" transform="rotate(-20 25 32)"/><rect x="30" y="31" width="7" height="5" transform="rotate(-20 33 33)"/><rect x="26" y="37" width="7" height="5" transform="rotate(-20 29 39)"/><rect x="34" y="38" width="7" height="5" transform="rotate(-20 37 40)"/></g></svg>',
+      whatsapp: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="26" fill="#25d366"/><path d="M32 14a18 18 0 1 0 0 36 18 18 0 0 0 9-2.4l8 2.4-2.4-7.8A18 18 0 0 0 32 14z" fill="none" stroke="#fff" stroke-width="3"/><path d="M25 24q-2 4 3 10q6 6 10 4l1.5-2.5-4-2.5-2 1.5q-3-1.5-4.5-4.5l1.5-2-2.5-4z" fill="#fff"/></svg>',
+      email: '<svg viewBox="0 0 64 64"><rect x="8" y="16" width="48" height="34" rx="6" fill="#fff" stroke="#a1a1aa" stroke-width="2.5"/><path d="M10 20 L32 36 L54 20" fill="none" stroke="#a1a1aa" stroke-width="2.5"/></svg>',
+      docs: '<svg viewBox="0 0 64 64"><path d="M16 8H38L50 20V56H16Z" fill="#fff" stroke="#a1a1aa" stroke-width="2.5"/><path d="M38 8V20H50" fill="none" stroke="#a1a1aa" stroke-width="2.5"/><g stroke="#a1a1aa" stroke-width="3" stroke-linecap="round"><path d="M22 30H44M22 38H44M22 46H36"/></g></svg>',
+      prices: '<svg viewBox="0 0 64 64"><path d="M10 32L32 10H54V32L32 54Z" fill="#fff" stroke="#a1a1aa" stroke-width="2.5" stroke-linejoin="round"/><circle cx="44" cy="20" r="3" fill="#a1a1aa"/><text x="31" y="38" font-size="20" font-weight="700" fill="#71717a" text-anchor="middle" font-family="Geist, sans-serif">€</text></svg>',
+    };
+    // centre of reo is (960, 540); an ellipse of tools around him (what the audience saw is solid, the vision is dashed)
+    const CX = 960, CYY = 520, RX = 720, RY = 330;
+    const ang = (deg) => [CX + RX * Math.cos((deg * Math.PI) / 180), CYY + RY * Math.sin((deg * Math.PI) / 180)];
+    const TOOLS = [
+      { id: "engine", label: "Engine", at: 2.9, deg: -90, glyph: G.engine, solid: true },
+      { id: "roof", label: "Roof photo", at: 3.5, deg: 35, glyph: G.roof, solid: true },
+      { id: "calendar", label: "Calendar", at: 4.35, deg: -40, glyph: G.calendar, solid: true },
+      { id: "crm", label: "CRM", at: 5.05, deg: 0, glyph: G.crm, solid: true },
+      { id: "whatsapp", label: "WhatsApp", at: 5.7, deg: 90, glyph: G.whatsapp, solid: false },
+      { id: "email", label: "Email", at: 6.5, deg: 145, glyph: G.email, solid: false },
+      { id: "docs", label: "Documents", at: 6.85, deg: 180, glyph: G.docs, solid: false },
+      { id: "prices", label: "Price lists", at: 7.2, deg: -140, glyph: G.prices, solid: false },
+    ];
+    const tilesEl = $("e-tiles"), linesEl = $("e-lines");
+    TOOLS.forEach((t) => {
+      const [x, y] = ang(t.deg);
+      t.x = x; t.y = y;
+      const d = document.createElement("div");
+      d.className = "e-tile abs" + (t.solid ? "" : " next");
+      d.id = "e-t-" + t.id;
+      d.style.left = x - 116 + "px"; d.style.top = y - 88 + "px";
+      d.innerHTML = t.glyph + `<span class="l">${t.label}</span>` + (t.solid ? "" : '<span class="pill">next</span>');
+      tilesEl.appendChild(d);
+      const len = Math.hypot(x - CX, y - 540);
+      const ln = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      ln.setAttribute("x1", CX); ln.setAttribute("y1", 540); ln.setAttribute("x2", x); ln.setAttribute("y2", y);
+      ln.setAttribute("stroke", t.solid ? "#1b1d20" : "#a1a1aa"); ln.setAttribute("stroke-width", t.solid ? 3 : 2.5);
+      ln.setAttribute("stroke-linecap", "round");
+      if (!t.solid) { ln.setAttribute("stroke-dasharray", "2 9"); }
+      else ln.setAttribute("stroke-dasharray", len);
+      ln.setAttribute("stroke-dashoffset", t.solid ? len : 0);
+      ln.setAttribute("opacity", t.solid ? 1 : 0);
+      ln.id = "e-l-" + t.id; ln.dataset.len = len;
+      linesEl.appendChild(ln);
+    });
+
+    /* ---------------- timeline (local seconds; film = 100.6 + local) ---------------- */
+    const tl = gsap.timeline({ paused: true });
+    const drv = { v: 0 };
+    tl.to(drv, { v: 1, duration: 19.4, ease: "none", onUpdate: function () { render(this.time()); } }, 0);
+    render(0);
+
+    // reo arrives where the planner window folded away, then floats
+    tl.fromTo("#e-reo", { opacity: 1, scale: 0.01, x: 0, y: 0 }, { opacity: 1, scale: 0.78, duration: 0.8, ease: "back.out(1.8)" }, 0.15);
+
+    TOOLS.forEach((t) => {
+      tl.fromTo("#e-t-" + t.id, { opacity: 0, scale: 0.6, y: 24 }, { opacity: 1, scale: 1, y: 0, duration: 0.5, ease: "back.out(1.7)" }, t.at);
+      if (t.solid) tl.fromTo("#e-l-" + t.id, { strokeDashoffset: Number(document.getElementById("e-l-" + t.id).dataset.len) }, { strokeDashoffset: 0, duration: 0.45, ease: "power2.out" }, t.at + 0.1);
+      else tl.fromTo("#e-l-" + t.id, { opacity: 0 }, { opacity: 1, duration: 0.4 }, t.at + 0.15);
+    });
+    tl.fromTo("#e-vision", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 6.45);
+    // everything falls away toward reo (8.3-8.8)
+    tl.to([".e-tile"], { opacity: 0, scale: 0.7, duration: 0.45, ease: "power2.in", stagger: 0.03 }, 8.3);
+    tl.to("#e-lines", { opacity: 0, duration: 0.4 }, 8.3);
+    tl.to("#e-vision", { opacity: 0, duration: 0.3 }, 8.3);
+
+    // scene 8
+    tl.to("#e-reo", { x: -560, y: 0, scale: 0.5, duration: 0.75, ease: "power3.inOut" }, 8.8);
+    tl.fromTo("#e-fig", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 9.3);
+    tl.fromTo("#e-method", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 10.9);
+    tl.fromTo("#e-src", { opacity: 0 }, { opacity: 1, duration: 0.5 }, 11.4);
+    tl.to(["#e-fig", "#e-src"], { opacity: 0, y: -10, duration: 0.45, ease: "power2.in" }, 14.35);
+
+    // scene 9
+    tl.to("#e-reo", { x: 0, y: -50, scale: 0.95, duration: 0.7, ease: "power3.inOut" }, 14.75);
+    tl.fromTo("#e-thanks", { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.6, ease: "power3.out" }, 15.5);
+
+    window.__timelines["ending"] = tl;
+  </script>
+</template>
