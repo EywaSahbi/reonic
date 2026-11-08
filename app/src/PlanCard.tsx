@@ -79,6 +79,7 @@ export function PlanCard({ plan, onHandoff, onToggleHeatpump, onExplain }: { pla
         )}
       </div>
 
+      {onExplain && <p className="explain-hint">Tap any number to see why.</p>}
       <dl className="econ">
         <div><dt>Savings / yr</dt><dd>{tap("savings", "these savings", eur(d.economics.annual_savings_eur))}</dd></div>
         <div><dt>Payback</dt><dd>{tap("payback", "this payback", d.economics.payback_years !== null ? `~${Math.round(d.economics.payback_years)} yrs` : "none")}</dd></div>

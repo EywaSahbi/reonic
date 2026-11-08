@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
 import type { Design, Plan } from "../types";
@@ -56,6 +56,29 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
   const g = useRef<THREE.Group>(null);
   const target = useMemo(() => new THREE.Vector3(...to), [to[0], to[1], to[2]]); // eslint-disable-line react-hooks/exhaustive-deps
   const [moving, setMoving] = useState(false);
+  const bubble = useRef<HTMLDivElement>(null);
+  const fit = useRef({ dx: 0, below: false });
+  const { gl } = useThree();
+  // Keep the bubble inside the 3D window: measure it against the canvas each frame, slide it sideways (the arrow keeps
+  // pointing at the advisor), flip it below the advisor when there is no room above, and cap it to the window.
+  useFrame(() => {
+    const b = bubble.current; if (!b) return;
+    const st = gl.domElement.getBoundingClientRect(), r = b.getBoundingClientRect(), pad = 10, f = fit.current;
+    b.style.maxWidth = `${Math.max(160, Math.min(300, st.width - 2 * pad))}px`;
+    const left = r.left - f.dx, right = r.right - f.dx;            // where it would be without our shift
+    let dx = 0;
+    if (left < st.left + pad) dx = st.left + pad - left;
+    else if (right > st.right - pad) dx = st.right - pad - right;
+    // pick the side of the advisor with room; cap the bubble's height to that space (it scrolls inside if needed)
+    const head = f.below ? r.top - 6 : r.bottom + 6;
+    const roomUp = head - st.top - pad - 12, roomDown = st.bottom - head - pad - 70;   // keep the advisor visible below
+    const inner = b.firstElementChild as HTMLElement | null;
+    const needed = (inner?.scrollHeight ?? r.height) + 26;           // natural height, so the choice never flip-flops
+    const below = needed > roomUp && roomDown > roomUp;
+    if (inner) inner.style.maxHeight = `${Math.max(60, (below ? roomDown : roomUp) - 24)}px`;
+    if (Math.abs(dx - f.dx) > 0.5) { f.dx = dx; b.style.setProperty("--dx", `${dx.toFixed(1)}px`); }
+    if (below !== f.below) { f.below = below; b.classList.toggle("is-below", below); }
+  });
   useFrame((_, dt) => {
     const o = g.current; if (!o) return;
     const d = o.position.distanceTo(target);
@@ -65,12 +88,14 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
   return (
     <group ref={g} position={to}>
       <Html zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
-        <div className={`guide ${moving ? "is-moving" : ""} ${side ? "is-side" : ""}`}>
+        <div className={`guide ${moving ? "is-moving" : ""}`}>
           {say && (
-            <div className={`guide-bubble ${hush ? "is-hidden" : busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
-              <p>{say.text}</p>
-              {say.lines && say.lines.length > 0 && <ul>{say.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
-              {say.more && onMore && <button type="button" className="guide-more" onClick={() => onMore(say.more!)}>Ask more ›</button>}
+            <div ref={bubble} className={`guide-bubble ${fit.current.below ? "is-below" : ""} ${hush ? "is-hidden" : busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
+              <div className="guide-bubble-in">
+                <p>{say.text}</p>
+                {say.lines && say.lines.length > 0 && <ul>{say.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
+                {say.more && onMore && <button type="button" className="guide-more" onClick={() => onMore(say.more!)}>Ask more ›</button>}
+              </div>
             </div>
           )}
           {busy && !say && <div className="guide-bubble guide-dots" aria-hidden><span /><span /><span /></div>}

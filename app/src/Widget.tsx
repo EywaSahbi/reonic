@@ -98,7 +98,17 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
 
   const id = plan?.id;
   const facts = (f: Partial<HomeFacts>, skip?: string[]) => id && ask && run(() => api.sendFacts(id, f, skip), ask, kindOf(ask, f, skip));
-  const onExplain = (topic: Topic) => plan && setSay(explain(topic, plan.design));
+  const stageRef = useRef<HTMLDivElement>(null);
+  // Tapping a number: the advisor answers in the scene, so bring the scene into view first.
+  const onExplain = (topic: Topic) => {
+    if (!plan) return;
+    // scroll the element that actually scrolls (desktop: the results grid, phones: the widget body)
+    const el = stageRef.current;
+    let sc = el?.parentElement ?? null;
+    while (sc && !(/(auto|scroll)/.test(getComputedStyle(sc).overflowY) && sc.scrollHeight > sc.clientHeight + 1)) sc = sc.parentElement;
+    if (el && sc) sc.scrollTo({ top: sc.scrollTop + el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 8, behavior: "smooth" });
+    setSay(explain(topic, plan.design));
+  };
   const askMore = (q: string) => setChatAsk((c) => ({ text: q, n: (c?.n ?? 0) + 1 }));
   const goBack = () => {
     const prev = back.at(-1);
@@ -169,11 +179,10 @@ export function Widget({ onClose, variant }: { onClose: () => void; variant?: "s
         {/* One flow container for steps and results: the 3D stage is always its first child, so it stays mounted
             (no reload, no flash) from the first question to the final plan. */}
         <div className={`flow ${results ? "results is-results" : "live-split is-steps"}`}>
-          <div className="flow-stage">
+          <div className="flow-stage" ref={stageRef}>
             <Suspense fallback={<div className="live-stage" />}>
               <LiveStage plan={plan} say={say} trace={trace} busy={busy} tall={results} onMore={results ? askMore : undefined} />
             </Suspense>
-            {results && !busy && <p className="explain-hint">Tap any number to see why.</p>}
           </div>
           {results && plan ? (
             <>
