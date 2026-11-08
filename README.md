@@ -186,5 +186,3 @@ cd app    && npm run build
 cd engine && uv run python predict.py --split test
 cd ../data && uv run python score.py ../engine/out/predictions_test.csv --split test
 ```
-
-The [five-minute demo script](pitch/demo-script.md) lists the exact inputs.
