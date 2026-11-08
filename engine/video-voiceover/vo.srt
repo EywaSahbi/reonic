@@ -1,25 +1,25 @@
 1
-00:00:01,000 --> 00:00:02,800
+00:00:01,000 --> 00:00:02,393
 A homeowner wants solar.
 
 2
-00:00:02,800 --> 00:00:05,800
+00:00:02,800 --> 00:00:04,936
 All they know is one number from their bill.
 
 3
-00:00:06,400 --> 00:00:07,422
+00:00:06,400 --> 00:00:07,561
 They fill in a form,
 
 4
-00:00:08,400 --> 00:00:10,400
+00:00:08,400 --> 00:00:09,468
 and then they wait.
 
 5
-00:00:12,300 --> 00:00:16,898
+00:00:12,300 --> 00:00:16,340
 On the other side, an installer gets another lead that starts from zero.
 
 6
-00:00:17,900 --> 00:00:21,801
+00:00:17,900 --> 00:00:21,383
 A planner will spend hours turning it into a design and a price.
 
 7
@@ -27,13 +27,13 @@ A planner will spend hours turning it into a design and a price.
 Reonic already connects installers and their customers.
 
 8
-00:00:28,300 --> 00:00:30,600
+00:00:28,300 --> 00:00:30,343
 We wanted to go… further.
 
 9
-00:00:34,450 --> 00:00:35,518
+00:00:34,450 --> 00:00:35,193
 Meet reo.
 
 10
-00:00:38,400 --> 00:00:42,998
+00:00:38,400 --> 00:00:43,137
 An agentic companion, dropped onto the installer's website, doing the work in between.
