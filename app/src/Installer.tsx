@@ -38,6 +38,21 @@ export function Installer() {
 function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
   const [plans, setPlans] = useState<PlanSummary[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  async function remove(p: PlanSummary) {
+    if (!window.confirm(`Delete the plan for ${p.customer.name ?? "this customer"}? This can't be undone.`)) return;
+    setDeleting(p.id);
+    try {
+      await api.deletePlan(p.id);
+      setPlans((ps) => ps.filter((x) => x.id !== p.id));
+      setSelected((s) => (s === p.id ? null : s));
+    } catch (e) {
+      window.alert(`Could not delete the plan: ${errText(e)}`);
+    } finally {
+      setDeleting(null);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -73,6 +88,8 @@ function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
                   <span className={`pill pill-${p.status}`}>{p.status === "quoted" ? "quoted" : "new"}</span>
                   <span className="inbox-meta">{p.total_eur > 0 ? eur(p.total_eur) : "no price yet"} · {when(p.updated_at)}</span>
                 </button>
+                <button className="inbox-delete" onClick={() => remove(p)} disabled={deleting === p.id}
+                  aria-label={`Delete plan for ${p.customer.name ?? "unnamed customer"}`} title="Delete plan">×</button>
               </li>
             ))}
           </ul>

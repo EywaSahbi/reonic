@@ -396,6 +396,17 @@ export const mockApi: Api = {
     return delay(save(plan));
   },
 
+  async deletePlan(id) {
+    const all = load();
+    delete all[id];
+    try {
+      localStorage.setItem(KEY, JSON.stringify(all));
+    } catch {
+      /* storage blocked: nothing persisted to remove */
+    }
+    return delay({ deleted: id });
+  },
+
   async rejectAction(id, actionId) {
     const plan = advancePrep(get(id));
     const a = plan.offer_pack?.actions.find((x) => x.id === actionId);

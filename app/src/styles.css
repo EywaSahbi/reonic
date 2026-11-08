@@ -224,6 +224,10 @@ h1, h2, h3 { color: var(--ink); }
 .inbox h2 { font-weight: 600; font-size: 16px; margin: 0 8px 12px; }
 .inbox ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .inbox .muted { margin: 0 8px; font-size: 14px; }
+.inbox li { display: flex; align-items: flex-start; gap: 2px; }
+.inbox-delete { flex: none; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); width: 28px; height: 28px; margin-top: 6px; color: var(--ink-500); font-size: 18px; line-height: 1; cursor: pointer; }
+.inbox-delete:hover { color: var(--ink-950); background: var(--paper-sand); border-color: var(--line); }
+.inbox-delete:disabled { opacity: 0.4; cursor: default; }
 .inbox-item { width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); padding: 10px 12px; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; color: var(--ink-950); }
 .inbox-item:hover { background: var(--paper-sand); }
 .inbox-item.active { background: var(--paper-sand); border-color: var(--line-strong); }

@@ -34,7 +34,7 @@ export async function verifyDemoAccess(): Promise<void> {
   if (!USING_MOCK) await call("GET", "/demo/access");
 }
 
-async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
+async function call<T>(method: "GET" | "POST" | "DELETE", path: string, body?: unknown): Promise<T> {
   const res = await fetch(BASE.replace(/\/$/, "") + path, {
     method,
     headers: requestHeaders(path, body !== undefined),
@@ -56,6 +56,7 @@ export type Api = {
   getSession(id: string): Promise<Plan>;
   listPlans(status?: Plan["status"]): Promise<PlanSummary[]>;
   getPlan(id: string): Promise<Plan>;
+  deletePlan(id: string): Promise<{ deleted: string }>;
   editPlan(id: string, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }): Promise<Plan>;
   askPlan(id: string, text: string): Promise<{ answer: string; run_id?: string }>;
   finalizePlan(id: string, note?: string): Promise<Plan>;
@@ -99,6 +100,7 @@ const httpApi: Api = {
   preparePlan: (id) => call("POST", `/plans/${id}/prepare`, {}),
   chooseVariant: (id, name) => call("POST", `/plans/${id}/variant`, { name }),
   approveAction: (id, actionId, payload) => call("POST", `/plans/${id}/actions/${actionId}/approve`, payload ? { payload } : {}),
+  deletePlan: (id) => call("DELETE", `/plans/${id}`),
   rejectAction: (id, actionId, reason) => call("POST", `/plans/${id}/actions/${actionId}/reject`, reason ? { reason } : {}),
   getRun: (runId) => call("GET", `/runs/${runId}`),
   watchRun(runId, onStep, onDone) {

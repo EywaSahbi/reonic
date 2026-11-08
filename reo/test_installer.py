@@ -132,3 +132,13 @@ def test_engine_down_quote_not_sent(tmp_path, monkeypatch):
     assert r.status_code == 503
     p = c.get(f"/plans/{pid}").json()
     assert p["status"] == "handed_over" and _quote(p)["status"] == "proposed"
+
+
+def test_delete_plan(tmp_path, monkeypatch):
+    c, pid, p = setup(tmp_path, monkeypatch)
+    rid = p["offer_pack"]["run_id"]
+    assert c.delete(f"/plans/{pid}").json() == {"deleted": pid}
+    assert pid not in [x["id"] for x in c.get("/plans").json()]
+    assert c.get(f"/plans/{pid}").status_code == 404 and c.get(f"/sessions/{pid}").status_code == 404
+    assert c.get(f"/runs/{rid}").status_code == 404
+    assert c.delete(f"/plans/{pid}").status_code == 404

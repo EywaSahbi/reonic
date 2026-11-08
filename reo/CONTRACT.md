@@ -66,6 +66,7 @@ Behaviour notes (v1):
 |---|---|---|---|
 | GET | `/plans?status=handed_over` | → `{id, customer, total_eur, status, updated_at}[]` | done |
 | GET | `/plans/{id}` | → `Plan` | done |
+| DELETE | `/plans/{id}` | → `{deleted: id}` (plan, its state and runs removed; 404 if unknown; booked slots stay) | done |
 | POST | `/plans/{id}/edit` | `{locks?, facts?, prices?}` → `Plan` (engine re-run, edit recorded; 503 if engine down) | done |
 | POST | `/plans/{id}/ask` | `{text}` → `{answer: string}` ("why a 10 kWh battery?") | done (benchmarks M2) |
 | POST | `/plans/{id}/finalize` | `{note?}` → `Plan` (status `quoted`) | done |

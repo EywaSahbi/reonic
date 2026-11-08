@@ -565,6 +565,23 @@ def get_plan(pid: str):
     return out(_get(_read(), pid)[0], installer=True)
 
 
+@app.delete("/plans/{pid}")
+def delete_plan(pid: str):
+    """Planner removes an inbox entry: the plan, its state and its runs. A running offer prep finds no plan and
+    drops its result (_finish_offer). Booked calendar slots stay booked."""
+    with _lock:
+        db = _load()
+        _get(db, pid)
+        del db["plans"][pid]
+        db["state"].pop(pid, None)
+        for rid in [r for r, run in db.get("runs", {}).items() if run["plan_id"] == pid]:
+            del db["runs"][rid]
+            RUNS.pop(rid, None)
+        _save(db)
+    demo_guard.release_session(pid)
+    return {"deleted": pid}
+
+
 @app.post("/plans/{pid}/edit")
 def edit_plan(pid: str, body: Edit):
     with _lock:
