@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { App } from "./App";
+import { DemoGate } from "./DemoGate";
 import { Installer } from "./Installer";
 import { ReoIntroPreview } from "./ReoIntroPreview";
 import "./styles.css";
@@ -19,6 +20,6 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Root />
+    <DemoGate><Root /></DemoGate>
   </React.StrictMode>,
 );

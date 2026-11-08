@@ -14,3 +14,17 @@ export function installerUnauthorized(): void {
 export function isInstallerPath(path: string): boolean {
   return /^\/(plans|runs)(\/|\?|$)/.test(path) || path === "/calendar/slots" || path === "/prices";
 }
+
+const DEMO_KEY = "reo-demo-pin";
+let memoryPin = "";
+export function getDemoPin(): string {
+  try { return sessionStorage.getItem(DEMO_KEY) ?? memoryPin; } catch { return memoryPin; }
+}
+export function setDemoPin(pin: string): void {
+  memoryPin = pin.trim();
+  try { if (memoryPin) sessionStorage.setItem(DEMO_KEY, memoryPin); else sessionStorage.removeItem(DEMO_KEY); } catch { /* tab-only fallback */ }
+}
+export function demoUnauthorized(): void {
+  setDemoPin("");
+  window.dispatchEvent(new Event("reo-demo-unauthorized"));
+}

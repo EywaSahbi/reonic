@@ -103,7 +103,7 @@ export type VoiceTurn = Turn & { heard: string; audio: string | null };
 export type PlanSummary = Pick<Plan, "id" | "customer" | "status" | "updated_at"> & { total_eur: number };
 export type GoalResult = { goal: "budget" | "independence" | "lowest_bill"; budget_eur?: number; recommendation: Variant; alternatives: Variant[]; trace: TraceStep[] };
 
-export type Health = { ok: boolean; llm: boolean; voice: boolean; engine: boolean };
+export type Health = { demo_auth_required?: boolean; ok: boolean; llm: boolean; voice: boolean; engine: boolean };
 
 /** reo marks designs made while the engine was unreachable: no numbers, never show as a real design. */
 export const isOffline = (d: Design) => d.params_version === "engine-offline";

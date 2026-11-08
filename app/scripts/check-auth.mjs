@@ -10,7 +10,7 @@ const authUrl = moduleUrl(compile('../src/auth.ts'));
 const auth = await import(authUrl);
 const apiSource = compile('../src/api.ts').replace('import { mockApi } from "./mock";', 'const mockApi = undefined;')
   .replace('"./auth"',JSON.stringify(authUrl)).replaceAll('import.meta.env','({VITE_API_URL:"https://test.ngrok-free.app"})');
-const {api} = await import(moduleUrl(apiSource));
+const {api, verifyDemoAccess} = await import(moduleUrl(apiSource));
 let lastRequest;
 globalThis.fetch = async (url,options) => {lastRequest={url,options};return new Response('[]',{headers:{'Content-Type':'application/json'}});};
 auth.setInstallerToken('test-token');
@@ -39,3 +39,20 @@ await assert.rejects(api.listPlans());
 assert.equal(auth.getInstallerToken(),'');
 assert(unauthorized);
 console.log('PASS: scoped Bearer headers, ngrok header, chunked authenticated SSE and 401 token clearing');
+
+// The public demo gate is separate from installer authorization.
+auth.setDemoPin('test-pin');
+globalThis.fetch = async (url,options) => {lastRequest={url,options};return new Response('{}');};
+await verifyDemoAccess();
+assert(lastRequest.url.endsWith('/demo/access'));
+assert.equal(lastRequest.options.headers['X-Demo-Pin'],'test-pin');
+assert.equal(lastRequest.options.headers.Authorization,undefined);
+globalThis.fetch = async () => new Response('', {status:429, headers:{'Retry-After':'12'}});
+await assert.rejects(api.startSession(), /try again in 12 seconds/);
+let demoDenied=false;
+window.addEventListener('reo-demo-unauthorized',()=>{demoDenied=true;});
+globalThis.fetch = async () => new Response('{"error":"demo PIN required"}',{status:401});
+await assert.rejects(verifyDemoAccess());
+assert.equal(auth.getDemoPin(),'');
+assert(demoDenied);
+console.log('PASS: demo PIN header, independent gate relock, and capacity retry message');

@@ -1,17 +1,37 @@
 // One client for reo/CONTRACT.md. VITE_API_URL empty or "mock" -> in-browser mock; otherwise HTTP to reo.
 import type { Run, RunStep, VariantName, Health, HomeFacts, Locks, Plan, PlanSummary, PriceList, Turn, VoiceTurn } from "./types";
 import { mockApi } from "./mock";
-import { getInstallerToken, installerUnauthorized, isInstallerPath } from "./auth";
+import { getInstallerToken, installerUnauthorized, isInstallerPath, getDemoPin, demoUnauthorized } from "./auth";
 
 const BASE = (import.meta.env.VITE_API_URL as string | undefined)?.trim() ?? "";
 export const USING_MOCK = BASE === "" || BASE === "mock";
 
 function requestHeaders(path: string, json = false): Record<string, string> {
   const headers: Record<string, string> = json ? { "Content-Type": "application/json" } : {};
+  const pin = getDemoPin();
+  if (pin) headers["X-Demo-Pin"] = pin;
   const token = getInstallerToken();
   if (isInstallerPath(path) && token) headers.Authorization = `Bearer ${token}`;
   if (/\.ngrok(-free)?\.(app|dev)$/.test(new URL(BASE || "http://localhost").hostname)) headers["ngrok-skip-browser-warning"] = "1";
   return headers;
+}
+
+async function responseError(res: Response): Promise<Error> {
+  const detail = await res.text();
+  if (res.status === 401) {
+    if (/demo[ _-]*(pin|access)|demo.*pin/i.test(detail)) demoUnauthorized();
+    else installerUnauthorized();
+  }
+  if (res.status === 429) {
+    const seconds = Number(res.headers.get("Retry-After"));
+    return new Error(seconds > 0 ? `The demo is busy. Please try again in ${Math.ceil(seconds)} seconds.` : "The demo is busy. Please try again shortly.");
+  }
+  if (res.status === 413) return new Error("This file is too large. Please use a smaller bill photo.");
+  return new Error(res.status === 401 ? "The access code was not accepted." : `Request failed (${res.status}). Please try again.`);
+}
+
+export async function verifyDemoAccess(): Promise<void> {
+  if (!USING_MOCK) await call("GET", "/demo/access");
 }
 
 async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Promise<T> {
@@ -20,8 +40,7 @@ async function call<T>(method: "GET" | "POST", path: string, body?: unknown): Pr
     headers: requestHeaders(path, body !== undefined),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  if (res.status === 401 && isInstallerPath(path)) installerUnauthorized();
-  if (!res.ok) throw new Error(`${method} ${path} → ${res.status} ${await res.text()}`);
+  if (!res.ok) throw await responseError(res);
   return res.json() as Promise<T>;
 }
 
@@ -56,7 +75,7 @@ const httpApi: Api = {
     const form = new FormData();
     form.append("audio", audio, audio.type.includes("mp4") ? "speech.mp4" : "speech.webm");
     const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/voice`, { method: "POST", headers: requestHeaders(`/sessions/${id}`), body: form });
-    if (!res.ok) throw new Error(`POST /sessions/${id}/voice → ${res.status} ${await res.text()}`);
+    if (!res.ok) throw await responseError(res);
     return res.json() as Promise<VoiceTurn>;
   },
   startSession: () => call("POST", "/sessions", {}),
@@ -66,7 +85,7 @@ const httpApi: Api = {
     const form = new FormData();
     form.append("image", image);
     const res = await fetch(BASE.replace(/\/$/, "") + `/sessions/${id}/bill`, { method: "POST", headers: requestHeaders(`/sessions/${id}`), body: form });
-    if (!res.ok) throw new Error(`POST /sessions/${id}/bill → ${res.status} ${await res.text()}`);
+    if (!res.ok) throw await responseError(res);
     return res.json() as Promise<Turn>;
   },
   sendAddress: (id, address) => call("POST", `/sessions/${id}/address`, { address }),
@@ -88,8 +107,8 @@ const httpApi: Api = {
     // fetch supports Bearer authentication without placing the planner secret in a URL or access log.
     void (async () => {
       const res = await fetch(BASE.replace(/\/$/, "") + path, { headers: requestHeaders(path), signal: controller.signal });
-      if (res.status === 401) { installerUnauthorized(); return; }
-      if (!res.ok || !res.body) return;
+      if (!res.ok) { await responseError(res); return; }
+      if (!res.body) return;
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let pending = "";
