@@ -75,10 +75,11 @@ export function OfferPackPanel({ plan, onPlan, onDesignChange }: {
 
       {pack.status === "ready" && (
         <>
-          {/* one quotation (reo prepares only the engine's design): no 'pick' badge, nothing to choose between */}
-          <div className={`op-variants ${pack.variants.length === 1 ? "is-single" : ""}`}>
-            {pack.variants.map((v) => (
-              <VariantCard key={v.name} v={v} single={pack.variants.length === 1} recommended={pack.recommended === v.name} chosen={pack.chosen === v.name}
+          {/* one quotation: reo prepares only the engine's design; packs prepared earlier with three variants show
+              just the chosen or recommended one (EywaSahbi) */}
+          <div className="op-variants is-single">
+            {pack.variants.filter((v) => v.name === (pack.chosen ?? pack.recommended)).slice(0, 1).map((v) => (
+              <VariantCard key={v.name} v={v} single recommended={pack.recommended === v.name} chosen={pack.chosen === v.name}
                 disabled={!!busy || quoted} busy={busy === `variant-${v.name}`}
                 onChoose={() => act(`variant-${v.name}`, () => api.chooseVariant(plan.id, v.name as VariantName), true)} />
             ))}
