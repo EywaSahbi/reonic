@@ -56,9 +56,8 @@ Before rehearsal: run the flow once and write the actual kWp, price range and he
 | Open the new **Anna Demo** plan in the inbox | Summary from reo, flags vs similar real homes, design with reasons and confidence | "The planner sees why each decision was made and where it differs from what experts built for similar homes." |
 | Watch the **Offer pack** timeline | Steps stream in: reads the plan, compares with ~1,100 similar homes, three engine designs, calendar, ✓ *numbers verified*; ready in ~15 s | "That's reo's agent running on our harness: deterministic tools only, and a code guard checks every number against an engine result." |
 | Point at the **Quotation** card | One offer = the engine's design: price, own power, payback | |
-| Scroll to **Design studio**, pick **Erase**, click 2 modules off the roof, **Apply to plan** | 3D house updates; re-derive banner shows PV kWp and total change, highlighted | "The planner stays in control: drag, drop, and the engine re-derives every number." |
-| Edit one sentence in the **Message to the customer** | | |
-| **Approve** "site visit" (pick a slot), **Reject** the CRM task, **Approve** "send quote" | Each step done / rejected; plan status *Quote sent* | "Nothing customer-facing happens without the planner's approval." |
+| Scroll to **Design studio**, click 2 modules off the roof (or drag a heat pump onto the lot), **Apply to plan** | 3D house updates; re-derive banner shows PV kWp and total change, highlighted | "The planner stays in control: drag, drop, and the engine re-derives every number." |
+| Add a short note, click **Finalise and send quote** | Plan status *Quote sent*; customer site shows the confirmed price | "Nothing reaches the customer until the planner sends it." |
 
 ### 3:40 — Customer sees the quote (window A)
 

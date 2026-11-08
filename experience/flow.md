@@ -37,14 +37,13 @@ Follow the approved order, without re-asking known or skipped facts:
 
 | Step | Field | Ask / fallback |
 |---|---|---|
-| Location | address via roof_area_sqm ask | address input; estimate sunny roof area; Enter width × length / Skip |
-| Address skipped | region | choice of 16 federal-state codes, displayed as names; Skip allowed |
-| State also skipped or lookup failed | roof_width_m, roof_length_m | dimensions input in metres; Skip keeps the roof assumed |
+| Location | address via roof_area_sqm ask | customer types or says the address in the composer; estimate sunny roof area; Enter width × length / Skip |
+| Address skipped or lookup failed | roof_width_m, roof_length_m | dimensions input in metres; Skip keeps the roof assumed |
 | EV | has_ev / ev_planned | Yes, already -> has_ev true; Planned -> ev_planned true; No -> both false |
-| Existing solar guard | has_existing_pv, optional existing_pv_kwp | Preserve retrofit check before handoff; a known existing_pv_kwp already implies existing solar |
-| Heating | heating_type | gas, oil, heatpump, electric, district, other; then comparison if available and handoff |
+| Heating | heating_type | gas, oil, heatpump, electric, district, other |
+| Heat pump option | heatpump_option (gas/oil/district/other only) | side-by-side without / with heat pump; Yes shows the with-heat-pump plan, No keeps the plan; then handoff |
 
-Successful address lookup proceeds to EV, without asking state/dimensions already derived. Manual dimensions can bypass lookup. Never invent skipped facts.
+Region and existing solar are no longer asked (customer 65f377f); volunteered facts still count and the address lookup sets region. Successful address lookup proceeds to EV, without asking dimensions already derived. Manual dimensions can bypass lookup. Never invent skipped facts.
 
 For gas/oil/district/other use Design.heating_comparison only when present. Compare a heat pump, not generic electric heating. Show annual cost estimates; claim a cost benefit only with heatpump_cheaper true. energy_factor is efficiency, not a cost factor. Null CO2 is unavailable, not zero. Electric/heatpump needs no conversion claim. Optional living-space, tariff and budget refinements must not block the main handoff flow.
 
@@ -71,7 +70,7 @@ Standing chips after every design turn (historical, not rendered): `Why this siz
 ### Stage 5: Handoff
 
 reo **offers** the handoff (once, then leaves the `Send to installer` chip) when any of these is true:
-- the main location, EV, existing-solar and heating questions are answered or skipped, or
+- the main location, EV and heating questions (incl. the heat pump option) are answered or skipped, or
 - the engine has no `high`-impact `missing_inputs` left, or
 - the customer asks ("send it", "I want an offer", "can someone call me").
 
