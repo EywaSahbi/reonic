@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from api import app  # noqa: E402
-from design import battery_for, sim  # noqa: E402
+from design import CATALOG, battery_for, sim  # noqa: E402
 from inputs import PARAMS  # noqa: E402
 
 client = TestClient(app)
@@ -97,8 +97,10 @@ def test_price_override_is_exact():
 def test_price_lines_split_and_add_up():
     d = post({"total_demand_kwh": 4500, "ev_planned": True})
     labels = [i["label"] for i in d["price"]["items"]]
-    assert labels[0].startswith("JA Solar") and "Scaffolding" in labels and "Wallbox installation and registration" in labels
-    assert any(l.startswith("Huawei SUN2000") for l in labels) and any(l.startswith("go-e") for l in labels)
+    assert labels[0].startswith("Solar module") and "Scaffolding" in labels and "Wallbox installation and registration" in labels
+    assert any(l.startswith("Hybrid inverter") for l in labels) and "Wallbox 11 kW" in labels
+    names = [p.get("name", "") for p in CATALOG["products"].values() if isinstance(p, dict)]
+    assert not any(n.split()[0] in " ".join(labels) for n in names if n)       # no brand or model in the quote
     modules = d["price"]["items"][0]
     assert modules["qty"] == d["components"]["pv"]["quantity"] and modules["unit"] == "pc"
     assert abs(sum(i["total_eur"] for i in d["price"]["items"]) - d["price"]["total_eur"]) < 0.01

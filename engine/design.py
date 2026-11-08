@@ -15,7 +15,8 @@ from sim import simulate
 
 PRICES = {k: v for k, v in json.loads((Path(__file__).parent / "prices.json").read_text()).items()
           if not k.startswith("_")}
-CATALOG = json.loads((Path(__file__).parent / "catalog.json").read_text(encoding="utf-8"))  # real products + labour rates
+CATALOG = json.loads((Path(__file__).parent / "catalog.json").read_text(encoding="utf-8"))  # real products + labour rates;
+# quote lines name only the generic product, never brand or model (EywaSahbi); `name` stays internal as the price source
 VERSION = f"{PARAMS['version']}+line{PARAMS['pv_line']['a_kwp']}/{PARAMS['pv_line']['b_kwp_per_mwh']}"
 COMPONENTS = ("pv", "battery", "heatpump", "wallbox")
 UNITS = {"pv": "kWp", "battery": "kWh", "heatpump": "kW", "wallbox": "kW"}
@@ -161,10 +162,10 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         # PV that exists only for the heat pump is costed to the heat pump
         sh = {"pv": (pv_kwp - hp_pv) / pv_kwp, "heatpump": hp_pv / pv_kwp} if hp_pv else None
         n = pv_modules or max(1, round(pv_kwp * 1000 / sizing.module_w))
-        line(prod["module"]["name"], n, "pc", product("module_eur", prod["module"]["price_eur"], overrides), "pv", share=sh)
+        line(prod["module"]["label"], n, "pc", product("module_eur", prod["module"]["price_eur"], overrides), "pv", share=sh)
         inv, k = inverters_for(pv_kwp)
-        line(inv["name"], k, "pc", product("inverter_eur", inv["price_eur"], overrides), "pv", share=sh)
-        line(prod["mounting"]["name"], n, "pc", product("mounting_eur_per_module", prod["mounting"]["price_eur_per_module"], overrides), "pv", share=sh)
+        line(f"Hybrid inverter {inv['kw']:g} kW", k, "pc", product("inverter_eur", inv["price_eur"], overrides), "pv", share=sh)
+        line(prod["mounting"]["label"], n, "pc", product("mounting_eur_per_module", prod["mounting"]["price_eur_per_module"], overrides), "pv", share=sh)
         work("Installation on the roof (modules, rails)", pv_kwp, "kWp", "pv_roof_installation_eur_per_kwp", "pv", sh)
         work("DC cabling (strings, connectors)", pv_kwp, "kWp", "pv_dc_cabling_eur_per_kwp", "pv", sh)
         work("AC cabling inverter to meter cabinet", pv_kwp, "kWp", "pv_ac_cabling_eur_per_kwp", "pv", sh)
@@ -172,15 +173,15 @@ def core(facts: dict, locks: dict, overrides: dict, installer: str | None = None
         work("Commissioning and grid registration", 1, "flat", "pv_commissioning_grid_eur", "pv", sh)
         work("Scaffolding", 1, "flat", "scaffolding_eur", "pv", sh)
     if bat_rec:
-        line(f"{prod['battery']['name']} {bat_kwh:g} kWh", 1, "pc", product("battery_eur", battery_price(bat_kwh), overrides), "battery")
+        line(f"Battery storage {bat_kwh:g} kWh (lithium iron phosphate, high voltage)", 1, "pc", product("battery_eur", battery_price(bat_kwh), overrides), "battery")
         work("Battery installation", 1, "flat", "battery_installation_eur", "battery")
     if wb_rec:
-        line(f"{prod['wallbox']['name']}", 1, "pc", product("wallbox_device_eur", prod["wallbox"]["price_eur"], overrides), "wallbox")
+        line(f"Wallbox {wb_kw:g} kW", 1, "pc", product("wallbox_device_eur", prod["wallbox"]["price_eur"], overrides), "wallbox")
         work("Wallbox installation and registration", 1, "flat", "wallbox_installation_eur", "wallbox")
     if hp_rec and hp_kw:
         hp = prod["heatpump"]
         device = product("heatpump_device_eur", hp["ref_price_eur"] + hp["eur_per_kw"] * (hp_kw - hp["ref_kw"]), overrides)
-        line(f"{hp['name']}, {hp_kw:g} kW", 1, "pc", device, "heatpump")
+        line(f"Air-water heat pump {hp_kw:g} kW with hydraulic station", 1, "pc", device, "heatpump")
         inst = labour("heatpump_installation_eur", overrides)
         work("Heat pump installation (hydraulics, electrics, storage, commissioning)", 1, "flat", "heatpump_installation_eur", "heatpump")
         # KfW 458 base grant: share of the eligible heat-pump cost (bonuses are case by case, not applied)
