@@ -205,12 +205,14 @@ h1, h2, h3 { color: var(--ink); }
 .inbox h2 { font-weight: 600; font-size: 16px; margin: 0 8px 12px; }
 .inbox ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .inbox .muted { margin: 0 8px; font-size: 14px; }
-.inbox li { display: flex; align-items: flex-start; gap: 2px; }
-.inbox-delete { flex: none; background: none; border: 1px solid transparent; border-radius: var(--radius-sm); width: 28px; height: 28px; margin-top: 6px; color: var(--ink-500); font-size: 18px; line-height: 1; cursor: pointer; }
-.inbox-delete:hover { color: var(--ink-950); background: var(--paper-sand); border-color: var(--line); }
+.inbox li { position: relative; }
+.inbox-delete { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--white); color: var(--ink-500); cursor: pointer; box-shadow: 0 1px 3px rgba(20, 24, 31, .08); }
+.inbox-delete svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.inbox-delete:hover { color: #b4232a; border-color: #f0c4c6; background: #fdf1f1; }
 .inbox-delete:disabled { opacity: 0.4; cursor: default; }
 /* the × shows only while the entry is hovered or focused (EywaSahbi) */
-.inbox li .inbox-delete { opacity: 0; transition: opacity .12s; }
+.inbox li .inbox-delete { opacity: 0; transition: opacity .12s, color .12s, background .12s; }
+.inbox li:hover .inbox-item, .inbox li:focus-within .inbox-item { padding-right: 48px; } /* room for the trash button inside the entry */
 .inbox li:hover .inbox-delete, .inbox li:focus-within .inbox-delete { opacity: 1; }
 @media (hover: none) { .inbox li .inbox-delete { opacity: 1; } }
 .confirm-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(20, 24, 31, .38); }
