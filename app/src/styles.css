@@ -525,3 +525,9 @@ h1, h2, h3 { color: var(--ink); }
 .address-hits button { width: 100%; text-align: left; background: none; border: 0; border-radius: var(--radius-sm); padding: 10px 12px; font-size: 15px; color: var(--ink); }
 .address-hits button:hover, .address-hits button:focus-visible { background: var(--sunset-tint); }
 .comp-end { display: flex; align-items: center; gap: 12px; }
+.heat-per-kwh { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; }
+.heat-per-kwh-label { font-size: 12px; color: var(--ink-500); }
+.heat-bar { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 10px; font-size: 13px; }
+.heat-bar i { display: block; height: 10px; border-radius: 9999px; background: var(--ink-400); min-width: 6px; }
+.heat-bar:last-child i { background: var(--sunset); }
+.heat-bar b { font-variant-numeric: tabular-nums; }
