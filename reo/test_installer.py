@@ -142,3 +142,13 @@ def test_delete_plan(tmp_path, monkeypatch):
     assert c.get(f"/plans/{pid}").status_code == 404 and c.get(f"/sessions/{pid}").status_code == 404
     assert c.get(f"/runs/{rid}").status_code == 404
     assert c.delete(f"/plans/{pid}").status_code == 404
+
+
+def test_planner_sees_the_estimate_the_customer_was_given(tmp_path, monkeypatch):
+    c, pid, _ = setup(tmp_path, monkeypatch)
+    handed = c.get(f"/sessions/{pid}").json()["design"]["price"]
+    c.post(f"/plans/{pid}/edit", json={"locks": {"battery": {"recommended": True, "size": 15}}})
+    p = c.get(f"/plans/{pid}").json()
+    assert p["customer_estimate"] == {"total_eur": handed["total_eur"], "range_eur": handed["range_eur"]}
+    assert p["design"]["price"]["total_eur"] != handed["total_eur"]
+    assert "customer_estimate" not in c.get(f"/sessions/{pid}").json()

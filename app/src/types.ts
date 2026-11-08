@@ -85,6 +85,7 @@ export type Plan = {
   updated_at: string;
   summary?: string; // reo's installer paragraph, set once handed over
   offer_pack?: OfferPack; // installer endpoints only (reo v1.1)
+  customer_estimate?: { total_eur: number; range_eur: [number, number] }; // installer view: what the customer was told at handoff
   roof_location?: RoofLocation; // set by an address lookup that found the building: satellite view on the plan card
 };
 

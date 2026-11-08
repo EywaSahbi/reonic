@@ -118,8 +118,12 @@ def out(plan: dict, installer: bool = False) -> dict:
     shown = {k: v for k, v in plan.items() if k not in ("customer_design", "offer_pack", "similar_projects")}
     if not installer:
         shown["design"] = customer_design(plan)
-    elif "offer_pack" in plan:
-        shown["offer_pack"] = plan["offer_pack"]
+    else:
+        if "offer_pack" in plan:
+            shown["offer_pack"] = plan["offer_pack"]
+        if plan.get("customer_design"):  # what the customer was told at handoff, for the planner (EywaSahbi)
+            p = plan["customer_design"]["price"]
+            shown["customer_estimate"] = {"total_eur": p["total_eur"], "range_eur": p["range_eur"]}
     if plan["status"] != "drafting":
         shown["summary"] = scripted.summary(shown)
     return shown
