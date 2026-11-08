@@ -185,3 +185,11 @@
 .guide-bubble::after { margin-left: calc(-1 * var(--dx)); }
 .guide-bubble.is-below { bottom: auto; top: calc(100% + 4px); transform-origin: 50% 0; }
 .guide-bubble.is-below::after { bottom: auto; top: -5px; border-radius: 3px 0 0 0; }
+
+/* bubble reveal: placed invisibly first (LiveStage measures it), shown once settled - no visible flip */
+.guide-bubble { opacity: 0; animation: none; }
+.guide-bubble.is-ready { opacity: 1; animation: bubble-in 0.5s var(--spring-pop) both; }
+.guide-bubble.is-ready.is-below { animation-name: bubble-in-below; }
+.guide-bubble.is-ready.is-hidden { opacity: 0; animation: none; }
+.guide-bubble.is-ready.is-stale { opacity: 0.55; animation: none; }
+@keyframes bubble-in-below { from { opacity: 0; transform: translateY(-6px) scale(0.92); } to { opacity: 1; transform: none; } }

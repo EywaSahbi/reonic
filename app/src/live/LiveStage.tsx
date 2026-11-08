@@ -57,13 +57,17 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
   const target = useMemo(() => new THREE.Vector3(...to), [to[0], to[1], to[2]]); // eslint-disable-line react-hooks/exhaustive-deps
   const [moving, setMoving] = useState(false);
   const bubble = useRef<HTMLDivElement>(null);
-  const fit = useRef({ dx: 0, below: false });
+  const fit = useRef({ dx: 0, below: false, ready: false, stable: 0, key: -1 });
   const { gl } = useThree();
   // Keep the bubble inside the 3D window: measure it against the canvas each frame, slide it sideways (the arrow keeps
   // pointing at the advisor), flip it below the advisor when there is no room above, and cap it to the window.
+  // The bubble is placed while invisible and only fades in once its side is settled and the advisor stands still,
+  // so it never visibly jumps from above to below.
   useFrame(() => {
     const b = bubble.current; if (!b) return;
     const st = gl.domElement.getBoundingClientRect(), r = b.getBoundingClientRect(), pad = 10, f = fit.current;
+    const key = say?.key ?? -1;
+    if (key !== f.key || moving) { f.key = key; f.ready = false; f.stable = 0; b.classList.remove("is-ready"); }
     b.style.maxWidth = `${Math.max(160, Math.min(300, st.width - 2 * pad))}px`;
     const left = r.left - f.dx, right = r.right - f.dx;            // where it would be without our shift
     let dx = 0;
@@ -74,10 +78,19 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
     const roomUp = head - st.top - pad - 12, roomDown = st.bottom - head - pad - 70;   // keep the advisor visible below
     const inner = b.firstElementChild as HTMLElement | null;
     const needed = (inner?.scrollHeight ?? r.height) + 26;           // natural height, so the choice never flip-flops
-    const below = needed > roomUp && roomDown > roomUp;
+    let below = needed > roomUp && roomDown > roomUp;
+    if (f.ready && below !== f.below) {                               // once shown, only move for a real overflow
+      const overflow = f.below ? r.bottom - (st.bottom - pad) : (st.top + pad) - r.top;
+      if (overflow < 12) below = f.below;
+    }
     if (inner) inner.style.maxHeight = `${Math.max(60, (below ? roomDown : roomUp) - 24)}px`;
+    const changed = below !== f.below || Math.abs(dx - f.dx) > 0.5;
     if (Math.abs(dx - f.dx) > 0.5) { f.dx = dx; b.style.setProperty("--dx", `${dx.toFixed(1)}px`); }
     if (below !== f.below) { f.below = below; b.classList.toggle("is-below", below); }
+    if (!f.ready && !moving) {
+      f.stable = changed ? 0 : f.stable + 1;
+      if (f.stable >= 2) { f.ready = true; b.classList.add("is-ready"); }
+    }
   });
   useFrame((_, dt) => {
     const o = g.current; if (!o) return;
@@ -90,7 +103,7 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
       <Html zIndexRange={[20, 0]} style={{ pointerEvents: "none" }}>
         <div className={`guide ${moving ? "is-moving" : ""}`}>
           {say && (
-            <div ref={bubble} className={`guide-bubble ${fit.current.below ? "is-below" : ""} ${hush ? "is-hidden" : busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
+            <div ref={bubble} className={`guide-bubble ${fit.current.below ? "is-below" : ""} ${fit.current.ready && fit.current.key === say.key ? "is-ready" : ""} ${hush ? "is-hidden" : busy ? "is-stale" : ""}`} key={say.key} role="status" aria-live="polite" style={{ pointerEvents: "auto" }}>
               <div className="guide-bubble-in">
                 <p>{say.text}</p>
                 {say.lines && say.lines.length > 0 && <ul>{say.lines.map((l) => <li key={l}>{l}</li>)}</ul>}
@@ -98,7 +111,7 @@ function Guide({ to, say: next, busy, side, wait, onMore }: { to: [number, numbe
               </div>
             </div>
           )}
-          {busy && !say && <div className="guide-bubble guide-dots" aria-hidden><span /><span /><span /></div>}
+          {busy && !say && <div className="guide-bubble guide-dots is-ready" aria-hidden><span /><span /><span /></div>}
           <div className="guide-body"><ReoAvatar size={62} interactive={false} greet winkKey={say?.key} title="Your energy advisor" /></div>
           <i className="guide-shadow" />
         </div>
@@ -132,7 +145,7 @@ export default function LiveStage({ plan, say, trace, busy, tall, onMore }: {
         <Canvas shadows dpr={[1, 2]} camera={{ position: [27, 18, 32], fov: 28 }} gl={{ antialias: true, alpha: true }}>
           <HouseScene roof={roof} cells={cells} panels={panels} items={items} />
           <Guide to={to} say={say} busy={busy} side={say?.spot === "roof"} wait={waitFor(say, panels.size)} onMore={onMore} />
-          <OrbitControls autoRotate autoRotateSpeed={0.35} enablePan={false} enableZoom={false} minPolarAngle={0.7} maxPolarAngle={1.2} minAzimuthAngle={-0.9} maxAzimuthAngle={1.4} target={[1.6, 2, 1.4]} />
+          <OrbitControls autoRotate={!say} autoRotateSpeed={0.35} enablePan={false} enableZoom={false} minPolarAngle={0.7} maxPolarAngle={1.2} minAzimuthAngle={-0.9} maxAzimuthAngle={1.4} target={[1.6, 2, 1.4]} />
         </Canvas>
       </div>
       {photo && loc && <div className="live-photo"><Satellite loc={loc} fallback={null} /></div>}
