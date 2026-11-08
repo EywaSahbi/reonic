@@ -40,3 +40,9 @@
 .studio-fold.is-folded .studio.card { padding-top: 14px; padding-bottom: 14px; }
 .studio-fold.is-folded .studio-head { margin-bottom: 0; }
 .studio-fold .studio-head > div { padding-right: 90px; }
+
+/* reo summary paragraph (planner view) */
+.summary-text { margin: 4px 0 18px; font-size: 16px; line-height: 1.55; color: var(--ink-700, #3f3f46); max-width: 66ch; }
+
+/* the re-derive banner floats over the page so an edit never moves what the planner is pointing at */
+.plan-detail .change-banner { position: fixed; top: 14px; left: calc(50% + 130px); transform: translateX(-50%); z-index: 40; max-width: min(920px, calc(100vw - 320px)); box-shadow: 0 14px 40px rgba(9, 9, 11, 0.2); }

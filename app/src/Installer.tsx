@@ -132,7 +132,7 @@ function InstallerWorkspace({ onLock }: { onLock?: () => void }) {
   );
 }
 
-type Change = { keys: Set<string>; text: string };
+type Change = { keys: Set<string>; text: string; prev?: Design };
 
 // What changed between two designs, as before → after (engine numbers only, no arithmetic).
 function diff(a: Design, b: Design): Change {
@@ -149,7 +149,7 @@ function diff(a: Design, b: Design): Change {
   if (a.price.total_eur !== b.price.total_eur) { keys.add("total"); parts.push(`total ${eur(a.price.total_eur)} → ${eur(b.price.total_eur)}`); }
   if (a.economics.payback_years !== b.economics.payback_years) { keys.add("payback"); parts.push(`ROI ${a.economics.payback_years ?? "–"} → ${b.economics.payback_years ?? "–"} yrs`); }
   if (a.economics.annual_savings_eur !== b.economics.annual_savings_eur) keys.add("savings");
-  return { keys, text: parts.length ? parts.join(" · ") : "No change to the design." };
+  return { keys, text: parts.length ? parts.join(" · ") : "No change to the design.", prev: a };
 }
 
 /** With real map data the roof editor above is the main tool, so the design studio folds into its title bar;
@@ -235,7 +235,7 @@ function PlanDetail({ id }: { id: string }) {
       )}
       {error && <div className="chat-error">{error}</div>}
 
-      <RoofEditor plan={plan} disabled={quoted || isOffline(d)} onPlan={setPlan} />
+      <RoofEditor plan={plan} disabled={quoted || isOffline(d)} onPlan={(p) => { const c = diff(plan.design, p.design); if (c.keys.size) setChange(c); setPlan(p); }} />
 
       <StudioFold fold={!!(plan.roof_location && plan.roof_layout && plan.roof_layout.frame.lat != null)}>
         <Suspense fallback={<section className="card studio"><p className="muted">Loading design studio…</p></section>}>
@@ -250,7 +250,7 @@ function PlanDetail({ id }: { id: string }) {
           <table className="price-table">
             <tbody>
               {d.price.items.map((i) => (
-                <tr key={i.label}><td>{i.label}</td><td className="num">{i.qty} {i.unit}</td><td className="num">{eur(i.unit_price_eur)}</td><td className="num">{eur(i.total_eur)}</td></tr>
+                <tr key={i.label} className={change?.prev && change.prev.price.items.find((o) => o.label === i.label)?.total_eur !== i.total_eur ? "changed" : ""}><td>{i.label}</td><td className="num">{i.qty} {i.unit}</td><td className="num">{eur(i.unit_price_eur)}</td><td className="num">{eur(i.total_eur)}</td></tr>
               ))}
               <tr className={`price-total ${hl("total")}`}><td colSpan={3}>Total</td><td className="num">{eur(d.price.total_eur)}</td></tr>
             </tbody>
@@ -314,6 +314,7 @@ function Summary({ plan }: { plan: Plan }) {
   return (
     <section className="card summary">
       <h3 className="installer-reo-heading"><ReoAvatar size={52} outfit="vest" greet={false} interactive title="reo" />Summary</h3>
+      {plan.summary && <p className="summary-text">{plan.summary}</p>}
       <div className="summary-grid">
         <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
         {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}

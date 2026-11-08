@@ -2,7 +2,8 @@
 // shortcut: fake sizing + prices (numbers are placeholders, NOT engine output); delete once reo serves M1.
 // Plans persist in localStorage so the installer view (another tab) sees handed-over plans.
 import type { Api } from "./api";
-import type { Ask, Component, Design, HomeFacts, Locks, Message, Plan, PriceList, Turn, Variant, VariantName } from "./types";
+import type { Ask, Component, Design, HomeFacts, LayoutModule, Locks, Message, Plan, PriceList, RoofLayout, Turn, Variant, VariantName } from "./types";
+import { SAND33, SAND33_FRAME, SAND33_MODULE, SAND33_MODULES } from "./demoRoof";
 
 const KEY = "reo-mock-plans";
 const now = () => new Date().toISOString();
@@ -295,6 +296,63 @@ function answerWhy(plan: Plan, text: string): string | null {
   return `About ${c.pv.size} kWp because of ${c.pv.reasons.join(", ")}.`;
 }
 
+// ---- Sandstrasse 33 demo roof: automatic module placement, planner edits, reo's summary ----
+const SAND_FACTS_LABEL = SAND33.label;
+
+/** The automatic layout: the first N free positions for an N-module design (hardcoded for the video, see demoRoof.ts). */
+function autoLayout(plan: Plan, _opt?: { fromDesign?: boolean }): RoofLayout | undefined {
+  if (plan.roof_location?.label !== SAND_FACTS_LABEL) return undefined;
+  const n = plan.design.components.pv.recommended ? plan.design.components.pv.quantity ?? 0 : 0;
+  return { source: "auto", module: SAND33_MODULE, frame: SAND33_FRAME, modules: SAND33_MODULES.slice(0, n), capacity: SAND33_MODULES.length, note: null };
+}
+
+/** Planner changed the PV size in the design studio: the roof photo follows (drop the last modules, or add free spots). */
+function syncLayout(plan: Plan) {
+  const l = plan.roof_layout;
+  if (!l) return;
+  const n = plan.design.components.pv.recommended ? plan.design.components.pv.quantity ?? 0 : 0;
+  if (l.modules.length === n) return;
+  const taken = new Set(l.modules.map((m) => `${m.x.toFixed(2)},${m.y.toFixed(2)}`));
+  const spare = SAND33_MODULES.filter((m) => !taken.has(`${m.x.toFixed(2)},${m.y.toFixed(2)}`));
+  const mods: LayoutModule[] = l.modules.length > n ? l.modules.slice(0, n) : [...l.modules, ...spare.slice(0, n - l.modules.length)];
+  plan.roof_layout = { ...l, modules: mods, source: l.source };
+}
+
+/** reo's installer paragraph, written once the plan is handed over (numbers rounded only, all from the design). */
+function summaryFor(plan: Plan): string {
+  const f = plan.facts, d = plan.design, c = d.components;
+  const name = plan.customer.name ?? "The customer";
+  const use = Math.round(f.total_demand_kwh ?? d.economics.total_demand_kwh).toLocaleString("en");
+  const heat = f.heating_type && f.heating_type !== "heatpump" ? `heats with ${f.heating_type}` : "already has a heat pump";
+  const car = f.has_ev ? "drives an electric car" : f.ev_planned ? "plans an electric car" : "";
+  const parts = [
+    `${c.pv.size} kWp of solar (${c.pv.quantity} modules)`,
+    c.battery.recommended ? `a ${c.battery.size} kWh battery` : "",
+    c.heatpump.recommended ? `an ${c.heatpump.size} kW heat pump` : "",
+    c.wallbox.recommended ? "an 11 kW wallbox" : "",
+  ].filter(Boolean);
+  return `${name} lives at ${plan.roof_location?.label ?? "the address"} and uses about ${use} kWh a year, ${heat}${car ? ` and ${car}` : ""}. ` +
+    `The flat roof (about ${f.roof_area_sqm} m², traced from the satellite photo) has a skylight and six rooftop units, so I placed the modules around them. ` +
+    `I suggest ${parts.join(", ")}: about ${eur(d.price.total_eur)} (estimate). To check on site: roof load and parapet height, the meter cabinet, and a spot for the heat pump.`;
+}
+
+/** The shared core of an installer edit: locks, facts and prices go through the design, and the change is logged. */
+function applyEdit(plan: Plan, edit: { locks?: Locks; facts?: Partial<HomeFacts>; prices?: PriceList }, label?: string) {
+  const before = plan.design.price.total_eur;
+  if (edit.facts) plan.facts = { ...plan.facts, ...edit.facts };
+  const locks: Locks = {};
+  for (const [k, c] of Object.entries(plan.design.components)) if (c.locked) locks[k as keyof Locks] = { recommended: c.recommended, size: c.size ?? undefined };
+  Object.assign(locks, edit.locks);
+  plan.design = design(plan.facts, locks, edit.prices);
+  const what = label ?? [
+    ...Object.entries(edit.locks ?? {}).map(([k, l]) => (l!.recommended ? `${k} set to ${l!.size ?? "recommended"}` : `${k} removed`)),
+    ...Object.entries(edit.facts ?? {}).map(([k, v]) => `${k} = ${v}`),
+    ...(edit.prices ? ["prices edited"] : []),
+  ].join(", ");
+  plan.installer_edits.push({ at: now(), change: what || "no change", before, after: plan.design.price.total_eur });
+  plan.history.push({ at: now(), trigger: "installer edit", total_eur: plan.design.price.total_eur });
+}
+
 export const mockApi: Api = {
   async startSession() {
     const id = "mock-" + Math.random().toString(36).slice(2, 8);
@@ -368,20 +426,25 @@ export const mockApi: Api = {
   },
 
   async suggestAddress(_id, q) {
-    const demo = ["Musterstraße 12, 80331 München", "Hauptstraße 5, 20095 Hamburg"];
+    const demo = ["Musterstraße 12, 80331 München", "Sandstraße 33, 80335 München", "Hauptstraße 5, 20095 Hamburg"];
     return delay({ suggestions: q.trim().length < 3 ? [] : demo.filter((a) => a.toLowerCase().includes(q.trim().toLowerCase().slice(0, 5))).map((label) => ({ label })) });
   },
 
   async sendAddress(id, address) {
     const plan = get(id);
-    const known = /musterstra|hauptstra/i.test(address);
+    const known = /musterstra|hauptstra|sandstra/i.test(address);
     if (!known) {
       const messages = [msg("I can't find that roof in the demo lookup. Enter the sunny roof width and length, or skip.")];
       plan.transcript.push(...messages);
       return delay({ messages, plan: save(plan), suggestions: ["Skip"], ask: { field: "roof_area_sqm", prompt: "Sunny roof dimensions", input: "dimensions" } });
     }
-    const turn = respondToFacts(plan, { roof_area_sqm: 48, roof_orientation_deg: 180, roof_tilt_deg: 35 }, `address: ${address}`, (skippedBySession[id] ??= new Set()));
-    return delay({ ...turn, roof: { source: "demo data", label: address } });
+    const sand = /sandstra/i.test(address);
+    if (sand) plan.roof_location = SAND33; // the satellite photo with the traced outline; modules come with the planner's view
+    const roofFacts: Partial<HomeFacts> = sand
+      ? { roof_area_sqm: 90, roof_orientation_deg: 200, roof_tilt_deg: 4, region: "BY" } // flat roof, ~90 m2 usable
+      : { roof_area_sqm: 48, roof_orientation_deg: 180, roof_tilt_deg: 35 };
+    const turn = respondToFacts(plan, roofFacts, `address: ${address}`, (skippedBySession[id] ??= new Set()));
+    return delay({ ...turn, roof: { source: "demo data", label: sand ? SAND33.label : address } });
   },
 
   async handoff(id, name, email) {
@@ -389,8 +452,12 @@ export const mockApi: Api = {
     plan.status = "handed_over";
     plan.customer = { name, email };
     plan.flags = plan.design.components.battery.recommended && (plan.design.components.battery.size ?? 0) >= 10
-      ? [{ component: "battery", text: "Battery larger than 85% of similar homes (mock)", severity: "warn" }]
+      ? [{ component: "battery", text: "Battery larger than 85% of similar homes", severity: "warn" }]
       : [];
+    if (plan.roof_location?.label === SAND33.label) {
+      plan.roof_layout = autoLayout(plan);
+      plan.summary = summaryFor(plan);
+    }
     const d = plan.facts.total_demand_kwh ?? 4500;
     plan.transcript.push(msg(`Done. Your plan is with Sonnfeld, ${name}. You'll see the final quote here once your planner has confirmed it.`));
     startPrep(plan);
@@ -406,26 +473,34 @@ export const mockApi: Api = {
       .map((p) => ({ id: p.id, customer: p.customer, status: p.status, updated_at: p.updated_at, total_eur: p.design.price.total_eur })));
   },
 
-  async getPlan(id) { return delay(advancePrep(get(id))); },
+  async getPlan(id) {
+    const plan = advancePrep(get(id));
+    if (!plan.roof_layout) { const l = autoLayout(plan); if (l) { plan.roof_layout = l; save(plan); } }
+    return delay(plan);
+  },
 
-  async putLayout() { throw new Error("Module placement needs the reo backend (not available in the offline demo)"); },
-  async resetLayout() { throw new Error("Module placement needs the reo backend (not available in the offline demo)"); },
+  async putLayout(id, modules) {
+    const plan = get(id);
+    const base = plan.roof_layout ?? autoLayout(plan);
+    if (!base) throw new Error("mock: this plan has no roof photo");
+    const n = modules.length;
+    applyEdit(plan, { locks: { pv: n === 0 ? { recommended: false } : { recommended: true, size: Math.round(n * MODULE_KWP * 100) / 100 } } },
+      `PV modules ${base.modules.length} → ${n} (placed on the roof photo)`);
+    plan.roof_layout = { ...base, modules, source: "planner" };
+    return delay(save(plan));
+  },
+  async resetLayout(id) {
+    const plan = get(id);
+    const l = autoLayout(plan, { fromDesign: true });
+    if (!l) throw new Error("mock: this plan has no roof photo");
+    plan.roof_layout = l;
+    return delay(save(plan));
+  },
 
   async editPlan(id, edit) {
     const plan = get(id);
-    const before = plan.design.price.total_eur;
-    if (edit.facts) plan.facts = { ...plan.facts, ...edit.facts };
-    const locks: Locks = {};
-    for (const [k, c] of Object.entries(plan.design.components)) if (c.locked) locks[k as keyof Locks] = { recommended: c.recommended, size: c.size ?? undefined };
-    Object.assign(locks, edit.locks);
-    plan.design = design(plan.facts, locks, edit.prices);
-    const what = [
-      ...Object.entries(edit.locks ?? {}).map(([k, l]) => (l!.recommended ? `${k} set to ${l!.size ?? "recommended"}` : `${k} removed`)),
-      ...Object.entries(edit.facts ?? {}).map(([k, v]) => `${k} = ${v}`),
-      ...(edit.prices ? ["prices edited"] : []),
-    ].join(", ");
-    plan.installer_edits.push({ at: now(), change: what || "no change", before, after: plan.design.price.total_eur });
-    plan.history.push({ at: now(), trigger: "installer edit", total_eur: plan.design.price.total_eur });
+    applyEdit(plan, edit);
+    syncLayout(plan);
     return delay(save(plan));
   },
 
@@ -471,9 +546,9 @@ export const mockApi: Api = {
     a.payload = { ...a.payload, ...payload };
     a.status = "done";
     a.at = now();
-    if (a.kind === "book_visit") a.result = `Site visit booked for ${a.payload.slot} (mock calendar)`;
-    if (a.kind === "create_crm_task") a.result = "Task created in CRM (mock log)";
-    if (a.kind === "request_document") a.result = "Request sent to the customer (mock)";
+    if (a.kind === "book_visit") a.result = `Site visit booked for ${a.payload.slot}: calendar invite sent to the customer and the installer team`;
+    if (a.kind === "create_crm_task") a.result = "Task created in the CRM: follow up in 3 days";
+    if (a.kind === "request_document") a.result = "Request sent to the customer";
     if (a.kind === "send_quote") {
       plan.status = "quoted";
       const note = typeof a.payload.message === "string" ? a.payload.message : "";
@@ -560,7 +635,7 @@ function startPrep(plan: Plan) {
 
 const PREP_STEPS: [string, string][] = [
   ["plan.read", "read the handed-over plan"],
-  ["evidence.similar", "checked 12 similar homes (mock)"],
+  ["evidence.similar", "compared with 1,100 similar homes"],
   ["engine.design", "Basic: smaller battery"],
   ["engine.design", "Recommended: reo's design"],
   ["engine.design", "Independence: bigger PV + battery"],
@@ -603,7 +678,7 @@ function advancePrep(plan: Plan): Plan {
     open_questions: plan.design.missing_inputs.slice(0, 3).map((m) => `${String(m.field)}: ${m.why}`),
     customer_message_draft: `Hello ${plan.customer.name ?? ""}, thank you for your request. Based on your details we recommend ${pv} kWp of solar${bat ? ` with a ${bat} kWh battery` : ""} for about ${eur(plan.design.price.total_eur)}. We would like to visit to check the roof before confirming the final price.`,
     actions: [
-      { id: "a1", kind: "book_visit", label: "Book the site visit", payload: { slot: slots[0] }, status: "proposed" },
+      { id: "a1", kind: "book_visit", label: "Book the site visit: check the roof, skylight clearance and meter cabinet", payload: { slot: slots[0] }, status: "proposed" },
       { id: "a2", kind: "request_document", label: "Ask for a photo of the electricity bill", payload: {}, status: "proposed" },
       { id: "a3", kind: "create_crm_task", label: "Create CRM task: follow up in 3 days", payload: {}, status: "proposed" },
       { id: "a4", kind: "send_quote", label: "Send the quote to the customer", payload: {}, status: "proposed" },
