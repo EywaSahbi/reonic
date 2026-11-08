@@ -224,7 +224,7 @@ export function RoofEditor({ plan, disabled, onPlan }: { plan: Plan; disabled: b
     <section className="card roof-editor" aria-label="Roof and solar modules">
       <div className="roof-head">
         <h3>Roof and solar modules</h3>
-        <span className="muted">{layout.source === "auto" ? "Placed automatically from the roof outline. Drag to rearrange." : "Arranged by you."}</span>
+        {layout.source === "auto" && <span className="muted">Placed automatically from the roof outline. Drag to rearrange.</span>}
       </div>
       <div className="roof-stage" tabIndex={0} onKeyDown={keys}>
         <svg ref={svg} viewBox={geo.vb.join(" ")} className={`roof-svg ${view && !noPhoto ? "" : "is-blank"}`} onPointerMove={move} onPointerUp={up}
