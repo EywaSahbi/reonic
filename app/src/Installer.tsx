@@ -141,7 +141,7 @@ function diff(a: Design, b: Design): Change {
     }
   }
   if (a.price.total_eur !== b.price.total_eur) { keys.add("total"); parts.push(`total ${eur(a.price.total_eur)} → ${eur(b.price.total_eur)}`); }
-  if (a.economics.payback_years !== b.economics.payback_years) { keys.add("payback"); parts.push(`payback ${a.economics.payback_years ?? "–"} → ${b.economics.payback_years ?? "–"} yrs`); }
+  if (a.economics.payback_years !== b.economics.payback_years) { keys.add("payback"); parts.push(`ROI ${a.economics.payback_years ?? "–"} → ${b.economics.payback_years ?? "–"} yrs`); }
   if (a.economics.annual_savings_eur !== b.economics.annual_savings_eur) keys.add("savings");
   return { keys, text: parts.length ? parts.join(" · ") : "No change to the design." };
 }
@@ -283,7 +283,7 @@ function Summary({ plan }: { plan: Plan }) {
     ["Heat pump", c.heatpump.recommended && c.heatpump.size ? `${c.heatpump.size} kW` : "–"],
     ["Wallbox", c.wallbox.recommended && c.wallbox.size ? `${c.wallbox.size} kW` : "–"],
     ["Price", eur(d.price.total_eur)],
-    ["Payback", d.economics.payback_years != null ? `about ${Math.round(d.economics.payback_years)} years` : "–"],
+    ["ROI", d.economics.payback_years != null ? `about ${Math.round(d.economics.payback_years)} years` : "–"],
   ];
   const check = d.missing_inputs.filter((m) => m.impact !== "low");
   return (
