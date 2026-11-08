@@ -25,6 +25,11 @@ const opt = (n, d) => (argv.includes(n) ? argv[argv.indexOf(n) + 1] : d);
 const KEY = process.env.ELEVENLABS_API_KEY;
 const VOICE = opt("--voice", process.env.ELEVENLABS_VOICE_ID);
 const MODEL = opt("--model", "eleven_multilingual_v2");
+// Delivery. Defaults are calm; for an upbeat read try: --stability 0.35 --style 0.45 --speed 1.08
+const STABILITY = Number(opt("--stability", 0.5)); // lower = more expressive
+const STYLE = Number(opt("--style", 0.15)); // higher = more exaggerated, energetic delivery
+const SPEED = opt("--speed", undefined) === undefined ? undefined : Number(opt("--speed")); // 0.7-1.2
+const SETTINGS = { stability: STABILITY, similarity_boost: 0.8, style: STYLE, use_speaker_boost: true, ...(SPEED ? { speed: SPEED } : {}) };
 const DRY = flag("--dry");
 const FORCE = flag("--force");
 const MAX_SPEEDUP = 1.12; // a line may be sped up by at most 12 % to fit its slot; beyond that, shorten the text
@@ -52,7 +57,7 @@ for (let i = 0; i < lines.length; i++) {
   const l = lines[i];
   const mp3 = path.join(out, `${l.id}.mp3`);
   const meta = path.join(out, `${l.id}.json`);
-  const fingerprint = createHash("sha1").update(JSON.stringify([l.text, VOICE, MODEL])).digest("hex");
+  const fingerprint = createHash("sha1").update(JSON.stringify([l.text, VOICE, MODEL, SETTINGS])).digest("hex");
   const cached = !FORCE && (await exists(mp3)) && (await exists(meta)) && JSON.parse(await readFile(meta, "utf8")).fingerprint === fingerprint;
   l.file = mp3;
   if (DRY) continue;
@@ -67,7 +72,7 @@ for (let i = 0; i < lines.length; i++) {
       // neighbouring lines give the model context so the delivery flows from line to line
       previous_text: lines[i - 1]?.text,
       next_text: lines[i + 1]?.text,
-      voice_settings: { stability: 0.5, similarity_boost: 0.8, style: 0.15, use_speaker_boost: true },
+      voice_settings: SETTINGS,
     }),
   });
   if (!res.ok) throw new Error(`ElevenLabs ${res.status} on ${l.id}: ${await res.text()}`);
@@ -101,6 +106,17 @@ const chains = lines.map((l, i) => {
 const mix = `${lines.map((_, i) => `[a${i}]`).join("")}amix=inputs=${lines.length}:normalize=0:duration=longest,apad=whole_dur=${spec.duration},atrim=0:${spec.duration}[mix]`;
 sh("ffmpeg", ["-y", ...inputs, "-filter_complex", [...chains, mix].join(";"), "-map", "[mix]", "-ar", "44100", "-ac", "1", path.join(out, "vo.wav")]);
 sh("ffmpeg", ["-y", "-i", path.join(out, "vo.wav"), "-b:a", "192k", path.join(out, "vo.mp3")]);
+
+// ---- 3b. self-check: the track must be exactly as long as the video and speech must start on the first cue ----
+const outDur = duration(path.join(out, "vo.mp3"));
+if (Math.abs(outDur - spec.duration) > 0.3) console.error(`WARNING: vo.mp3 is ${outDur.toFixed(2)} s, the video is ${spec.duration} s.`);
+{
+  const r = spawnSync("ffmpeg", ["-hide_banner", "-i", path.join(out, "vo.mp3"), "-af", "silencedetect=noise=-40dB:d=0.3", "-f", "null", "-"], { encoding: "utf8" });
+  const ends = [...(r.stderr || "").matchAll(/silence_end: ([\d.]+)/g)].map((m) => Number(m[1]));
+  const starts = [...(r.stderr || "").matchAll(/silence_start: ([\d.]+)/g)].map((m) => Number(m[1]));
+  const first = starts.length && starts[0] < 0.01 ? ends[0] : 0; // speech begins where the opening silence ends
+  if (first !== undefined && Math.abs(first - lines[0].start) > 0.35) console.error(`WARNING: first speech at ${first.toFixed(2)} s but the first cue is ${lines[0].start} s: the track is shifted; fix before using it.`);
+}
 
 // ---- 4. subtitles from the real timings -----------------------------------------------
 const ts = (s) => { const ms = Math.round(s * 1000); const p = (n, w = 2) => String(n).padStart(w, "0"); return `${p(Math.floor(ms / 3600000))}:${p(Math.floor(ms / 60000) % 60)}:${p(Math.floor(ms / 1000) % 60)},${p(ms % 1000, 3)}`; };
