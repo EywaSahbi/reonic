@@ -236,12 +236,6 @@ function PlanDetail({ id }: { id: string }) {
 
         <AskReo id={plan.id} />
 
-        <section className="card">
-          <h3>Conversation</h3>
-          <div className="transcript">
-            {plan.transcript.map((m, i) => <div key={i} className={`bubble bubble-${m.role}`}>{m.text}</div>)}
-          </div>
-        </section>
       </div>
 
       {/* the offer pack no longer carries a send-quote step: the planner finalises here (EywaSahbi) */}
@@ -299,8 +293,10 @@ function Summary({ plan }: { plan: Plan }) {
         <div><h4>Home</h4><dl className="summary-dl">{home.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>
         {!offline && <div><h4>Proposal</h4><dl className="summary-dl">{proposal.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl></div>}
       </div>
+      <div className="summary-grid summary-lists">
       {d.assumptions.length > 0 && <div className="summary-list"><h4>Assumed</h4><ul>{d.assumptions.map((a, i) => <li key={i}>{cap(a.note || String(a.field).replace(/_/g, " "))}</li>)}</ul></div>}
       {check.length > 0 && <div className="summary-list"><h4>To check</h4><ul>{check.map((m) => <li key={String(m.field)}><b>{FIELD_LABEL[String(m.field)] ?? cap(String(m.field).replace(/_/g, " "))}</b>: {m.why}</li>)}</ul></div>}
+      </div>
     </section>
   );
 }

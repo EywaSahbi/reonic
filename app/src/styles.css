@@ -247,7 +247,8 @@ h1, h2, h3 { color: var(--ink); }
 .summary-dl div { display: flex; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
 .summary-dl dt { color: var(--ink-500); }
 .summary-dl dd { margin: 0; font-weight: 600; text-align: right; }
-.summary-list { margin-top: 14px; }
+.summary-list { margin-top: 0; }
+.summary-lists { margin-top: 14px; } /* Assumed and To check side by side */
 .summary-list ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 3px; font-size: 14px; color: var(--ink-700); }
 @media (max-width: 720px) { .summary-grid { grid-template-columns: 1fr; } }
 .flags { display: flex; flex-direction: column; gap: 6px; }
