@@ -9,6 +9,7 @@
     "publish": "npx --yes hyperframes@0.9.22 publish"
   },
   "devDependencies": {
-    "@hyperframes/core": "^0.9.22"
+    "@hyperframes/core": "^0.9.22",
+    "puppeteer-core": "^25.11.0"
   }
 }

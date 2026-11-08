@@ -9,3 +9,6 @@ node_modules/
 voiceover/out/*
 !voiceover/out/vo.mp3
 !voiceover/out/vo.srt
+
+# raw capture frames and the pointer log (re-record with capture/capture-customer.mjs)
+capture/out/

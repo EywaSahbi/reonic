@@ -1,0 +1,186 @@
+<template>
+  <style>
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Regular.woff2"); font-weight: 400; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Medium.woff2"); font-weight: 500; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-SemiBold.woff2"); font-weight: 600; }
+    @font-face { font-family: "Geist"; src: url("assets/fonts/Geist-Bold.woff2"); font-weight: 700; }
+
+    #root { position: absolute; inset: 0; font-family: "Geist", sans-serif; color: #1b1d20; }
+    #root * { box-sizing: border-box; }
+    .abs { position: absolute; }
+
+    /* the whole customer side: label, ticker and window move together at the hand-off */
+    #c5-group { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; transform-origin: 50% 50%; }
+    #c5-label { left: 240px; top: 14px; font-size: 40px; font-weight: 700; letter-spacing: -0.01em; color: #e8643c; opacity: 0; }
+    #c5-ticker { left: 900px; top: 20px; width: 780px; height: 40px; display: flex; justify-content: flex-end; gap: 10px; opacity: 0; }
+    .c5-chip { height: 40px; padding: 0 18px; border-radius: 20px; font-size: 24px; font-weight: 600; line-height: 40px; color: #c9a999; background: transparent; border: 2px solid transparent; }
+    .c5-chip.active { color: #fff; background: #e8643c; }
+    .c5-chip.done { color: #e8643c; border-color: #f6c9b2; background: #fff3eb; }
+
+    #c5-win { left: 240px; top: 72px; width: 1440px; height: 936px; border-radius: 18px; overflow: hidden; background: #fff; opacity: 0;
+      box-shadow: 0 0 0 3px #e8643c, 0 30px 80px rgba(232, 100, 60, 0.18); }
+    #c5-bar { left: 0; top: 0; width: 1440px; height: 36px; background: #f4f4f5; border-bottom: 1px solid #e4e4e7; }
+    .c5-dot { top: 11px; width: 14px; height: 14px; border-radius: 7px; background: #d4d4d8; }
+    #c5-url { left: 120px; top: 6px; width: 560px; height: 24px; border-radius: 12px; background: #fff; }
+    #c5-view { left: 0; top: 36px; width: 1440px; height: 900px; overflow: hidden; background: #fff; }
+    #c5-cam { left: 0; top: 0; width: 1440px; height: 900px; transform-origin: 0 0; }
+    .c5-vid { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; }
+
+    /* the large pointer, drawn by the film (the capture has no cursor) */
+    #c5-ptr { position: absolute; left: 0; top: 0; width: 72px; height: 72px; z-index: 20; opacity: 0; filter: drop-shadow(0 6px 10px rgba(9, 9, 11, 0.28)); transform-origin: 0 0; }
+
+    /* hand-off: the planner's side waits on the right */
+    #c5-planner { left: 1038px; top: 259px; width: 864px; height: 562px; border-radius: 12px; overflow: hidden; background: #fff; opacity: 0;
+      box-shadow: 0 0 0 3px #0f9f7a, 0 24px 60px rgba(15, 159, 122, 0.16); }
+    #c5-plabel { left: 1038px; top: 214px; font-size: 26px; font-weight: 700; color: #0f9f7a; opacity: 0; }
+    #c5-pbar { left: 0; top: 0; width: 864px; height: 24px; background: #f4f4f5; }
+    #c5-ptitle { left: 28px; top: 56px; font-size: 28px; font-weight: 700; color: #0b7a5e; }
+    #c5-pnone { left: 28px; top: 112px; font-size: 24px; color: #5eb99f; }
+    #c5-prow { left: 28px; top: 112px; width: 808px; height: 64px; border-radius: 12px; border: 2px solid #0f9f7a; background: #eaf8f3; padding: 0 22px; line-height: 60px; font-size: 24px; font-weight: 600; color: #0b7a5e; opacity: 0; }
+    #c5-fly { left: 300px; top: 470px; width: 300px; height: 150px; border-radius: 16px; background: #fff; border: 2px solid #e8643c; box-shadow: 0 18px 44px rgba(232, 100, 60, 0.22);
+      padding: 22px 26px; font-size: 30px; font-weight: 700; opacity: 0; z-index: 15; }
+    #c5-fly small { display: block; margin-top: 8px; font-size: 22px; font-weight: 500; color: #e8643c; }
+  </style>
+
+  <div id="root" data-composition-id="customer" data-width="1920" data-height="1080">
+    <div id="c5-group">
+      <div id="c5-label" class="abs">Homeowner</div>
+      <div id="c5-ticker" class="abs">
+        <div class="c5-chip" id="c5-chip0">Usage</div><div class="c5-chip" id="c5-chip1">Address</div><div class="c5-chip" id="c5-chip2">Car</div><div class="c5-chip" id="c5-chip3">Heating</div>
+      </div>
+      <div id="c5-win" class="abs" data-layout-allow-overflow>
+        <div id="c5-bar" class="abs"><div class="abs c5-dot" style="left:16px"></div><div class="abs c5-dot" style="left:38px"></div><div class="abs c5-dot" style="left:60px"></div><div id="c5-url" class="abs"></div></div>
+        <div id="c5-view" class="abs">
+          <div id="c5-cam" class="abs">
+/*VIDEOS*/
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <svg id="c5-ptr" viewBox="0 0 44 44" aria-hidden="true"><path d="M6 4 L6 34 L14 27 L19 39 L25 36 L20 25 L31 25 Z" fill="#1b1d20" stroke="#ffffff" stroke-width="2.6" stroke-linejoin="round"/></svg>
+
+    <div id="c5-plabel" class="abs">Planner</div>
+    <div id="c5-planner" class="abs">
+      <div id="c5-pbar" class="abs"></div>
+      <div id="c5-ptitle" class="abs">New plans</div>
+      <div id="c5-pnone" class="abs">No plans yet</div>
+      <div id="c5-prow" class="abs">Anna Demo · new plan from Sonnfeld's website</div>
+    </div>
+    <div id="c5-fly" class="abs">Anna Demo<small>plan sent</small></div>
+  </div>
+
+  <script>
+    window.__timelines = window.__timelines || {};
+
+    const SEG = /*SEGMENTS*/;
+    const CAM = /*CAMERA*/;
+    const PTR = /*POINTER*/;
+    const DOWNS = /*DOWNS*/;
+    const STEPS = /*STEPS*/;
+    const RESULTS_AT = /*RESULTS_AT*/;
+    const TOTAL = /*TOTAL*/;
+
+    const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+    const lerp = (a, b, p) => a + (b - a) * p;
+    const inOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+    const outBack = (p, s = 1.9) => 1 + (s + 1) * Math.pow(p - 1, 3) + s * Math.pow(p - 1, 2);
+
+    // film time <-> capture time (the clip is cut into constant-speed segments)
+    function capOf(local) {
+      for (const s of SEG) if (local < s.film0 + s.dur) return local < s.film0 ? s.cap0 : s.cap0 + (local - s.film0) * s.rate;
+      return SEG[SEG.length - 1].cap1;
+    }
+    function filmOf(cap) {
+      for (const s of SEG) if (cap <= s.cap1) return cap < s.cap0 ? s.film0 : s.film0 + (cap - s.cap0) / s.rate;
+      const s = SEG[SEG.length - 1]; return s.film0 + s.dur;
+    }
+
+    // camera: a move ARRIVES at the key's capture time and takes `dur` film seconds
+    const K = CAM.map(([cap, z, c, dur]) => ({ t1: filmOf(cap), z, cx: c[0], cy: c[1], dur }));
+    K.forEach((k) => { k.t0 = Math.max(0, k.t1 - k.dur); });
+    function camAt(local) {
+      let st = K[0];
+      let out = { z: st.z, cx: st.cx, cy: st.cy };
+      for (let i = 1; i < K.length; i++) {
+        const k = K[i], prev = K[i - 1];
+        if (local >= k.t1) { out = { z: k.z, cx: k.cx, cy: k.cy }; continue; }
+        if (local > k.t0) {
+          const p = inOutCubic((local - k.t0) / (k.t1 - k.t0));
+          out = { z: lerp(prev.z, k.z, p), cx: lerp(prev.cx, k.cx, p), cy: lerp(prev.cy, k.cy, p) };
+        }
+        break;
+      }
+      const tx = clamp(720 - out.z * out.cx, 1440 - 1440 * out.z, 0);
+      const ty = clamp(450 - out.z * out.cy, 900 - 900 * out.z, 0);
+      return { z: out.z, tx, ty };
+    }
+
+    // pointer: the capture's own positions, eased between the moments it left and arrived
+    function pointerAt(cap) {
+      let pos = PTR.length ? PTR[0][2] : [1500, 220];
+      for (const [t0, t1, a, b] of PTR) {
+        if (cap < t0) return pos;
+        if (cap < t1) { const p = inOutCubic((cap - t0) / (t1 - t0)); return [lerp(a[0], b[0], p), lerp(a[1], b[1], p)]; }
+        pos = b;
+      }
+      return pos;
+    }
+    const DOWN_FILM = DOWNS.map(filmOf);
+    function pressAt(local) {
+      let s = 1;
+      for (const fd of DOWN_FILM) {
+        const dt = local - fd;
+        if (dt < 0 || dt > 0.55) continue;
+        if (dt < 0.07) s = Math.min(s, lerp(1, 0.84, dt / 0.07));
+        else if (dt < 0.2) s = Math.min(s, 0.84);
+        else s = Math.min(s, lerp(0.84, 1, clamp(outBack((dt - 0.2) / 0.35), 0, 1.15)));
+      }
+      return s;
+    }
+
+    const camEl = document.getElementById("c5-cam");
+    const ptrEl = document.getElementById("c5-ptr");
+    const chips = [0, 1, 2, 3].map((i) => document.getElementById("c5-chip" + i));
+    const TIP = [9.8, 6.5]; // the arrow's tip inside the 72 px svg
+    function render(local) {
+      const cam = camAt(local);
+      camEl.style.transform = `translate(${cam.tx}px, ${cam.ty}px) scale(${cam.z})`;
+
+      const cap = capOf(local);
+      const [px, py] = pointerAt(cap);
+      const X = 240 + cam.tx + cam.z * px; // window content origin is (240, 108) in the film
+      const Y = 108 + cam.ty + cam.z * py;
+      ptrEl.style.transform = `translate(${X}px, ${Y}px) scale(${pressAt(local)}) translate(${-TIP[0]}px, ${-TIP[1]}px)`;
+
+      // step ticker follows the real step marks
+      let active = cap < STEPS[0][1] ? -1 : 0;
+      STEPS.forEach(([, t], i) => { if (cap >= t) active = i; });
+      const done = cap >= RESULTS_AT;
+      chips.forEach((c, i) => { c.className = "c5-chip" + (done || i < active ? " done" : i === active ? " active" : ""); });
+    }
+
+    const tl = gsap.timeline({ paused: true });
+    const drv = { v: 0 };
+    tl.to(drv, { v: 1, duration: TOTAL + 1.5, ease: "none", onUpdate: function () { render(this.time()); } }, 0);
+    render(0);
+
+    // entrance: the customer's bubble from scene 4 becomes the window (object becomes the world)
+    tl.fromTo("#c5-win", { opacity: 0, x: -570, y: 86, scale: 0.28 }, { opacity: 1, x: 0, y: 0, scale: 1, duration: 0.8, ease: "power3.inOut" }, 0);
+    tl.fromTo(["#c5-label", "#c5-ticker"], { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.5, ease: "power3.out" }, 0.55);
+    tl.fromTo("#c5-ptr", { opacity: 0 }, { opacity: 1, duration: 0.2 }, 0.6);
+
+    // hand-off: the plan leaves the customer's window and lands in the planner's inbox
+    const H = TOTAL - 0.6;
+    tl.to("#c5-ptr", { opacity: 0, duration: 0.25 }, H - 0.3);
+    tl.to("#c5-group", { x: -510, scale: 0.6, duration: 1.0, ease: "power3.inOut" }, H);
+    tl.fromTo(["#c5-planner", "#c5-plabel"], { opacity: 0, x: 220 }, { opacity: 1, x: 0, duration: 0.9, ease: "power3.out" }, H + 0.5);
+    tl.fromTo("#c5-fly", { opacity: 0, x: 0, y: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power2.out" }, H + 0.55);
+    tl.to("#c5-fly", { x: 1020, y: -70, duration: 0.9, ease: "power3.inOut" }, H + 0.85);
+    tl.to("#c5-fly", { opacity: 0, duration: 0.2 }, H + 1.7);
+    tl.to("#c5-pnone", { opacity: 0, duration: 0.2 }, H + 1.7);
+    tl.fromTo("#c5-prow", { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.35, ease: "power3.out" }, H + 1.75);
+
+    window.__timelines["customer"] = tl;
+  </script>
+</template>
