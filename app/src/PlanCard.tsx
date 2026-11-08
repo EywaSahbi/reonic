@@ -95,7 +95,7 @@ export function PlanCard({ plan, onHandoff }: { plan: Plan; onHandoff?: () => vo
           <div className="precision" role="progressbar" aria-valuemin={0} aria-valuemax={INPUTS.length} aria-valuenow={given}>
             <span style={{ transform: `scaleX(${Math.max(0.04, given / INPUTS.length)})` }} />
           </div>
-          <p className="precision-note">Precision: {given} of {INPUTS.length} inputs given. Every answer you add narrows the range.</p>
+          <p className="precision-note">Every answer you add narrows the range.</p>
         </>)}
       </div>
 
