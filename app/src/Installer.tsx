@@ -184,14 +184,6 @@ function PlanDetail({ id }: { id: string }) {
         <p>{plan.summary ?? summarize(plan)}</p>
       </section>
 
-      {plan.flags.length > 0 && (
-        <section className="flags">
-          {plan.flags.map((f, i) => (
-            <div key={i} className={`flag flag-${f.severity}`}>{f.severity === "warn" ? "⚠ " : ""}{f.text}</div>
-          ))}
-        </section>
-      )}
-
       {isOffline(d) && <div className="flag flag-warn">⚠ Design engine unreachable: no sizes or prices in this plan yet. Edits and finalise need the engine.</div>}
 
       <OfferPackPanel plan={plan} onPlan={setPlan} onDesignChange={(next) => { setChange(diff(plan.design, next.design)); setPlan(next); }} />
